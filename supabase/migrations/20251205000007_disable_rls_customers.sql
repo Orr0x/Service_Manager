@@ -1,0 +1,2 @@
+-- TEMPORARILY DISABLE RLS on customers table to debug
+ALTER TABLE customers DISABLE ROW LEVEL SECURITY;

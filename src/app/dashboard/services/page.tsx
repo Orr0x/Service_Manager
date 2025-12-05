@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { api, HydrateClient } from '@/trpc/server'
+import { ServicesList } from './services-list'
 
 export default async function ServicesPage() {
     // Prefetch services on the server
@@ -36,7 +37,4 @@ export default async function ServicesPage() {
     )
 }
 
-// Separate client component for the list to handle interactivity if needed later
-// For now, we can just render it here or make a client component.
-// Let's make a client component for the list to use useQuery
-import { ServicesList } from './services-list'
+

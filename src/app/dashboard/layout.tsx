@@ -17,7 +17,9 @@ import {
     Award,
     Search,
     Bell,
-    Settings
+    Settings,
+    Scale,
+    PlayCircle
 } from 'lucide-react'
 
 export default async function DashboardLayout({
@@ -44,17 +46,17 @@ export default async function DashboardLayout({
 
     const navigation = [
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-        { name: 'Cleaning Jobs', href: '/dashboard/jobs', icon: Briefcase },
-        { name: 'Properties', href: '/dashboard/properties', icon: Building2 },
         { name: 'Customers', href: '/dashboard/customers', icon: Users },
-        { name: 'Workers', href: '/dashboard/workers', icon: HardHat },
+        { name: 'Job Sites', href: '/dashboard/job-sites', icon: Building2 },
         { name: 'Contracts', href: '/dashboard/contracts', icon: FileText },
-        { name: 'Invoices', href: '/dashboard/invoices', icon: Receipt },
         { name: 'Quotes', href: '/dashboard/quotes', icon: FileCheck },
-        { name: 'Calendar', href: '/dashboard/calendar', icon: CalendarDays },
         { name: 'Checklists', href: '/dashboard/checklists', icon: ClipboardCheck },
-        { name: 'Financial', href: '/dashboard/financial', icon: CreditCard },
-        { name: 'Certificates', href: '/dashboard/certificates', icon: Award },
+        { name: 'Internal Workers', href: '/dashboard/workers', icon: HardHat },
+        { name: 'External Contractors', href: '/dashboard/contractors', icon: Briefcase },
+        { name: 'Jobs', href: '/dashboard/jobs', icon: PlayCircle },
+        { name: 'Scheduling', href: '/dashboard/schedule', icon: CalendarDays },
+        { name: 'Financials', href: '/dashboard/financials', icon: CreditCard },
+        { name: 'Legals', href: '/dashboard/legals', icon: Scale },
     ]
 
     return (

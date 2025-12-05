@@ -1,12 +1,28 @@
 import { authRouter } from './routers/auth'
 import { usersRouter } from './routers/users'
 import { servicesRouter } from './routers/services'
+import { customersRouter } from './routers/customers'
+import { jobSitesRouter } from './routers/job-sites'
+import { contractsRouter } from './routers/contracts'
+import { quotesRouter } from './routers/quotes'
+import { checklistsRouter } from './routers/checklists'
+import { workersRouter } from './routers/workers'
+import { contractorsRouter } from './routers/contractors'
+import { invoicesRouter } from './routers/invoices'
 import { createCallerFactory, createTRPCRouter } from './trpc'
 
 export const appRouter = createTRPCRouter({
     auth: authRouter,
     users: usersRouter,
     services: servicesRouter,
+    customers: customersRouter,
+    jobSites: jobSitesRouter,
+    contracts: contractsRouter,
+    quotes: quotesRouter,
+    checklists: checklistsRouter,
+    workers: workersRouter,
+    contractors: contractorsRouter,
+    invoices: invoicesRouter,
 })
 
 export const createCaller = createCallerFactory(appRouter)

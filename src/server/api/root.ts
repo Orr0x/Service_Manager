@@ -9,6 +9,10 @@ import { checklistsRouter } from './routers/checklists'
 import { workersRouter } from './routers/workers'
 import { contractorsRouter } from './routers/contractors'
 import { invoicesRouter } from './routers/invoices'
+import { settingsRouter } from './routers/settings'
+import { jobsRouter } from './routers/jobs'
+import { notesRouter } from './routers/notes'
+import { attachmentsRouter } from './routers/attachments'
 import { createCallerFactory, createTRPCRouter } from './trpc'
 
 export const appRouter = createTRPCRouter({
@@ -23,6 +27,10 @@ export const appRouter = createTRPCRouter({
     workers: workersRouter,
     contractors: contractorsRouter,
     invoices: invoicesRouter,
+    settings: settingsRouter,
+    jobs: jobsRouter,
+    notes: notesRouter,
+    attachments: attachmentsRouter,
 })
 
 export const createCaller = createCallerFactory(appRouter)

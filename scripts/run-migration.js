@@ -37,8 +37,8 @@ async function runMigration() {
         await client.connect();
         console.log('Connected to database.');
 
-        const migrationFile = path.join(__dirname, '../supabase/migrations/20251205000016_create_invoices.sql');
-        const sql = fs.readFileSync(migrationFile, 'utf8');
+        const MIGRATION_FILE = path.join(__dirname, '../supabase/migrations/20251205000021_storage_policies.sql');
+        const sql = fs.readFileSync(MIGRATION_FILE, 'utf8');
 
         console.log('Running migration...');
 

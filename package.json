@@ -11,17 +11,23 @@
     "pre-deploy": "npm run type-check && npm run lint && npm run build"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.9",
+    "@hookform/resolvers": "^5.2.2",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.86.2",
     "@tanstack/react-query": "^5.90.12",
     "@trpc/client": "^11.7.2",
     "@trpc/react-query": "^11.7.2",
     "@trpc/server": "^11.7.2",
+    "@types/react-big-calendar": "^1.16.3",
+    "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "lucide-react": "^0.556.0",
     "next": "16.0.7",
     "pg": "^8.16.3",
     "react": "19.2.0",
+    "react-big-calendar": "^1.19.4",
+    "react-colorful": "^5.6.1",
     "react-dom": "19.2.0",
     "superjson": "^2.2.6",
     "zod": "^4.1.13"

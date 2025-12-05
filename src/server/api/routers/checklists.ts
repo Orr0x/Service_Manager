@@ -56,7 +56,7 @@ export const checklistsRouter = createTRPCRouter({
                     name: input.name,
                     description: input.description,
                     is_template: input.isTemplate || false,
-                    items: input.items ? JSON.stringify(input.items) : '[]',
+                    items: input.items || [],
                 })
                 .select()
                 .single()
@@ -85,7 +85,7 @@ export const checklistsRouter = createTRPCRouter({
                     name: input.name,
                     description: input.description,
                     is_template: input.isTemplate,
-                    items: input.items ? JSON.stringify(input.items) : undefined,
+                    items: input.items || undefined,
                 })
                 .eq('id', input.id)
                 .eq('tenant_id', ctx.tenantId)

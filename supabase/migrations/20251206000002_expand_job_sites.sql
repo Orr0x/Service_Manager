@@ -1,0 +1,9 @@
+-- Add new columns to job_sites table
+ALTER TABLE job_sites
+ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS what3words TEXT,
+ADD COLUMN IF NOT EXISTS access_instructions TEXT,
+ADD COLUMN IF NOT EXISTS security_codes TEXT,
+ADD COLUMN IF NOT EXISTS key_holder TEXT,
+ADD COLUMN IF NOT EXISTS facilities TEXT;

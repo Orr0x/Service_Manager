@@ -2,17 +2,29 @@
 
 import { useRouter } from 'next/navigation'
 import { api } from '@/trpc/react'
-import { useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Plus, Trash2, Camera, ChevronDown, ChevronUp } from 'lucide-react'
+import { FileUploader } from '@/components/file-uploader'
 
 interface ChecklistItem {
+    id: string
     text: string
+    description?: string
+    imageUrl?: string
     isCompleted: boolean
+    isExpanded?: boolean
 }
 
 export default function NewChecklistPage() {
     const router = useRouter()
-    const [items, setItems] = useState<ChecklistItem[]>([{ text: '', isCompleted: false }])
+    const [checklistId, setChecklistId] = useState<string>('')
+    const [items, setItems] = useState<ChecklistItem[]>([])
+
+    useEffect(() => {
+        setChecklistId(crypto.randomUUID())
+        // Initialize with one empty item
+        setItems([{ id: crypto.randomUUID(), text: '', isCompleted: false, isExpanded: true }])
+    }, [])
 
     const createChecklist = api.checklists.create.useMutation({
         onSuccess: () => {
@@ -21,16 +33,29 @@ export default function NewChecklistPage() {
         },
     })
 
-    // Update item text
-    const updateItem = (index: number, text: string) => {
+    // Update item field
+    const updateItem = (index: number, field: keyof ChecklistItem, value: any) => {
         const newItems = [...items]
-        newItems[index].text = text
+        newItems[index] = { ...newItems[index], [field]: value }
+        setItems(newItems)
+    }
+
+    // Toggle item expansion
+    const toggleItem = (index: number) => {
+        const newItems = [...items]
+        newItems[index].isExpanded = !newItems[index].isExpanded
         setItems(newItems)
     }
 
     // Add new item row
     const addItem = () => {
-        setItems([...items, { text: '', isCompleted: false }])
+        setItems([...items, {
+            id: crypto.randomUUID(),
+            text: '',
+            description: '',
+            isCompleted: false,
+            isExpanded: true
+        }])
     }
 
     // Remove item row
@@ -50,10 +75,11 @@ export default function NewChecklistPage() {
         const validItems = items.filter(item => item.text.trim() !== '')
 
         createChecklist.mutate({
+            id: checklistId,
             name,
             description: description || undefined,
             isTemplate,
-            items: validItems,
+            items: validItems.map(({ isExpanded, ...item }) => item), // Remove UI-only fields
         })
     }
 
@@ -157,26 +183,68 @@ export default function NewChecklistPage() {
                         </button>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         {items.map((item, index) => (
-                            <div key={index} className="flex items-center gap-x-3">
-                                <span className="text-sm text-gray-400 w-6 text-right">{index + 1}.</span>
-                                <input
-                                    type="text"
-                                    value={item.text}
-                                    onChange={(e) => updateItem(index, e.target.value)}
-                                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                                    placeholder="Task description"
-                                    required
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => removeItem(index)}
-                                    className="text-red-600 hover:text-red-900 disabled:opacity-50 p-2"
-                                    disabled={items.length === 1}
-                                >
-                                    <Trash2 className="h-5 w-5" />
-                                </button>
+                            <div key={item.id || index} className="bg-white border rounded-lg shadow-sm">
+                                {/* Header / Summary */}
+                                <div className="flex items-center gap-x-3 p-4 bg-gray-50 border-b rounded-t-lg">
+                                    <button type="button" onClick={() => toggleItem(index)} className="text-gray-500 hover:text-gray-700">
+                                        {item.isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                                    </button>
+                                    <span className="font-medium text-gray-500">Task {index + 1}</span>
+                                    <input
+                                        type="text"
+                                        value={item.text}
+                                        onChange={(e) => updateItem(index, 'text', e.target.value)}
+                                        className="block w-full border-0 bg-transparent p-0 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm sm:leading-6"
+                                        placeholder="Task title..."
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => removeItem(index)}
+                                        className="text-red-600 hover:text-red-900 disabled:opacity-50 p-1"
+                                        disabled={items.length === 1}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </button>
+                                </div>
+
+                                {/* Expanded Content */}
+                                {item.isExpanded && (
+                                    <div className="p-4 space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium leading-6 text-gray-900">Description</label>
+                                            <div className="mt-2">
+                                                <textarea
+                                                    rows={2}
+                                                    value={item.description || ''}
+                                                    onChange={(e) => updateItem(index, 'description', e.target.value)}
+                                                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                                                    placeholder="Detailed instructions..."
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium leading-6 text-gray-900">Reference Image</label>
+                                            <div className="mt-2">
+                                                {checklistId && (
+                                                    <FileUploader
+                                                        entityType="checklist_item"
+                                                        entityId={item.id} // Use the item's UUID
+                                                        onUploadComplete={() => {
+                                                            // We might want to store the image URL here if the uploader returns it,
+                                                            // but for now the attachment is linked to the Entity ID.
+                                                            // To display it, we'd need to fetch attachments.
+                                                            // Since this is creating a NEW checklist, we rely on the ID link.
+                                                        }}
+                                                    />
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>

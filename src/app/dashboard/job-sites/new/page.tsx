@@ -4,10 +4,17 @@ import { useRouter } from 'next/navigation'
 import { api } from '@/trpc/react'
 import { useState } from 'react'
 import Link from 'next/link'
+import { FileUploader } from '@/components/file-uploader'
+import { useEffect } from 'react'
 
 export default function NewJobSitePage() {
     const router = useRouter()
     const { data: customers, isLoading: isLoadingCustomers } = api.customers.getAll.useQuery()
+    const [siteId, setSiteId] = useState<string>('')
+
+    useEffect(() => {
+        setSiteId(crypto.randomUUID())
+    }, [])
 
     const createJobSite = api.jobSites.create.useMutation({
         onSuccess: () => {
@@ -24,13 +31,33 @@ export default function NewJobSitePage() {
         const postalCode = formData.get('postalCode') as string
         const country = formData.get('country') as string
 
+        const latitude = formData.get('latitude') ? parseFloat(formData.get('latitude') as string) : undefined
+        const longitude = formData.get('longitude') ? parseFloat(formData.get('longitude') as string) : undefined
+        const what3words = formData.get('what3words') as string
+        const accessInstructions = formData.get('accessInstructions') as string
+        const securityCodes = formData.get('securityCodes') as string
+        const keyHolder = formData.get('keyHolder') as string
+        const facilities = formData.get('facilities') as string
+        const siteType = formData.get('siteType') as string
+        const parkingInfo = formData.get('parkingInfo') as string
+
         createJobSite.mutate({
+            id: siteId,
             customerId,
             name,
             address,
             city,
             postalCode,
             country,
+            latitude,
+            longitude,
+            what3words,
+            accessInstructions,
+            securityCodes,
+            keyHolder,
+            facilities,
+            siteType,
+            parkingInfo,
         })
     }
 
@@ -77,6 +104,26 @@ export default function NewJobSitePage() {
                         </div>
                     </div>
                 )}
+
+                {/* Image Upload */}
+                <div className="space-y-6">
+                    <div>
+                        <h3 className="text-base font-semibold leading-7 text-gray-900">Job Site Photos</h3>
+                        <p className="mt-1 text-sm leading-6 text-gray-600">Upload photos of the site. You can do this now or later.</p>
+                    </div>
+
+                    <div className="rounded-lg border border-dashed border-gray-900/25 p-6">
+                        {siteId && (
+                            <FileUploader
+                                entityType="job_site"
+                                entityId={siteId}
+                                onUploadComplete={() => {
+                                    // Optional: Show a success message or refresh a list if we were displaying one
+                                }}
+                            />
+                        )}
+                    </div>
+                </div>
 
                 {/* Site Information */}
                 <div className="space-y-6">
@@ -140,6 +187,32 @@ export default function NewJobSitePage() {
                         </div>
 
                         <div className="sm:col-span-2 sm:col-start-1">
+                            <label htmlFor="siteType" className="block text-sm font-medium leading-6 text-gray-900">
+                                Site Type
+                            </label>
+                            <div className="mt-2">
+                                <select
+                                    id="siteType"
+                                    name="siteType"
+                                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:max-w-xs sm:text-sm sm:leading-6"
+                                >
+                                    <option value="">Select a type</option>
+                                    <option value="Office">Office</option>
+                                    <option value="House">House</option>
+                                    <option value="Bungalow">Bungalow</option>
+                                    <option value="Lodge">Lodge</option>
+                                    <option value="Cabin">Cabin</option>
+                                    <option value="Public Building">Public Building</option>
+                                    <option value="Warehouse">Warehouse</option>
+                                    <option value="Retail Store">Retail Store</option>
+                                    <option value="School">School</option>
+                                    <option value="Hospital">Hospital</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="sm:col-span-2">
                             <label htmlFor="city" className="block text-sm font-medium leading-6 text-gray-900">
                                 City
                             </label>
@@ -180,6 +253,149 @@ export default function NewJobSitePage() {
                                     id="country"
                                     defaultValue="United Kingdom"
                                     className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                {/* Geolocation */}
+                <div className="space-y-6">
+                    <div>
+                        <h3 className="text-base font-semibold leading-7 text-gray-900">Geolocation</h3>
+                        <p className="mt-1 text-sm leading-6 text-gray-600">Precise location details for rural sites.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-6">
+                        <div className="sm:col-span-2">
+                            <label htmlFor="latitude" className="block text-sm font-medium leading-6 text-gray-900">
+                                Latitude
+                            </label>
+                            <div className="mt-2">
+                                <input
+                                    type="number"
+                                    step="any"
+                                    name="latitude"
+                                    id="latitude"
+                                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                                    placeholder="e.g., 51.5074"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="sm:col-span-2">
+                            <label htmlFor="longitude" className="block text-sm font-medium leading-6 text-gray-900">
+                                Longitude
+                            </label>
+                            <div className="mt-2">
+                                <input
+                                    type="number"
+                                    step="any"
+                                    name="longitude"
+                                    id="longitude"
+                                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                                    placeholder="e.g., -0.1278"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="sm:col-span-2">
+                            <label htmlFor="what3words" className="block text-sm font-medium leading-6 text-gray-900">
+                                What3Words
+                            </label>
+                            <div className="mt-2">
+                                <input
+                                    type="text"
+                                    name="what3words"
+                                    id="what3words"
+                                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                                    placeholder="e.g., ///filled.count.soap"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Access & Facilities */}
+                <div className="space-y-6">
+                    <div>
+                        <h3 className="text-base font-semibold leading-7 text-gray-900">Access & Facilities</h3>
+                        <p className="mt-1 text-sm leading-6 text-gray-600">Important information for accessing the site.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-6">
+                        <div className="col-span-full">
+                            <label htmlFor="accessInstructions" className="block text-sm font-medium leading-6 text-gray-900">
+                                Access Instructions
+                            </label>
+                            <div className="mt-2">
+                                <textarea
+                                    id="accessInstructions"
+                                    name="accessInstructions"
+                                    rows={3}
+                                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                                    placeholder="e.g., Use side gate, beware of dog."
+                                />
+                            </div>
+                        </div>
+
+                        <div className="sm:col-span-3">
+                            <label htmlFor="securityCodes" className="block text-sm font-medium leading-6 text-gray-900">
+                                Security Codes
+                            </label>
+                            <div className="mt-2">
+                                <input
+                                    type="text"
+                                    name="securityCodes"
+                                    id="securityCodes"
+                                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                                    placeholder="e.g., Gate: 1234, Alarm: 5678"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="sm:col-span-3">
+                            <label htmlFor="keyHolder" className="block text-sm font-medium leading-6 text-gray-900">
+                                Key Holder
+                            </label>
+                            <div className="mt-2">
+                                <input
+                                    type="text"
+                                    name="keyHolder"
+                                    id="keyHolder"
+                                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                                    placeholder="e.g., John Smith (07700 900000)"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="col-span-full">
+                            <label htmlFor="parkingInfo" className="block text-sm font-medium leading-6 text-gray-900">
+                                Parking Information
+                            </label>
+                            <div className="mt-2">
+                                <textarea
+                                    id="parkingInfo"
+                                    name="parkingInfo"
+                                    rows={3}
+                                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                                    placeholder="e.g., Free parking on street, or use driveway."
+                                />
+                            </div>
+                        </div>
+
+                        <div className="col-span-full">
+                            <label htmlFor="facilities" className="block text-sm font-medium leading-6 text-gray-900">
+                                Facilities
+                            </label>
+                            <div className="mt-2">
+                                <textarea
+                                    id="facilities"
+                                    name="facilities"
+                                    rows={3}
+                                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                                    placeholder="e.g., Kitchen, Toilets, Parking..."
                                 />
                             </div>
                         </div>

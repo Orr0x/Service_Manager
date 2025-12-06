@@ -80,6 +80,7 @@ export const jobSitesRouter = createTRPCRouter({
     create: protectedProcedure
         .input(
             z.object({
+                id: z.string().uuid().optional(),
                 customerId: z.string().uuid(),
                 name: z.string().min(1),
                 address: z.string().min(1),
@@ -87,12 +88,22 @@ export const jobSitesRouter = createTRPCRouter({
                 state: z.string().optional(),
                 postalCode: z.string().optional(),
                 country: z.string().optional(),
+                latitude: z.number().optional(),
+                longitude: z.number().optional(),
+                what3words: z.string().optional(),
+                accessInstructions: z.string().optional(),
+                securityCodes: z.string().optional(),
+                keyHolder: z.string().optional(),
+                facilities: z.string().optional(),
+                siteType: z.string().optional(),
+                parkingInfo: z.string().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
             const { data, error } = await ctx.db
                 .from('job_sites')
                 .insert({
+                    id: input.id, // Use provided ID if available
                     tenant_id: ctx.tenantId,
                     customer_id: input.customerId,
                     name: input.name,
@@ -101,6 +112,15 @@ export const jobSitesRouter = createTRPCRouter({
                     state: input.state,
                     postal_code: input.postalCode,
                     country: input.country,
+                    latitude: input.latitude,
+                    longitude: input.longitude,
+                    what3words: input.what3words,
+                    access_instructions: input.accessInstructions,
+                    security_codes: input.securityCodes,
+                    key_holder: input.keyHolder,
+                    facilities: input.facilities,
+                    site_type: input.siteType,
+                    parking_info: input.parkingInfo,
                 })
                 .select()
                 .single()
@@ -123,6 +143,15 @@ export const jobSitesRouter = createTRPCRouter({
                 postalCode: z.string().optional(),
                 country: z.string().optional(),
                 isActive: z.boolean().optional(),
+                latitude: z.number().optional(),
+                longitude: z.number().optional(),
+                what3words: z.string().optional(),
+                accessInstructions: z.string().optional(),
+                securityCodes: z.string().optional(),
+                keyHolder: z.string().optional(),
+                facilities: z.string().optional(),
+                siteType: z.string().optional(),
+                parkingInfo: z.string().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -136,6 +165,15 @@ export const jobSitesRouter = createTRPCRouter({
                     postal_code: input.postalCode,
                     country: input.country,
                     is_active: input.isActive,
+                    latitude: input.latitude,
+                    longitude: input.longitude,
+                    what3words: input.what3words,
+                    access_instructions: input.accessInstructions,
+                    security_codes: input.securityCodes,
+                    key_holder: input.keyHolder,
+                    facilities: input.facilities,
+                    site_type: input.siteType,
+                    parking_info: input.parkingInfo,
                 })
                 .eq('id', input.id)
                 .eq('tenant_id', ctx.tenantId)

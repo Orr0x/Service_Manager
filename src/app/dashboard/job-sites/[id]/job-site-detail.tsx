@@ -14,9 +14,12 @@ import {
     FileText,
     Receipt,
     File,
-    ClipboardList
+    ClipboardList,
+    Camera
 } from 'lucide-react'
+
 import Link from 'next/link'
+import { AttachmentsSection } from '@/components/attachments-section'
 
 export function JobSiteDetail({ id }: { id: string }) {
     const router = useRouter()
@@ -65,6 +68,7 @@ export function JobSiteDetail({ id }: { id: string }) {
         { id: 'invoices', name: `Invoices (${invoices?.length || 0})`, icon: Receipt },
         { id: 'quotes', name: `Quotes (${quotes?.length || 0})`, icon: File },
         { id: 'checklists', name: `Checklists (${checklists?.length || 0})`, icon: ClipboardList },
+        { id: 'attachments', name: 'Photos & Attachments', icon: Camera },
     ]
 
     return (
@@ -162,6 +166,14 @@ export function JobSiteDetail({ id }: { id: string }) {
                                     <div className="sm:col-span-1">
                                         <dt className="text-sm font-medium text-gray-500">Site Name</dt>
                                         <dd className="mt-1 text-sm text-gray-900">{jobSite.name}</dd>
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <dt className="text-sm font-medium text-gray-500">Access Instructions</dt>
+                                        <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{jobSite.access_instructions || '-'}</dd>
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <dt className="text-sm font-medium text-gray-500">Parking Information</dt>
+                                        <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{jobSite.parking_info || '-'}</dd>
                                     </div>
                                     <div className="sm:col-span-1">
                                         <dt className="text-sm font-medium text-gray-500">Status</dt>

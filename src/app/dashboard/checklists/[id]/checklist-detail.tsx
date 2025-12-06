@@ -9,6 +9,7 @@ import { useState } from 'react'
 interface ChecklistItem {
     text: string
     isCompleted: boolean
+    description?: string
 }
 
 export function ChecklistDetail({ id }: { id: string }) {
@@ -209,10 +210,15 @@ export function ChecklistDetail({ id }: { id: string }) {
                                                     <Circle className="h-5 w-5 text-gray-400" />
                                                 )}
                                             </div>
-                                            <div className="ml-3 text-sm leading-6">
-                                                <label className={`font-medium text-gray-900 cursor-pointer ${item.isCompleted ? 'line-through text-gray-500' : ''}`}>
+                                            <div className="ml-3 text-sm leading-6 flex-1 min-w-0">
+                                                <p className={`font-medium text-gray-900 cursor-pointer ${item.isCompleted ? 'line-through text-gray-500' : ''}`}>
                                                     {item.text}
-                                                </label>
+                                                </p>
+                                                {item.description && (
+                                                    <p className="text-sm text-gray-500 mt-1">
+                                                        {item.description}
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                     ))}

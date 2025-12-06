@@ -19,9 +19,22 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
         api.createClient({
             links: [
                 loggerLink({
-                    enabled: (op) =>
-                        process.env.NODE_ENV === 'development' ||
-                        (op.direction === 'down' && op.result instanceof Error),
+                    enabled: (opts) => {
+                        // Suppress logging for expected conflict errors
+                        if (
+                            opts.direction === 'down' &&
+                            opts.result instanceof Error &&
+                            // @ts-ignore - TRPCClientError has data property
+                            (opts.result.data?.code === 'CONFLICT' || opts.result.message?.includes('unavailable'))
+                        ) {
+                            return false;
+                        }
+
+                        return (
+                            process.env.NODE_ENV === "development" ||
+                            (opts.direction === "down" && opts.result instanceof Error)
+                        );
+                    },
                 }),
                 unstable_httpBatchStreamLink({
                     transformer: superjson,

@@ -3,7 +3,10 @@ import { createTRPCRouter, protectedProcedure } from '../trpc'
 
 // Define a schema for checklist items
 const checklistItemSchema = z.object({
+    id: z.string().optional(), // client-generated UUID
     text: z.string(),
+    description: z.string().optional(),
+    imageUrl: z.string().optional(),
     isCompleted: z.boolean(),
 })
 
@@ -76,6 +79,7 @@ export const checklistsRouter = createTRPCRouter({
     create: protectedProcedure
         .input(
             z.object({
+                id: z.string().uuid().optional(),
                 name: z.string().min(1),
                 description: z.string().optional(),
                 isTemplate: z.boolean().optional(),
@@ -86,6 +90,7 @@ export const checklistsRouter = createTRPCRouter({
             const { data, error } = await ctx.db
                 .from('checklists')
                 .insert({
+                    id: input.id, // Use provided ID if available
                     tenant_id: ctx.tenantId,
                     name: input.name,
                     description: input.description,

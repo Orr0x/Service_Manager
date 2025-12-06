@@ -17,6 +17,7 @@ export function JobPreviewModal({ isOpen, onClose, jobId }: JobPreviewModalProps
     const [selectedWorkers, setSelectedWorkers] = useState<string[]>([])
     const [startTime, setStartTime] = useState<string>('')
     const [endTime, setEndTime] = useState<string>('')
+    const [error, setError] = useState<string | null>(null)
     const utils = api.useUtils()
 
     const { data: job, isLoading } = api.jobs.getById.useQuery(jobId!, {
@@ -42,8 +43,15 @@ export function JobPreviewModal({ isOpen, onClose, jobId }: JobPreviewModalProps
         }
     }, [job])
 
+    useEffect(() => {
+        if (isOpen) {
+            setError(null)
+        }
+    }, [isOpen])
+
     const handleSave = async () => {
         if (!jobId) return
+        setError(null)
 
         const assignments = selectedWorkers.map(id => {
             const isWorker = workers?.some(w => w.id === id)
@@ -69,8 +77,21 @@ export function JobPreviewModal({ isOpen, onClose, jobId }: JobPreviewModalProps
             utils.jobs.getAll.invalidate()
             utils.jobs.getById.invalidate(jobId)
             onClose()
-        } catch (error) {
-            console.error('Failed to save changes:', error)
+        } catch (error: any) {
+            // Only log unexpected errors to console (suppress expected CONFLICT errors)
+            // TRPCClientError usually exposes 'shape' or 'data'. We can check message or code.
+            // Using a safe check preventing crash if properties missing.
+            const isConflict = error?.data?.code === 'CONFLICT' || error?.message?.includes('unavailable');
+
+            if (!isConflict) {
+                console.error('Failed to save changes:', error)
+            }
+            // If conflict, give specific instruction; otherwise generic error
+            const errorMessage = isConflict
+                ? 'One or more workers are unavailable. Please assign a different worker.'
+                : (error.message || 'Failed to save changes. Please try again.')
+
+            setError(errorMessage)
         }
     }
 
@@ -135,6 +156,19 @@ export function JobPreviewModal({ isOpen, onClose, jobId }: JobPreviewModalProps
                                                 {job.customers?.business_name || job.customers?.contact_name}
                                             </p>
                                         </div>
+
+                                        {error && (
+                                            <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4">
+                                                <div className="flex">
+                                                    <div className="flex-shrink-0">
+                                                        <X className="h-5 w-5 text-red-400" aria-hidden="true" />
+                                                    </div>
+                                                    <div className="ml-3">
+                                                        <p className="text-sm text-red-700">{error}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <div className="space-y-3 mb-6">
                                             <div className="flex items-center text-sm text-gray-600">

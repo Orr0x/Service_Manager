@@ -3,9 +3,11 @@
 import { api } from '@/trpc/react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Mail, Phone, Briefcase, DollarSign, User, Pencil, Trash2, FileText, Calendar } from 'lucide-react'
+import { ArrowLeft, Mail, Phone, Briefcase, DollarSign, User, Pencil, Trash2, FileText, Calendar, MapPin, Truck, Award } from 'lucide-react'
 import { useState } from 'react'
 import { format } from 'date-fns'
+import { WorkerAvailability } from './worker-availability'
+import { AttachmentsSection } from '@/components/attachments-section'
 
 export function WorkerDetail({ id }: { id: string }) {
     const router = useRouter()
@@ -34,10 +36,11 @@ export function WorkerDetail({ id }: { id: string }) {
         }
     }
 
-    const skills = (typeof worker.skills === 'string' ? JSON.parse(worker.skills) : worker.skills) as string[]
+    const skills = (Array.isArray(worker.skills) ? worker.skills : typeof worker.skills === 'string' ? JSON.parse(worker.skills) : []) as string[]
 
     const tabs = [
         { id: 'info', name: 'Worker Info', icon: FileText },
+        { id: 'availability', name: 'Availability', icon: Calendar },
         { id: 'jobs', name: `Assigned Jobs (${jobs?.length || 0})`, icon: Briefcase },
     ]
 
@@ -82,13 +85,13 @@ export function WorkerDetail({ id }: { id: string }) {
                             <Trash2 className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
                             Delete
                         </button>
-                        <button
-                            type="button"
+                        <Link
+                            href={`/dashboard/workers/${id}/edit`}
                             className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                         >
                             <Pencil className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
                             Edit
-                        </button>
+                        </Link>
                     </div>
                 </div>
 
@@ -172,6 +175,36 @@ export function WorkerDetail({ id }: { id: string }) {
                                                 {worker.hourly_rate ? `£${worker.hourly_rate.toFixed(2)}/hr` : 'N/A'}
                                             </dd>
                                         </div>
+
+                                        {/* New Fields */}
+                                        <div className="sm:col-span-1">
+                                            <dt className="text-sm font-medium text-gray-500">Area Covered</dt>
+                                            <dd className="mt-1 text-sm text-gray-900 flex items-center gap-x-2">
+                                                <MapPin className="h-4 w-4 text-gray-400" />
+                                                {worker.area_postcode ? (
+                                                    <span>{worker.area_postcode} {worker.area_radius ? `(+${worker.area_radius} miles)` : ''}</span>
+                                                ) : (
+                                                    <span className="text-gray-400">N/A</span>
+                                                )}
+                                            </dd>
+                                        </div>
+
+                                        <div className="sm:col-span-1">
+                                            <dt className="text-sm font-medium text-gray-500">Transport</dt>
+                                            <dd className="mt-1 text-sm text-gray-900 flex items-center gap-x-2">
+                                                <Truck className="h-4 w-4 text-gray-400" />
+                                                {worker.has_own_transport ? 'Has own transport' : 'No own transport'}
+                                            </dd>
+                                        </div>
+
+                                        <div className="sm:col-span-2">
+                                            <dt className="text-sm font-medium text-gray-500">Licenses & Certifications</dt>
+                                            <dd className="mt-1 text-sm text-gray-900 flex items-start gap-x-2 whitespace-pre-line">
+                                                <Award className="h-4 w-4 text-gray-400 mt-1" />
+                                                {worker.licenses || <span className="text-gray-400">None listed</span>}
+                                            </dd>
+                                        </div>
+
                                         <div className="sm:col-span-2">
                                             <dt className="text-sm font-medium text-gray-500">Skills</dt>
                                             <dd className="mt-2 flex flex-wrap gap-2">
@@ -189,6 +222,23 @@ export function WorkerDetail({ id }: { id: string }) {
                                     </dl>
                                 </div>
                             </div>
+
+                            {/* Documents Section */}
+                            <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
+                                <div className="border-b border-gray-900/5 bg-gray-50 px-4 py-3 sm:px-6">
+                                    <h3 className="text-base font-semibold leading-7 text-gray-900">Documents & Photos</h3>
+                                </div>
+                                <div className="px-4 py-5 sm:p-6 space-y-4">
+                                    <div>
+                                        <h4 className="text-sm font-medium leading-6 text-gray-900 mb-2">Profile Picture</h4>
+                                        <AttachmentsSection entityType="worker_profile" entityId={worker.id} />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-sm font-medium leading-6 text-gray-900 mb-2">Certifications & Files</h4>
+                                        <AttachmentsSection entityType="worker_document" entityId={worker.id} />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Sidebar */}
@@ -202,6 +252,12 @@ export function WorkerDetail({ id }: { id: string }) {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {activeTab === 'availability' && (
+                    <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
+                        <WorkerAvailability workerId={worker.id} />
                     </div>
                 )}
 

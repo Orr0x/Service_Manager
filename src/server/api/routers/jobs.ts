@@ -19,6 +19,8 @@ export const jobsRouter = createTRPCRouter({
           job_assignments(
             id,
             status,
+            worker_id,
+            contractor_id,
             workers(first_name, last_name, email),
             contractors(company_name, contact_name)
           )
@@ -82,6 +84,8 @@ export const jobsRouter = createTRPCRouter({
           job_assignments(
             id,
             status,
+            worker_id,
+            contractor_id,
             workers(id, first_name, last_name, email, role),
             contractors(id, company_name, contact_name)
           ),
@@ -352,6 +356,56 @@ export const jobsRouter = createTRPCRouter({
             })).optional(),
         }))
         .mutation(async ({ ctx, input }) => {
+            // Check for worker unavailability
+            if (input.assignments && input.assignments.length > 0 && input.startTime && input.endTime) {
+                const workerIds = input.assignments
+                    .map(a => a.workerId)
+                    .filter((id): id is string => !!id)
+
+                if (workerIds.length > 0) {
+                    const { data: conflicts, error: conflictError } = await ctx.db
+                        .from('worker_unavailability')
+                        .select('worker_id, start_date, end_date')
+                        .in('worker_id', workerIds)
+                        .eq('tenant_id', ctx.tenantId)
+                        .or(`start_date.lte.${input.endTime},end_date.gte.${input.startTime}`)
+
+                    if (conflictError) {
+                        throw new Error(`Failed to check worker availability: ${conflictError.message}`)
+                    }
+
+                    // The .or filter above might be too broad or tricky with Supabase syntax for overlaps.
+                    // Let's refine the overlap check in JS to be safe, or ensure the query is correct.
+                    // Overlap: (StartA <= EndB) and (EndA >= StartB)
+                    // Supabase .or with range overlap is:
+                    // .lte('start_date', input.endTime).gte('end_date', input.startTime) -- wait this checks if record is INSIDE range.
+                    // Correct overlap logic: Unavailability Start <= Job End AND Unavailability End >= Job Start.
+
+                    // Let's simple fetch all unavailability for these workers that might overlap
+                    // Since we can't easily do complex range overlaps in one simple OR string in all versions,
+                    // let's try a safer query:
+                    // Fetch unavailability where start_date <= JobEndTime AND end_date >= JobStartTime
+
+                    const { data: unavailabilities } = await ctx.db
+                        .from('worker_unavailability')
+                        .select('worker_id, workers(first_name, last_name)')
+                        .in('worker_id', workerIds)
+                        .eq('tenant_id', ctx.tenantId)
+                        .lte('start_date', input.endTime)
+                        .gte('end_date', input.startTime)
+
+                    if (unavailabilities && unavailabilities.length > 0) {
+                        const conflictingWorker = unavailabilities[0]
+                        // @ts-ignore
+                        const name = conflictingWorker.workers ? `${conflictingWorker.workers.first_name} ${conflictingWorker.workers.last_name}` : 'Worker'
+                        throw new TRPCError({
+                            code: 'CONFLICT',
+                            message: `${name} is unavailable during this time.`
+                        })
+                    }
+                }
+            }
+
             // Create Job
             const { data: job, error: jobError } = await ctx.db
                 .from('jobs')
@@ -521,7 +575,45 @@ export const jobsRouter = createTRPCRouter({
             })),
         }))
         .mutation(async ({ ctx, input }) => {
-            // 1. Delete existing assignments
+            // 1. Get Job details for timing
+            const { data: job, error: jobFetchError } = await ctx.db
+                .from('jobs')
+                .select('start_time, end_time')
+                .eq('id', input.jobId)
+                .single()
+
+            if (jobFetchError || !job) {
+                throw new Error(`Job not found: ${jobFetchError?.message}`)
+            }
+
+            // 2. Validate Availability if job has times
+            if (job.start_time && job.end_time && input.assignments.length > 0) {
+                const workerIds = input.assignments
+                    .map(a => a.workerId)
+                    .filter((id): id is string => !!id)
+
+                if (workerIds.length > 0) {
+                    const { data: unavailabilities } = await ctx.db
+                        .from('worker_unavailability')
+                        .select('worker_id, workers(first_name, last_name)')
+                        .in('worker_id', workerIds)
+                        .eq('tenant_id', ctx.tenantId)
+                        .lte('start_date', job.end_time)
+                        .gte('end_date', job.start_time)
+
+                    if (unavailabilities && unavailabilities.length > 0) {
+                        const conflictingWorker = unavailabilities[0]
+                        // @ts-ignore
+                        const name = conflictingWorker.workers ? `${conflictingWorker.workers.first_name} ${conflictingWorker.workers.last_name}` : 'Worker'
+                        throw new TRPCError({
+                            code: 'CONFLICT',
+                            message: `${name} is unavailable during this time.`
+                        })
+                    }
+                }
+            }
+
+            // 3. Delete existing assignments
             const { error: deleteError } = await ctx.db
                 .from('job_assignments')
                 .delete()

@@ -13,7 +13,10 @@ import {
     Paperclip,
     StickyNote,
     Receipt,
-    Briefcase
+    Briefcase,
+    Building2,
+    File,
+    Clock
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -25,7 +28,6 @@ export function JobDetail({ id }: { id: string }) {
     const router = useRouter()
     const utils = api.useUtils()
     const { data: job, isLoading: isLoadingJob } = api.jobs.getById.useQuery(id)
-    const { data: invoices } = api.invoices.getByJobId.useQuery({ jobId: id })
 
     const [activeTab, setActiveTab] = useState('info')
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -76,12 +78,23 @@ export function JobDetail({ id }: { id: string }) {
     if (isLoadingJob) return <div className="p-8 text-center text-gray-500">Loading job details...</div>
     if (!job) return <div className="p-8 text-center text-gray-500">Job not found</div>
 
+    const assignedStaff = [
+        ...(job.job_assignments?.filter((a: any) => a.workers).map((a: any) => ({ ...a.workers, type: 'worker' as const, status: a.status })) || []),
+        ...(job.job_assignments?.filter((a: any) => a.contractors).map((a: any) => ({ ...a.contractors, type: 'contractor' as const, status: a.status })) || [])
+    ]
+
     const tabs = [
         { id: 'info', name: 'Job Info', icon: Briefcase },
+        { id: 'job-site', name: 'Job Site', icon: Building2 },
+        { id: 'customer', name: 'Customer', icon: User },
+        { id: 'schedule', name: 'Schedule', icon: Clock },
+        { id: 'workers', name: `Workers (${assignedStaff.length})`, icon: User },
         { id: 'checklists', name: `Checklists (${job.job_checklists?.length || 0})`, icon: CheckSquare },
         { id: 'attachments', name: 'Attachments', icon: Paperclip },
         { id: 'notes', name: 'Notes', icon: StickyNote },
-        { id: 'invoices', name: `Invoices (${invoices?.length || 0})`, icon: Receipt },
+        { id: 'invoices', name: `Invoices (${job.invoices?.length || 0})`, icon: Receipt },
+        { id: 'contracts', name: `Contracts (${job.customers?.contracts?.length || 0})`, icon: FileText },
+        { id: 'quotes', name: `Quotes (${job.customers?.quotes?.length || 0})`, icon: File },
     ]
 
     return (
@@ -147,7 +160,7 @@ export function JobDetail({ id }: { id: string }) {
 
                 {/* Tabs */}
                 <div className="mt-8 border-b border-gray-200">
-                    <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+                    <nav className="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
                         {tabs.map((tab) => (
                             <button
                                 key={tab.name}
@@ -156,7 +169,7 @@ export function JobDetail({ id }: { id: string }) {
                   ${activeTab === tab.id
                                         ? 'border-blue-500 text-blue-600'
                                         : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}
-                  group inline-flex items-center border-b-2 py-4 px-1 text-sm font-medium
+                  group inline-flex items-center border-b-2 py-4 px-1 text-sm font-medium whitespace-nowrap
                 `}
                             >
                                 <tab.icon
@@ -176,45 +189,153 @@ export function JobDetail({ id }: { id: string }) {
             {/* Tab Content */}
             <div className="space-y-6">
                 {activeTab === 'info' && (
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                        {/* Description */}
-                        <div className="lg:col-span-2 bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
-                            <h3 className="text-base font-semibold leading-7 text-gray-900 flex items-center">
-                                <FileText className="mr-2 h-5 w-5 text-blue-500" />
-                                Description
-                            </h3>
-                            <p className="mt-4 text-sm leading-6 text-gray-600 whitespace-pre-wrap">
-                                {job.description || 'No description provided.'}
-                            </p>
-                        </div>
+                    <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
+                        <h3 className="text-base font-semibold leading-7 text-gray-900 flex items-center">
+                            <FileText className="mr-2 h-5 w-5 text-blue-500" />
+                            Description
+                        </h3>
+                        <p className="mt-4 text-sm leading-6 text-gray-600 whitespace-pre-wrap">
+                            {job.description || 'No description provided.'}
+                        </p>
+                    </div>
+                )}
 
-                        {/* Assignments Sidebar */}
-                        <div className="lg:col-span-1 bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
-                            <h3 className="text-base font-semibold leading-7 text-gray-900">Assignments</h3>
-                            <ul className="mt-4 divide-y divide-gray-100">
-                                {job.job_assignments && job.job_assignments.length > 0 ? (
-                                    job.job_assignments.map((assignment: any) => (
-                                        <li key={assignment.id} className="flex items-center justify-between py-2">
-                                            <div className="flex items-center">
-                                                <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-600">
-                                                    {(assignment.workers?.first_name?.[0] || assignment.contractors?.company_name?.[0] || '?').toUpperCase()}
-                                                </div>
-                                                <div className="ml-3">
-                                                    <p className="text-sm font-medium text-gray-900">
-                                                        {assignment.workers
-                                                            ? `${assignment.workers.first_name} ${assignment.workers.last_name}`
-                                                            : assignment.contractors?.company_name}
-                                                    </p>
-                                                    <p className="text-xs text-gray-500 capitalize">{assignment.status}</p>
-                                                </div>
-                                            </div>
-                                        </li>
-                                    ))
-                                ) : (
-                                    <p className="text-sm text-gray-500">No workers assigned.</p>
-                                )}
-                            </ul>
+                {activeTab === 'job-site' && (
+                    <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
+                        <h3 className="text-base font-semibold leading-7 text-gray-900 flex items-center mb-4">
+                            <Building2 className="mr-2 h-5 w-5 text-blue-500" />
+                            Job Site Details
+                        </h3>
+                        {job.job_sites ? (
+                            <dl className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2">
+                                <div className="sm:col-span-1">
+                                    <dt className="text-sm font-medium text-gray-500">Site Name</dt>
+                                    <dd className="mt-1 text-sm text-gray-900">
+                                        <Link href={`/dashboard/job-sites/${job.job_sites.id}`} className="text-blue-600 hover:underline">
+                                            {job.job_sites.name}
+                                        </Link>
+                                    </dd>
+                                </div>
+                                <div className="sm:col-span-1">
+                                    <dt className="text-sm font-medium text-gray-500">Status</dt>
+                                    <dd className="mt-1 text-sm text-gray-900">{job.job_sites.is_active ? 'Active' : 'Inactive'}</dd>
+                                </div>
+                                <div className="sm:col-span-2">
+                                    <dt className="text-sm font-medium text-gray-500">Address</dt>
+                                    <dd className="mt-1 text-sm text-gray-900">
+                                        {job.job_sites.address}<br />
+                                        {job.job_sites.city}, {job.job_sites.state} {job.job_sites.postal_code}<br />
+                                        {job.job_sites.country}
+                                    </dd>
+                                </div>
+                            </dl>
+                        ) : (
+                            <p className="text-sm text-gray-500">No job site linked.</p>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === 'customer' && (
+                    <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
+                        <h3 className="text-base font-semibold leading-7 text-gray-900 flex items-center mb-4">
+                            <User className="mr-2 h-5 w-5 text-blue-500" />
+                            Customer Information
+                        </h3>
+                        {job.customers ? (
+                            <dl className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2">
+                                <div className="sm:col-span-1">
+                                    <dt className="text-sm font-medium text-gray-500">Customer Name</dt>
+                                    <dd className="mt-1 text-sm text-gray-900">
+                                        <Link href={`/dashboard/customers/${job.customers.id}`} className="text-blue-600 hover:underline">
+                                            {job.customers.business_name || job.customers.contact_name}
+                                        </Link>
+                                    </dd>
+                                </div>
+                                <div className="sm:col-span-1">
+                                    <dt className="text-sm font-medium text-gray-500">Contact Person</dt>
+                                    <dd className="mt-1 text-sm text-gray-900">{job.customers.contact_name}</dd>
+                                </div>
+                                <div className="sm:col-span-1">
+                                    <dt className="text-sm font-medium text-gray-500">Email</dt>
+                                    <dd className="mt-1 text-sm text-gray-900">{job.customers.email || '-'}</dd>
+                                </div>
+                                <div className="sm:col-span-1">
+                                    <dt className="text-sm font-medium text-gray-500">Phone</dt>
+                                    <dd className="mt-1 text-sm text-gray-900">{job.customers.phone || '-'}</dd>
+                                </div>
+                            </dl>
+                        ) : (
+                            <p className="text-sm text-gray-500">No customer linked.</p>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === 'schedule' && (
+                    <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
+                        <h3 className="text-base font-semibold leading-7 text-gray-900 flex items-center mb-4">
+                            <Clock className="mr-2 h-5 w-5 text-blue-500" />
+                            Schedule Details
+                        </h3>
+                        <dl className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2">
+                            <div className="sm:col-span-1">
+                                <dt className="text-sm font-medium text-gray-500">Start Time</dt>
+                                <dd className="mt-1 text-sm text-gray-900">
+                                    {job.start_time ? format(new Date(job.start_time), 'PPpp') : 'Unscheduled'}
+                                </dd>
+                            </div>
+                            <div className="sm:col-span-1">
+                                <dt className="text-sm font-medium text-gray-500">End Time</dt>
+                                <dd className="mt-1 text-sm text-gray-900">
+                                    {job.end_time ? format(new Date(job.end_time), 'PPpp') : 'Not set'}
+                                </dd>
+                            </div>
+                            <div className="sm:col-span-1">
+                                <dt className="text-sm font-medium text-gray-500">Priority</dt>
+                                <dd className="mt-1 text-sm text-gray-900 capitalize">{job.priority}</dd>
+                            </div>
+                            <div className="sm:col-span-1">
+                                <dt className="text-sm font-medium text-gray-500">Status</dt>
+                                <dd className="mt-1 text-sm text-gray-900 capitalize">{job.status.replace('_', ' ')}</dd>
+                            </div>
+                        </dl>
+                    </div>
+                )}
+
+                {activeTab === 'workers' && (
+                    <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">
+                        <div className="border-b border-gray-200 px-4 py-5 sm:px-6">
+                            <h3 className="text-base font-semibold leading-6 text-gray-900 flex items-center">
+                                <User className="mr-2 h-5 w-5 text-blue-500" />
+                                Assigned Workers
+                            </h3>
                         </div>
+                        <ul role="list" className="divide-y divide-gray-100">
+                            {assignedStaff.map((staff: any) => (
+                                <li key={staff.id} className="flex items-center justify-between gap-x-6 py-5 px-6 hover:bg-gray-50">
+                                    <div className="min-w-0">
+                                        <div className="flex items-start gap-x-3">
+                                            <p className="text-sm font-semibold leading-6 text-gray-900">
+                                                {staff.type === 'worker' ? `${staff.first_name} ${staff.last_name}` : staff.company_name}
+                                            </p>
+                                            <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                                                {staff.type === 'worker' ? 'Internal' : 'Contractor'}
+                                            </span>
+                                        </div>
+                                        <div className="mt-1 flex items-center gap-x-2 text-xs leading-5 text-gray-500">
+                                            <p className="truncate">{staff.type === 'worker' ? staff.role : staff.contact_name}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-none items-center gap-x-4">
+                                        <a href={`/dashboard/${staff.type === 'worker' ? 'workers' : 'contractors'}/${staff.id}`} className="hidden rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:block">
+                                            View
+                                        </a>
+                                    </div>
+                                </li>
+                            ))}
+                            {assignedStaff.length === 0 && (
+                                <li className="py-12 text-center text-gray-500">No workers assigned to this job.</li>
+                            )}
+                        </ul>
                     </div>
                 )}
 
@@ -271,7 +392,7 @@ export function JobDetail({ id }: { id: string }) {
                 {activeTab === 'invoices' && (
                     <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">
                         <ul role="list" className="divide-y divide-gray-100">
-                            {invoices?.map((invoice) => (
+                            {job.invoices?.map((invoice: any) => (
                                 <li key={invoice.id} className="flex items-center justify-between gap-x-6 py-5 px-6 hover:bg-gray-50">
                                     <div className="min-w-0">
                                         <div className="flex items-start gap-x-3">
@@ -291,8 +412,70 @@ export function JobDetail({ id }: { id: string }) {
                                     </div>
                                 </li>
                             ))}
-                            {(!invoices || invoices.length === 0) && (
+                            {(!job.invoices || job.invoices.length === 0) && (
                                 <li className="py-12 text-center text-gray-500">No invoices linked to this job.</li>
+                            )}
+                        </ul>
+                    </div>
+                )}
+
+                {activeTab === 'contracts' && (
+                    <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">
+                        <ul role="list" className="divide-y divide-gray-100">
+                            {job.customers?.contracts?.map((contract: any) => (
+                                <li key={contract.id} className="flex items-center justify-between gap-x-6 py-5 px-6 hover:bg-gray-50">
+                                    <div className="min-w-0">
+                                        <div className="flex items-start gap-x-3">
+                                            <p className="text-sm font-semibold leading-6 text-gray-900">{contract.name}</p>
+                                            <p className={`rounded-md whitespace-nowrap mt-0.5 px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${contract.status === 'active' ? 'text-green-700 bg-green-50 ring-green-600/20' : 'text-gray-600 bg-gray-50 ring-gray-500/10'}`}>
+                                                {contract.status}
+                                            </p>
+                                        </div>
+                                        <div className="mt-1 flex items-center gap-x-2 text-xs leading-5 text-gray-500">
+                                            <p className="truncate">
+                                                {new Date(contract.start_date).toLocaleDateString('en-GB')} - {new Date(contract.end_date).toLocaleDateString('en-GB')}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-none items-center gap-x-4">
+                                        <a href={`/dashboard/contracts/${contract.id}`} className="hidden rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:block">
+                                            View
+                                        </a>
+                                    </div>
+                                </li>
+                            ))}
+                            {(!job.customers?.contracts || job.customers.contracts.length === 0) && (
+                                <li className="py-12 text-center text-gray-500">No contracts found for this customer.</li>
+                            )}
+                        </ul>
+                    </div>
+                )}
+
+                {activeTab === 'quotes' && (
+                    <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">
+                        <ul role="list" className="divide-y divide-gray-100">
+                            {job.customers?.quotes?.map((quote: any) => (
+                                <li key={quote.id} className="flex items-center justify-between gap-x-6 py-5 px-6 hover:bg-gray-50">
+                                    <div className="min-w-0">
+                                        <div className="flex items-start gap-x-3">
+                                            <p className="text-sm font-semibold leading-6 text-gray-900">{quote.title}</p>
+                                            <p className={`rounded-md whitespace-nowrap mt-0.5 px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${quote.status === 'accepted' ? 'text-green-700 bg-green-50 ring-green-600/20' : 'text-gray-600 bg-gray-50 ring-gray-500/10'}`}>
+                                                {quote.status}
+                                            </p>
+                                        </div>
+                                        <div className="mt-1 flex items-center gap-x-2 text-xs leading-5 text-gray-500">
+                                            <p className="truncate">£{quote.total_amount?.toFixed(2) || '0.00'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-none items-center gap-x-4">
+                                        <a href={`/dashboard/quotes/${quote.id}`} className="hidden rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:block">
+                                            View
+                                        </a>
+                                    </div>
+                                </li>
+                            ))}
+                            {(!job.customers?.quotes || job.customers.quotes.length === 0) && (
+                                <li className="py-12 text-center text-gray-500">No quotes found for this customer.</li>
                             )}
                         </ul>
                     </div>

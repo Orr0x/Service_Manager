@@ -52,19 +52,24 @@ export const jobsRouter = createTRPCRouter({
                 .from('jobs')
                 .select(`
           *,
-          customers(business_name, contact_name),
-          job_sites(name, address),
+          customers(
+            id, business_name, contact_name, email, phone,
+            contracts(id, name, status, start_date, end_date),
+            quotes(id, quote_number, title, status, total_amount)
+          ),
+          job_sites(id, name, address, city, state, postal_code, country, is_active),
           job_assignments(
             id,
             status,
-            workers(first_name, last_name, email),
-            contractors(company_name, contact_name)
+            workers(id, first_name, last_name, email, role),
+            contractors(id, company_name, contact_name)
           ),
           job_checklists(
             id,
             items,
             checklists(name)
-          )
+          ),
+          invoices(id, invoice_number, status, total_amount, due_date)
         `)
                 .eq('id', input)
                 .eq('tenant_id', ctx.tenantId)

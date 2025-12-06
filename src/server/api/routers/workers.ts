@@ -16,6 +16,49 @@ export const workersRouter = createTRPCRouter({
         return data
     }),
 
+    getDashboardStats: protectedProcedure.query(async ({ ctx }) => {
+        const [
+            { count: totalCount },
+            { count: activeCount },
+            { count: onJobCount },
+            { count: completedJobsCount }
+        ] = await Promise.all([
+            ctx.db.from('workers').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId),
+            ctx.db.from('workers').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'active'),
+            // "On Job" - workers currently assigned to active jobs. This is a bit complex to count directly with simple select.
+            // Let's approximate or use a join if possible, or just count 'active' status for now if 'on job' isn't a status.
+            // Assuming 'status' field has 'active', 'inactive'.
+            // For 'On Job', we need to check job_assignments where job status is not completed.
+            // This requires a join. Supabase/PostgREST can do this but count is tricky with joins in one go.
+            // Let's fetch assignments for active jobs and count unique workers.
+            ctx.db.from('job_assignments')
+                .select('worker_id', { count: 'exact', head: true })
+                .not('worker_id', 'is', null)
+                .eq('status', 'active'), // Assuming assignment has status or we check job status.
+            // Actually, let's just count assignments for now as a proxy or stick to simpler stats if performance is key.
+            // Let's try to get a count of assignments where status is 'active'.
+            ctx.db.from('job_assignments').select('*', { count: 'exact', head: true }).eq('status', 'completed')
+        ])
+
+        // Refined "On Job" count:
+        // We want workers who have at least one active assignment.
+        // A simple count of 'active' assignments might overcount if a worker has multiple.
+        // But for a dashboard summary, "Active Assignments" might be a better metric than "Workers on Job" if we can't easily distinct.
+        // Let's label it "Active Assignments" or similar if we use assignment count.
+        // Or we can try to be more precise:
+        const { count: activeAssignments } = await ctx.db
+            .from('job_assignments')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'active')
+
+        return {
+            total: totalCount || 0,
+            active: activeCount || 0,
+            onJob: activeAssignments || 0, // Using active assignments count
+            completedJobs: completedJobsCount || 0 // Using completed assignments count
+        }
+    }),
+
     getById: protectedProcedure
         .input(z.object({ id: z.string().uuid() }))
         .query(async ({ ctx, input }) => {

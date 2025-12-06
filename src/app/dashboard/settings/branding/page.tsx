@@ -4,6 +4,8 @@ import { api } from '@/trpc/react'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { HexColorPicker } from 'react-colorful'
+import { createClient } from '@/lib/supabase/client'
+import { Upload } from 'lucide-react'
 
 export default function BrandingSettingsPage() {
     const router = useRouter()
@@ -22,6 +24,36 @@ export default function BrandingSettingsPage() {
     const [primaryColor, setPrimaryColor] = useState('#2563eb')
     const [secondaryColor, setSecondaryColor] = useState('#1e40af')
     const [logoUrl, setLogoUrl] = useState('')
+    const [isUploading, setIsUploading] = useState(false)
+    const supabase = createClient()
+
+    const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        setIsUploading(true)
+        try {
+            const fileExt = file.name.split('.').pop()
+            const fileName = `logo-${Math.random().toString(36).substring(2)}.${fileExt}`
+
+            const { error: uploadError } = await supabase.storage
+                .from('branding')
+                .upload(fileName, file)
+
+            if (uploadError) throw uploadError
+
+            const { data } = supabase.storage
+                .from('branding')
+                .getPublicUrl(fileName)
+
+            setLogoUrl(data.publicUrl)
+        } catch (error) {
+            console.error('Error uploading logo:', error)
+            alert('Failed to upload logo')
+        } finally {
+            setIsUploading(false)
+        }
+    }
 
     useEffect(() => {
         if (settings?.branding) {
@@ -74,16 +106,53 @@ export default function BrandingSettingsPage() {
                     </div>
 
                     <div>
-                        <label htmlFor="logoUrl" className="block text-sm font-medium leading-6 text-gray-900">
-                            Logo URL
+                        <label className="block text-sm font-medium leading-6 text-gray-900">
+                            Logo
                         </label>
+                        <div className="mt-2 flex items-center gap-x-3">
+                            {logoUrl ? (
+                                <img src={logoUrl} alt="Logo" className="h-12 w-12 rounded-lg object-contain bg-gray-50 border border-gray-200" />
+                            ) : (
+                                <div className="h-12 w-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400">
+                                    <Upload className="h-6 w-6" />
+                                </div>
+                            )}
+                            <div className="relative">
+                                <input
+                                    type="file"
+                                    id="logo-upload"
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={handleLogoUpload}
+                                    disabled={isUploading}
+                                />
+                                <label
+                                    htmlFor="logo-upload"
+                                    className="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 cursor-pointer"
+                                >
+                                    {isUploading ? 'Uploading...' : 'Change'}
+                                </label>
+                            </div>
+                            {logoUrl && (
+                                <button
+                                    type="button"
+                                    onClick={() => setLogoUrl('')}
+                                    className="text-sm font-semibold text-red-600 hover:text-red-500"
+                                >
+                                    Remove
+                                </button>
+                            )}
+                        </div>
                         <div className="mt-2">
+                            <label htmlFor="logoUrl" className="block text-xs font-medium text-gray-500">
+                                Or enter URL manually
+                            </label>
                             <input
                                 type="text"
                                 id="logoUrl"
                                 value={logoUrl}
                                 onChange={(e) => setLogoUrl(e.target.value)}
-                                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                                className="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                                 placeholder="https://example.com/logo.png"
                             />
                         </div>

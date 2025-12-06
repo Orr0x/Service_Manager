@@ -20,6 +20,27 @@ export const contractsRouter = createTRPCRouter({
         return data
     }),
 
+    getDashboardStats: protectedProcedure.query(async ({ ctx }) => {
+        const [
+            { count: totalCount },
+            { count: activeCount },
+            { count: expiredCount },
+            { count: draftCount }
+        ] = await Promise.all([
+            ctx.db.from('contracts').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId),
+            ctx.db.from('contracts').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'active'),
+            ctx.db.from('contracts').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'expired'),
+            ctx.db.from('contracts').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'draft')
+        ])
+
+        return {
+            total: totalCount || 0,
+            active: activeCount || 0,
+            expired: expiredCount || 0,
+            draft: draftCount || 0
+        }
+    }),
+
     getById: protectedProcedure
         .input(z.object({ id: z.string().uuid() }))
         .query(async ({ ctx, input }) => {

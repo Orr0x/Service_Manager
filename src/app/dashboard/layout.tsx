@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { signOut } from '@/actions/auth'
+import { UserNav } from '@/components/dashboard/user-nav'
 import {
     LayoutDashboard,
     Briefcase,
@@ -19,7 +20,8 @@ import {
     Bell,
     Settings,
     Scale,
-    PlayCircle
+    PlayCircle,
+    Wrench
 } from 'lucide-react'
 import { ThemeProvider } from '@/components/theme-provider'
 
@@ -39,28 +41,28 @@ export default async function DashboardLayout({
     }
 
     // Fetch tenant info and settings
+    // We fetch tenant_settings directly to ensure we get the latest data
+    const { data: settingsData } = await supabase
+        .from('tenant_settings')
+        .select('branding, terminology, navigation')
+        .eq('tenant_id', user.user_metadata.tenant_id)
+        .single()
+
+    // Also fetch tenant name for fallback
     const { data: tenantData } = await supabase
         .from('tenants')
-        .select(`
-            name,
-            tenant_settings (
-                branding,
-                terminology,
-                navigation
-            )
-        `)
+        .select('name')
         .eq('id', user.user_metadata.tenant_id)
         .single()
 
-    const settings = (tenantData?.tenant_settings?.[0] || {}) as any
-    const branding = (settings.branding as any) || {
+    const branding = (settingsData?.branding as any) || {
         primary_color: '#2563eb',
         secondary_color: '#1e40af',
         company_name: tenantData?.name || 'Service Manager',
         logo_url: null
     }
-    const terminology = (settings.terminology as Record<string, string>) || {}
-    const navSettings = (settings.navigation as Record<string, { enabled: boolean, label: string }>) || {}
+    const terminology = (settingsData?.terminology as Record<string, string>) || {}
+    const navSettings = (settingsData?.navigation as Record<string, { enabled: boolean, label: string }>) || {}
 
     const defaultNavigation = [
         { key: 'dashboard', name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -68,14 +70,15 @@ export default async function DashboardLayout({
         { key: 'job_sites', name: 'Job Sites', href: '/dashboard/job-sites', icon: Building2 },
         { key: 'contracts', name: 'Contracts', href: '/dashboard/contracts', icon: FileText },
         { key: 'quotes', name: 'Quotes', href: '/dashboard/quotes', icon: FileCheck },
+        { key: 'invoices', name: 'Invoices', href: '/dashboard/invoices', icon: Receipt },
         { key: 'checklists', name: 'Checklists', href: '/dashboard/checklists', icon: ClipboardCheck },
         { key: 'workers', name: 'Internal Workers', href: '/dashboard/workers', icon: HardHat },
         { key: 'contractors', name: 'External Contractors', href: '/dashboard/contractors', icon: Briefcase },
         { key: 'jobs', name: 'Jobs', href: '/dashboard/jobs', icon: PlayCircle },
         { key: 'schedule', name: 'Scheduling', href: '/dashboard/schedule', icon: CalendarDays },
-        { key: 'invoices', name: 'Invoices', href: '/dashboard/invoices', icon: Receipt },
-        { key: 'legals', name: 'Legals', href: '/dashboard/legals', icon: Scale },
-        { key: 'settings', name: 'Settings', href: '/dashboard/settings', icon: Settings },
+        { key: 'services', name: 'Services', href: '/dashboard/services', icon: Wrench },
+        { key: 'certification', name: 'Certification', href: '/dashboard/certification', icon: Award },
+        { key: 'settings', name: 'App Settings', href: '/dashboard/settings', icon: Settings },
     ]
 
     const navigation = defaultNavigation
@@ -87,12 +90,6 @@ export default async function DashboardLayout({
             ...item,
             name: navSettings[item.key]?.label || terminology[item.key] || item.name
         }))
-
-
-
-    // ... (imports)
-
-    // ... (inside DashboardLayout)
 
     return (
         <ThemeProvider branding={branding}>
@@ -126,15 +123,7 @@ export default async function DashboardLayout({
                     </nav>
 
                     <div className="border-t p-4">
-                        <div className="flex items-center">
-                            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600">
-                                {user.email?.substring(0, 2).toUpperCase()}
-                            </div>
-                            <div className="ml-3">
-                                <p className="text-sm font-medium text-gray-700">Admin</p>
-                                <p className="text-xs text-gray-500">{user.email}</p>
-                            </div>
-                        </div>
+                        <UserNav user={user} />
                     </div>
                 </div>
 

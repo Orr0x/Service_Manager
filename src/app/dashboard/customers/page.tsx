@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { api, HydrateClient } from '@/trpc/server'
-import { Users, FileText, Wrench, Building2, Plus } from 'lucide-react'
+import { Users, FileText, Building2, Plus, Briefcase } from 'lucide-react'
 import { CustomerList } from './customer-list'
 
 export default async function CustomersPage() {
     void api.customers.getAll.prefetch()
+    const stats = await api.customers.getDashboardStats()
 
     return (
         <HydrateClient>
@@ -39,7 +40,7 @@ export default async function CustomersPage() {
                                     <dl>
                                         <dt className="truncate text-sm font-medium text-gray-500">TOTAL CUSTOMERS</dt>
                                         <dd>
-                                            <div className="text-2xl font-bold text-blue-600">0</div>
+                                            <div className="text-2xl font-bold text-blue-600">{stats.customers}</div>
                                         </dd>
                                     </dl>
                                 </div>
@@ -47,7 +48,7 @@ export default async function CustomersPage() {
                         </div>
                     </div>
 
-                    {/* Cleaning Contracts */}
+                    {/* Total Contracts */}
                     <div className="overflow-hidden rounded-lg bg-white shadow">
                         <div className="p-5">
                             <div className="flex items-center">
@@ -56,9 +57,9 @@ export default async function CustomersPage() {
                                 </div>
                                 <div className="ml-5 w-0 flex-1">
                                     <dl>
-                                        <dt className="truncate text-sm font-medium text-gray-500">CLEANING CONTRACTS</dt>
+                                        <dt className="truncate text-sm font-medium text-gray-500">TOTAL CONTRACTS</dt>
                                         <dd>
-                                            <div className="text-2xl font-bold text-blue-600">0</div>
+                                            <div className="text-2xl font-bold text-blue-600">{stats.contracts}</div>
                                         </dd>
                                     </dl>
                                 </div>
@@ -66,26 +67,7 @@ export default async function CustomersPage() {
                         </div>
                     </div>
 
-                    {/* Maintenance Contracts */}
-                    <div className="overflow-hidden rounded-lg bg-white shadow">
-                        <div className="p-5">
-                            <div className="flex items-center">
-                                <div className="flex-shrink-0">
-                                    <Wrench className="h-6 w-6 text-blue-400" aria-hidden="true" />
-                                </div>
-                                <div className="ml-5 w-0 flex-1">
-                                    <dl>
-                                        <dt className="truncate text-sm font-medium text-gray-500">MAINTENANCE CONTRACTS</dt>
-                                        <dd>
-                                            <div className="text-2xl font-bold text-blue-600">0</div>
-                                        </dd>
-                                    </dl>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Properties */}
+                    {/* Total Sites */}
                     <div className="overflow-hidden rounded-lg bg-white shadow">
                         <div className="p-5">
                             <div className="flex items-center">
@@ -94,9 +76,28 @@ export default async function CustomersPage() {
                                 </div>
                                 <div className="ml-5 w-0 flex-1">
                                     <dl>
-                                        <dt className="truncate text-sm font-medium text-gray-500">PROPERTIES</dt>
+                                        <dt className="truncate text-sm font-medium text-gray-500">TOTAL SITES</dt>
                                         <dd>
-                                            <div className="text-2xl font-bold text-blue-600">0</div>
+                                            <div className="text-2xl font-bold text-blue-600">{stats.sites}</div>
+                                        </dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Total Jobs */}
+                    <div className="overflow-hidden rounded-lg bg-white shadow">
+                        <div className="p-5">
+                            <div className="flex items-center">
+                                <div className="flex-shrink-0">
+                                    <Briefcase className="h-6 w-6 text-blue-400" aria-hidden="true" />
+                                </div>
+                                <div className="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt className="truncate text-sm font-medium text-gray-500">TOTAL JOBS</dt>
+                                        <dd>
+                                            <div className="text-2xl font-bold text-blue-600">{stats.jobs}</div>
                                         </dd>
                                     </dl>
                                 </div>

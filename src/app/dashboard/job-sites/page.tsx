@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { api, HydrateClient } from '@/trpc/server'
-import { Building2, Plus } from 'lucide-react'
+import { Building2, Plus, Briefcase, FileText, CheckSquare } from 'lucide-react'
 import { JobSiteList } from './job-site-list'
 
 export default async function JobSitesPage() {
     void api.jobSites.getAll.prefetch()
+    const stats = await api.jobSites.getDashboardStats()
 
     return (
         <HydrateClient>
@@ -24,6 +25,85 @@ export default async function JobSitesPage() {
                         <Plus className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
                         Add Job Site
                     </Link>
+                </div>
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {/* Total Job Sites */}
+                    <div className="overflow-hidden rounded-lg bg-white shadow">
+                        <div className="p-5">
+                            <div className="flex items-center">
+                                <div className="flex-shrink-0">
+                                    <Building2 className="h-6 w-6 text-blue-400" aria-hidden="true" />
+                                </div>
+                                <div className="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt className="truncate text-sm font-medium text-gray-500">TOTAL JOB SITES</dt>
+                                        <dd>
+                                            <div className="text-2xl font-bold text-blue-600">{stats.sites}</div>
+                                        </dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Total Jobs */}
+                    <div className="overflow-hidden rounded-lg bg-white shadow">
+                        <div className="p-5">
+                            <div className="flex items-center">
+                                <div className="flex-shrink-0">
+                                    <Briefcase className="h-6 w-6 text-blue-400" aria-hidden="true" />
+                                </div>
+                                <div className="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt className="truncate text-sm font-medium text-gray-500">TOTAL JOBS</dt>
+                                        <dd>
+                                            <div className="text-2xl font-bold text-blue-600">{stats.jobs}</div>
+                                        </dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Total Contracts */}
+                    <div className="overflow-hidden rounded-lg bg-white shadow">
+                        <div className="p-5">
+                            <div className="flex items-center">
+                                <div className="flex-shrink-0">
+                                    <FileText className="h-6 w-6 text-blue-400" aria-hidden="true" />
+                                </div>
+                                <div className="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt className="truncate text-sm font-medium text-gray-500">TOTAL CONTRACTS</dt>
+                                        <dd>
+                                            <div className="text-2xl font-bold text-blue-600">{stats.contracts}</div>
+                                        </dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Total Checklists */}
+                    <div className="overflow-hidden rounded-lg bg-white shadow">
+                        <div className="p-5">
+                            <div className="flex items-center">
+                                <div className="flex-shrink-0">
+                                    <CheckSquare className="h-6 w-6 text-blue-400" aria-hidden="true" />
+                                </div>
+                                <div className="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt className="truncate text-sm font-medium text-gray-500">TOTAL CHECKLISTS</dt>
+                                        <dd>
+                                            <div className="text-2xl font-bold text-blue-600">{stats.checklists}</div>
+                                        </dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Search Bar */}

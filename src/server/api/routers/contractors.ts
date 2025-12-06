@@ -16,6 +16,37 @@ export const contractorsRouter = createTRPCRouter({
         return data
     }),
 
+    getDashboardStats: protectedProcedure.query(async ({ ctx }) => {
+        const [
+            { count: totalCount },
+            { count: activeCount },
+            { count: activeJobsCount },
+            { count: completedJobsCount }
+        ] = await Promise.all([
+            ctx.db.from('contractors').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId),
+            ctx.db.from('contractors').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'active'),
+            // Active Jobs: Contractors assigned to active jobs
+            // Similar logic to workers, we count assignments or unique contractors on active jobs
+            // Let's count active assignments for contractors
+            ctx.db.from('job_assignments')
+                .select('contractor_id', { count: 'exact', head: true })
+                .not('contractor_id', 'is', null)
+                .eq('status', 'active'),
+            // Completed Jobs: Contractors assigned to completed jobs
+            ctx.db.from('job_assignments')
+                .select('contractor_id', { count: 'exact', head: true })
+                .not('contractor_id', 'is', null)
+                .eq('status', 'completed')
+        ])
+
+        return {
+            total: totalCount || 0,
+            active: activeCount || 0,
+            activeJobs: activeJobsCount || 0,
+            completedJobs: completedJobsCount || 0
+        }
+    }),
+
     getById: protectedProcedure
         .input(z.object({ id: z.string().uuid() }))
         .query(async ({ ctx, input }) => {

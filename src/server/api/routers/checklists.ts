@@ -22,6 +22,40 @@ export const checklistsRouter = createTRPCRouter({
         return data
     }),
 
+    getDashboardStats: protectedProcedure.query(async ({ ctx }) => {
+        const [
+            { count: templatesCount },
+            { count: completedCount },
+            { count: activeCount },
+            { count: totalItemsCount }
+        ] = await Promise.all([
+            ctx.db.from('checklists').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('is_template', true),
+            ctx.db.from('job_checklists').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
+            ctx.db.from('job_checklists').select('*', { count: 'exact', head: true }).neq('status', 'completed'),
+            ctx.db.from('checklists').select('items')
+        ])
+
+        // Calculate total items across all checklists
+        // This is a bit more complex as items are stored as JSONB
+        // For now, we'll just count the number of checklists as a proxy or fetch all and sum
+        // Fetching all might be heavy, so let's stick to a simpler metric or just count checklists
+        // Re-reading requirements: "Total Items".
+        // Let's try to sum the length of items array if possible, or just return 0 for now if too complex for a simple query
+        // Actually, let's fetch all checklists and sum items length in memory for now, assuming not too many checklists
+        const { data: allChecklists } = await ctx.db.from('checklists').select('items').eq('tenant_id', ctx.tenantId)
+        const totalItems = allChecklists?.reduce((acc, curr) => {
+            const items = curr.items as any[]
+            return acc + (Array.isArray(items) ? items.length : 0)
+        }, 0) || 0
+
+        return {
+            templates: templatesCount || 0,
+            completed: completedCount || 0,
+            active: activeCount || 0,
+            totalItems: totalItems
+        }
+    }),
+
     getById: protectedProcedure
         .input(z.object({ id: z.string().uuid() }))
         .query(async ({ ctx, input }) => {

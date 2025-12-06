@@ -45,6 +45,27 @@ export const jobsRouter = createTRPCRouter({
             return data
         }),
 
+    getDashboardStats: protectedProcedure.query(async ({ ctx }) => {
+        const [
+            { count: totalCount },
+            { count: inProgressCount },
+            { count: scheduledCount },
+            { count: completedCount }
+        ] = await Promise.all([
+            ctx.db.from('jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId),
+            ctx.db.from('jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'in_progress'),
+            ctx.db.from('jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'scheduled'),
+            ctx.db.from('jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'completed')
+        ])
+
+        return {
+            total: totalCount || 0,
+            inProgress: inProgressCount || 0,
+            scheduled: scheduledCount || 0,
+            completed: completedCount || 0
+        }
+    }),
+
     getById: protectedProcedure
         .input(z.string())
         .query(async ({ ctx, input }) => {

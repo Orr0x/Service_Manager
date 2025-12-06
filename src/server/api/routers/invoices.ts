@@ -30,6 +30,27 @@ export const invoicesRouter = createTRPCRouter({
         return data
     }),
 
+    getDashboardStats: protectedProcedure.query(async ({ ctx }) => {
+        const [
+            { count: totalCount },
+            { count: paidCount },
+            { count: overdueCount },
+            { count: draftCount }
+        ] = await Promise.all([
+            ctx.db.from('invoices').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId),
+            ctx.db.from('invoices').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'paid'),
+            ctx.db.from('invoices').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'overdue'),
+            ctx.db.from('invoices').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'draft')
+        ])
+
+        return {
+            total: totalCount || 0,
+            paid: paidCount || 0,
+            overdue: overdueCount || 0,
+            draft: draftCount || 0
+        }
+    }),
+
     getById: protectedProcedure
         .input(z.object({ id: z.string().uuid() }))
         .query(async ({ ctx, input }) => {

@@ -56,7 +56,7 @@ export function ChecklistList() {
                                 )}
                             </div>
                             <div className="mt-1 text-xs leading-5 text-gray-500">
-                                Created {new Date(checklist.created_at).toLocaleDateString()}
+                                Created {new Date(checklist.created_at).toLocaleDateString('en-GB')}
                             </div>
                         </div>
                         <svg className="h-5 w-5 flex-none text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

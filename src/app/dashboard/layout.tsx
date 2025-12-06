@@ -73,7 +73,7 @@ export default async function DashboardLayout({
         { key: 'contractors', name: 'External Contractors', href: '/dashboard/contractors', icon: Briefcase },
         { key: 'jobs', name: 'Jobs', href: '/dashboard/jobs', icon: PlayCircle },
         { key: 'schedule', name: 'Scheduling', href: '/dashboard/schedule', icon: CalendarDays },
-        { key: 'financials', name: 'Financials', href: '/dashboard/financials', icon: CreditCard },
+        { key: 'invoices', name: 'Invoices', href: '/dashboard/invoices', icon: Receipt },
         { key: 'legals', name: 'Legals', href: '/dashboard/legals', icon: Scale },
         { key: 'settings', name: 'Settings', href: '/dashboard/settings', icon: Settings },
     ]

@@ -50,7 +50,7 @@ export function InvoiceList() {
                                 </p>
                                 <span className="text-gray-300">|</span>
                                 <Calendar className="h-4 w-4 text-gray-400" />
-                                <span className="truncate">Due {new Date(invoice.due_date).toLocaleDateString()}</span>
+                                <span className="truncate">Due {new Date(invoice.due_date).toLocaleDateString('en-GB')}</span>
                             </div>
                         </div>
                     </div>
@@ -59,9 +59,9 @@ export function InvoiceList() {
                             <p className="text-sm leading-6 text-gray-900">£{Number(invoice.total_amount).toFixed(2)}</p>
                             <div className="mt-1 flex items-center gap-x-1.5 text-xs leading-5 text-gray-500">
                                 <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${invoice.status === 'paid' ? 'bg-green-50 text-green-700 ring-green-600/20' :
-                                        invoice.status === 'overdue' ? 'bg-red-50 text-red-700 ring-red-600/20' :
-                                            invoice.status === 'sent' ? 'bg-blue-50 text-blue-700 ring-blue-600/20' :
-                                                'bg-gray-50 text-gray-600 ring-gray-500/10'
+                                    invoice.status === 'overdue' ? 'bg-red-50 text-red-700 ring-red-600/20' :
+                                        invoice.status === 'sent' ? 'bg-blue-50 text-blue-700 ring-blue-600/20' :
+                                            'bg-gray-50 text-gray-600 ring-gray-500/10'
                                     }`}>
                                     {invoice.status.toUpperCase()}
                                 </span>

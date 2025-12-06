@@ -77,6 +77,240 @@ export const jobsRouter = createTRPCRouter({
             return data
         }),
 
+    getByCustomerId: protectedProcedure
+        .input(z.object({ customerId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            const { data, error } = await ctx.db
+                .from('jobs')
+                .select(`
+          *,
+          job_sites(name, address),
+          job_assignments(
+            id,
+            status,
+            workers(first_name, last_name),
+            contractors(company_name, contact_name)
+          )
+        `)
+                .eq('customer_id', input.customerId)
+                .eq('tenant_id', ctx.tenantId)
+                .order('created_at', { ascending: false })
+
+            if (error) {
+                throw new Error(`Failed to fetch jobs for customer: ${error.message}`)
+            }
+
+            return data
+        }),
+
+    getByJobSiteId: protectedProcedure
+        .input(z.object({ jobSiteId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            const { data, error } = await ctx.db
+                .from('jobs')
+                .select(`
+          *,
+          customers(business_name, contact_name),
+          job_assignments(
+            id,
+            status,
+            workers(first_name, last_name),
+            contractors(company_name, contact_name)
+          )
+        `)
+                .eq('job_site_id', input.jobSiteId)
+                .eq('tenant_id', ctx.tenantId)
+                .order('created_at', { ascending: false })
+
+            if (error) {
+                throw new Error(`Failed to fetch jobs for job site: ${error.message}`)
+            }
+
+            return data
+        }),
+
+    getByContractId: protectedProcedure
+        .input(z.object({ contractId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            // First fetch the contract to get customer_id and job_site_id
+            const { data: contract, error: contractError } = await ctx.db
+                .from('contracts')
+                .select('customer_id, job_site_id')
+                .eq('id', input.contractId)
+                .single()
+
+            if (contractError) {
+                throw new Error(`Failed to fetch contract details: ${contractError.message}`)
+            }
+
+            let query = ctx.db
+                .from('jobs')
+                .select(`
+          *,
+          customers(business_name, contact_name),
+          job_assignments(
+            id,
+            status,
+            workers(first_name, last_name),
+            contractors(company_name, contact_name)
+          )
+        `)
+                .eq('customer_id', contract.customer_id)
+                .eq('tenant_id', ctx.tenantId)
+                .order('created_at', { ascending: false })
+
+            if (contract.job_site_id) {
+                query = query.eq('job_site_id', contract.job_site_id)
+            }
+
+            const { data, error } = await query
+
+            if (error) {
+                throw new Error(`Failed to fetch jobs for contract: ${error.message}`)
+            }
+
+            return data
+        }),
+
+    getByQuoteId: protectedProcedure
+        .input(z.object({ quoteId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            // First fetch the quote to get customer_id and job_site_id
+            const { data: quote, error: quoteError } = await ctx.db
+                .from('quotes')
+                .select('customer_id, job_site_id')
+                .eq('id', input.quoteId)
+                .single()
+
+            if (quoteError) {
+                throw new Error(`Failed to fetch quote details: ${quoteError.message}`)
+            }
+
+            let query = ctx.db
+                .from('jobs')
+                .select(`
+          *,
+          customers(business_name, contact_name),
+          job_assignments(
+            id,
+            status,
+            workers(first_name, last_name),
+            contractors(company_name, contact_name)
+          )
+        `)
+                .eq('customer_id', quote.customer_id)
+                .eq('tenant_id', ctx.tenantId)
+                .order('created_at', { ascending: false })
+
+            if (quote.job_site_id) {
+                query = query.eq('job_site_id', quote.job_site_id)
+            }
+
+            const { data, error } = await query
+
+            if (error) {
+                throw new Error(`Failed to fetch jobs for quote: ${error.message}`)
+            }
+
+            return data
+        }),
+
+    getByWorkerId: protectedProcedure
+        .input(z.object({ workerId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            const { data, error } = await ctx.db
+                .from('jobs')
+                .select(`
+          *,
+          customers(business_name, contact_name),
+          job_sites(name, address),
+          job_assignments!inner(worker_id)
+        `)
+                .eq('job_assignments.worker_id', input.workerId)
+                .eq('tenant_id', ctx.tenantId)
+                .order('created_at', { ascending: false })
+
+            if (error) {
+                throw new Error(`Failed to fetch jobs for worker: ${error.message}`)
+            }
+
+            return data
+        }),
+
+    getByContractorId: protectedProcedure
+        .input(z.object({ contractorId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            const { data, error } = await ctx.db
+                .from('jobs')
+                .select(`
+          *,
+          customers(business_name, contact_name),
+          job_sites(name, address),
+          job_assignments!inner(contractor_id)
+        `)
+                .eq('job_assignments.contractor_id', input.contractorId)
+                .eq('tenant_id', ctx.tenantId)
+                .order('created_at', { ascending: false })
+
+            if (error) {
+                throw new Error(`Failed to fetch jobs for contractor: ${error.message}`)
+            }
+
+            return data
+        }),
+
+    getByChecklistId: protectedProcedure
+        .input(z.object({ checklistId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            // 1. Get job IDs that use this checklist template
+            const { data: jobChecklists, error: checklistError } = await ctx.db
+                .from('job_checklists')
+                .select('job_id')
+                .eq('checklist_template_id', input.checklistId)
+
+            if (checklistError) {
+                throw new Error(`Failed to fetch job checklists: ${checklistError.message}`)
+            }
+
+            if (!jobChecklists || jobChecklists.length === 0) {
+                return []
+            }
+
+            const jobIds = jobChecklists.map(jc => jc.job_id)
+
+            // 2. Fetch jobs with these IDs
+            const { data, error } = await ctx.db
+                .from('jobs')
+                .select(`
+          *,
+          customers(
+            id, business_name, contact_name, email, phone,
+            contracts(id, name, status, start_date, end_date),
+            quotes(
+              id, quote_number, title, status, total_amount,
+              invoices(id, invoice_number, status, total_amount, due_date)
+            )
+          ),
+          job_sites(id, name, address, city, is_active),
+          job_assignments(
+            id,
+            status,
+            workers(first_name, last_name, role),
+            contractors(company_name, contact_name)
+          ),
+          invoices(id, invoice_number, status, total_amount, due_date)
+        `)
+                .in('id', jobIds)
+                .eq('tenant_id', ctx.tenantId)
+                .order('created_at', { ascending: false })
+
+            if (error) {
+                throw new Error(`Failed to fetch jobs for checklist: ${error.message}`)
+            }
+
+            return data
+        }),
+
     create: protectedProcedure
         .input(z.object({
             customerId: z.string(),

@@ -114,4 +114,142 @@ export const checklistsRouter = createTRPCRouter({
 
             return { success: true }
         }),
+
+    getByJobSiteId: protectedProcedure
+        .input(z.object({ jobSiteId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            // 1. Get jobs for the site
+            const { data: jobs, error: jobsError } = await ctx.db
+                .from('jobs')
+                .select('id')
+                .eq('job_site_id', input.jobSiteId)
+                .eq('tenant_id', ctx.tenantId)
+
+            if (jobsError) {
+                throw new Error(`Failed to fetch jobs for site: ${jobsError.message}`)
+            }
+
+            if (!jobs || jobs.length === 0) {
+                return []
+            }
+
+            const jobIds = jobs.map(j => j.id)
+
+            // 2. Get checklists for these jobs
+            const { data, error } = await ctx.db
+                .from('job_checklists')
+                .select(`
+          *,
+          checklists(name, description),
+          jobs(title, job_site_id)
+        `)
+                .in('job_id', jobIds)
+
+            if (error) {
+                throw new Error(`Failed to fetch checklists for job site: ${error.message}`)
+            }
+
+            return data.map((item: any) => ({
+                ...item,
+                checklist: item.checklists,
+                job: item.jobs,
+            }))
+        }),
+
+    getByContractId: protectedProcedure
+        .input(z.object({ contractId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            // First get the contract to find the job site
+            const { data: contract, error: contractError } = await ctx.db
+                .from('contracts')
+                .select('job_site_id')
+                .eq('id', input.contractId)
+                .single()
+
+            if (contractError || !contract || !contract.job_site_id) {
+                return []
+            }
+
+            // Get jobs for the site
+            const { data: jobs, error: jobsError } = await ctx.db
+                .from('jobs')
+                .select('id')
+                .eq('job_site_id', contract.job_site_id)
+                .eq('tenant_id', ctx.tenantId)
+
+            if (jobsError || !jobs || jobs.length === 0) {
+                return []
+            }
+
+            const jobIds = jobs.map(j => j.id)
+
+            // Get checklists for these jobs
+            const { data, error } = await ctx.db
+                .from('job_checklists')
+                .select(`
+          *,
+          checklists(name, description),
+          jobs(title, job_site_id)
+        `)
+                .in('job_id', jobIds)
+
+            if (error) {
+                throw new Error(`Failed to fetch checklists for contract: ${error.message}`)
+            }
+
+            return data.map((item: any) => ({
+                ...item,
+                checklist: item.checklists,
+                job: item.jobs,
+            }))
+        }),
+
+    getByQuoteId: protectedProcedure
+        .input(z.object({ quoteId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            // First get the quote to find the job site
+            const { data: quote, error: quoteError } = await ctx.db
+                .from('quotes')
+                .select('job_site_id')
+                .eq('id', input.quoteId)
+                .single()
+
+            if (quoteError || !quote || !quote.job_site_id) {
+                return []
+            }
+
+            // Get jobs for the site first
+            const { data: jobs, error: jobsError } = await ctx.db
+                .from('jobs')
+                .select('id')
+                .eq('job_site_id', quote.job_site_id)
+                .eq('tenant_id', ctx.tenantId)
+
+            if (jobsError || !jobs || jobs.length === 0) {
+                return []
+            }
+
+            const jobIds = jobs.map(j => j.id)
+
+            // Then fetch checklists for these jobs
+            const { data, error } = await ctx.db
+                .from('job_checklists')
+                .select(`
+          *,
+          checklists(name, description),
+          jobs(title, job_site_id)
+        `)
+                .in('job_id', jobIds)
+
+            if (error) {
+                console.error('Error fetching checklists for quote:', error)
+                throw new Error(`Failed to fetch checklists for quote: ${error.message}`)
+            }
+
+            return data.map((item: any) => ({
+                ...item,
+                checklist: item.checklists,
+                job: item.jobs,
+            }))
+        }),
 })

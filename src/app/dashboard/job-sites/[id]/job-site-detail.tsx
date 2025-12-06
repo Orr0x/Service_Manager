@@ -1,40 +1,54 @@
 'use client'
 
 import { api } from '@/trpc/react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { ArrowLeft, Briefcase, Calendar, FileText, MapPin, Receipt, User, Trash2, Building2, Edit, ClipboardList } from 'lucide-react'
+import {
+    ArrowLeft,
+    MapPin,
+    User,
+    Building2,
+    Edit,
+    Trash2,
+    Briefcase,
+    FileText,
+    Receipt,
+    File,
+    ClipboardList
+} from 'lucide-react'
+import Link from 'next/link'
 
-export function ContractDetail({ id }: { id: string }) {
+export function JobSiteDetail({ id }: { id: string }) {
     const router = useRouter()
-    const { data: contract, isLoading: isLoadingContract } = api.contracts.getById.useQuery({ id })
-    const { data: jobs } = api.jobs.getByContractId.useQuery({ contractId: id })
-    const { data: invoices } = api.invoices.getByContractId.useQuery({ contractId: id })
-    const { data: workers } = api.workers.getByContractId.useQuery({ contractId: id })
-    const { data: contractors } = api.contractors.getByContractId.useQuery({ contractId: id })
-    const { data: checklists } = api.checklists.getByContractId.useQuery({ contractId: id })
+    const { data: jobSite, isLoading: isLoadingSite } = api.jobSites.getById.useQuery({ id })
+    const { data: jobs } = api.jobs.getByJobSiteId.useQuery({ jobSiteId: id })
+    const { data: contracts } = api.contracts.getByJobSiteId.useQuery({ jobSiteId: id })
+    const { data: invoices } = api.invoices.getByJobSiteId.useQuery({ jobSiteId: id })
+    const { data: quotes } = api.quotes.getByJobSiteId.useQuery({ jobSiteId: id })
+    const { data: workers } = api.workers.getByJobSiteId.useQuery({ jobSiteId: id })
+    const { data: contractors } = api.contractors.getByJobSiteId.useQuery({ jobSiteId: id })
+    const { data: checklists } = api.checklists.getByJobSiteId.useQuery({ jobSiteId: id })
 
     const [activeTab, setActiveTab] = useState('info')
 
-    const deleteContract = api.contracts.delete.useMutation({
+    const deleteJobSite = api.jobSites.delete.useMutation({
         onSuccess: () => {
-            router.push('/dashboard/contracts')
+            router.push('/dashboard/job-sites')
             router.refresh()
         },
     })
 
-    if (isLoadingContract) {
-        return <div className="p-8 text-center text-gray-500">Loading contract details...</div>
+    if (isLoadingSite) {
+        return <div className="p-8 text-center text-gray-500">Loading job site details...</div>
     }
 
-    if (!contract) {
-        return <div className="p-8 text-center text-gray-500">Contract not found</div>
+    if (!jobSite) {
+        return <div className="p-8 text-center text-gray-500">Job site not found</div>
     }
 
     const handleDelete = () => {
-        if (confirm('Are you sure you want to delete this contract?')) {
-            deleteContract.mutate({ id })
+        if (confirm('Are you sure you want to delete this job site?')) {
+            deleteJobSite.mutate({ id })
         }
     }
 
@@ -44,12 +58,13 @@ export function ContractDetail({ id }: { id: string }) {
     ]
 
     const tabs = [
-        { id: 'info', name: 'Contract Info', icon: FileText },
+        { id: 'info', name: 'Site Info', icon: Building2 },
         { id: 'jobs', name: `Scheduled Jobs (${jobs?.length || 0})`, icon: Briefcase },
         { id: 'workers', name: `Assigned Workers (${assignedStaff.length})`, icon: User },
-        { id: 'job-sites', name: `Job Sites (${contract.job_site ? 1 : 0})`, icon: Building2 },
-        { id: 'checklists', name: `Checklists (${checklists?.length || 0})`, icon: ClipboardList },
+        { id: 'contracts', name: `Contracts (${contracts?.length || 0})`, icon: FileText },
         { id: 'invoices', name: `Invoices (${invoices?.length || 0})`, icon: Receipt },
+        { id: 'quotes', name: `Quotes (${quotes?.length || 0})`, icon: File },
+        { id: 'checklists', name: `Checklists (${checklists?.length || 0})`, icon: ClipboardList },
     ]
 
     return (
@@ -70,20 +85,23 @@ export function ContractDetail({ id }: { id: string }) {
                 <div className="md:flex md:items-center md:justify-between">
                     <div className="min-w-0 flex-1">
                         <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
-                            {contract.name}
+                            {jobSite.name}
                         </h2>
                         <div className="mt-1 flex flex-col sm:mt-0 sm:flex-row sm:flex-wrap sm:space-x-6">
                             <div className="mt-2 flex items-center text-sm text-gray-500">
-                                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${contract.status === 'Active' ? 'bg-green-50 text-green-700 ring-green-600/20' : 'bg-gray-50 text-gray-600 ring-gray-500/10'}`}>
-                                    {contract.status}
+                                <MapPin className="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-400" aria-hidden="true" />
+                                {jobSite.address}, {jobSite.city}
+                            </div>
+                            <div className="mt-2 flex items-center text-sm text-gray-500">
+                                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${jobSite.is_active ? 'bg-green-50 text-green-700 ring-green-600/20' : 'bg-red-50 text-red-700 ring-red-600/20'}`}>
+                                    {jobSite.is_active ? 'ACTIVE' : 'INACTIVE'}
                                 </span>
-                                <span className="ml-2 text-gray-500">• {contract.type}</span>
                             </div>
                         </div>
                     </div>
                     <div className="mt-4 flex md:ml-4 md:mt-0 gap-x-3">
                         <Link
-                            href={`/dashboard/contracts/${id}/edit`}
+                            href={`/dashboard/job-sites/${id}/edit`}
                             className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                         >
                             <Edit className="-ml-0.5 mr-1.5 h-5 w-5 text-gray-400" aria-hidden="true" />
@@ -131,65 +149,31 @@ export function ContractDetail({ id }: { id: string }) {
             <div className="space-y-6">
                 {activeTab === 'info' && (
                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        {/* Contract Information */}
+                        {/* Site Information */}
                         <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
                             <div className="border-b border-gray-200 px-4 py-5 sm:px-6">
                                 <h3 className="text-base font-semibold leading-6 text-gray-900 flex items-center">
-                                    <FileText className="mr-2 h-5 w-5 text-blue-500" />
-                                    Contract Details
+                                    <Building2 className="mr-2 h-5 w-5 text-blue-500" />
+                                    Site Details
                                 </h3>
                             </div>
                             <div className="px-4 py-5 sm:p-6">
                                 <dl className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2">
                                     <div className="sm:col-span-1">
-                                        <dt className="text-sm font-medium text-gray-500">Customer</dt>
-                                        <dd className="mt-1 text-sm text-gray-900">
-                                            {contract.customer ? (
-                                                <Link href={`/dashboard/customers/${contract.customer_id}`} className="flex items-center text-blue-600 hover:underline">
-                                                    <User className="mr-1.5 h-4 w-4 text-gray-400" />
-                                                    {contract.customer.business_name || contract.customer.contact_name}
-                                                </Link>
-                                            ) : '-'}
-                                        </dd>
+                                        <dt className="text-sm font-medium text-gray-500">Site Name</dt>
+                                        <dd className="mt-1 text-sm text-gray-900">{jobSite.name}</dd>
                                     </div>
                                     <div className="sm:col-span-1">
-                                        <dt className="text-sm font-medium text-gray-500">Job Site</dt>
-                                        <dd className="mt-1 text-sm text-gray-900">
-                                            {contract.job_site ? (
-                                                <Link href={`/dashboard/job-sites/${contract.job_site_id}`} className="flex items-center text-blue-600 hover:underline">
-                                                    <MapPin className="mr-1.5 h-4 w-4 text-gray-400" />
-                                                    {contract.job_site.name}
-                                                </Link>
-                                            ) : '-'}
-                                        </dd>
-                                    </div>
-                                    <div className="sm:col-span-1">
-                                        <dt className="text-sm font-medium text-gray-500">Start Date</dt>
-                                        <dd className="mt-1 text-sm text-gray-900 flex items-center">
-                                            <Calendar className="mr-1.5 h-4 w-4 text-gray-400" />
-                                            {contract.start_date ? new Date(contract.start_date).toLocaleDateString('en-GB') : '-'}
-                                        </dd>
-                                    </div>
-                                    <div className="sm:col-span-1">
-                                        <dt className="text-sm font-medium text-gray-500">End Date</dt>
-                                        <dd className="mt-1 text-sm text-gray-900 flex items-center">
-                                            <Calendar className="mr-1.5 h-4 w-4 text-gray-400" />
-                                            {contract.end_date ? new Date(contract.end_date).toLocaleDateString('en-GB') : '-'}
-                                        </dd>
-                                    </div>
-                                    <div className="sm:col-span-1">
-                                        <dt className="text-sm font-medium text-gray-500">Value</dt>
-                                        <dd className="mt-1 text-sm text-gray-900">
-                                            {contract.amount ? `£${contract.amount.toFixed(2)}` : '-'}
-                                        </dd>
-                                    </div>
-                                    <div className="sm:col-span-1">
-                                        <dt className="text-sm font-medium text-gray-500">Billing Frequency</dt>
-                                        <dd className="mt-1 text-sm text-gray-900">{contract.billing_frequency || '-'}</dd>
+                                        <dt className="text-sm font-medium text-gray-500">Status</dt>
+                                        <dd className="mt-1 text-sm text-gray-900">{jobSite.is_active ? 'Active' : 'Inactive'}</dd>
                                     </div>
                                     <div className="sm:col-span-2">
-                                        <dt className="text-sm font-medium text-gray-500">Description</dt>
-                                        <dd className="mt-1 text-sm text-gray-900">{contract.description || 'No description provided.'}</dd>
+                                        <dt className="text-sm font-medium text-gray-500">Full Address</dt>
+                                        <dd className="mt-1 text-sm text-gray-900">
+                                            {jobSite.address}<br />
+                                            {jobSite.city}, {jobSite.state} {jobSite.postal_code}<br />
+                                            {jobSite.country}
+                                        </dd>
                                     </div>
                                 </dl>
                             </div>
@@ -204,27 +188,27 @@ export function ContractDetail({ id }: { id: string }) {
                                 </h3>
                             </div>
                             <div className="px-4 py-5 sm:p-6">
-                                {contract.customer ? (
+                                {jobSite.customer ? (
                                     <dl className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2">
                                         <div className="sm:col-span-1">
                                             <dt className="text-sm font-medium text-gray-500">Customer Name</dt>
                                             <dd className="mt-1 text-sm text-gray-900">
-                                                <Link href={`/dashboard/customers/${contract.customer.id}`} className="text-blue-600 hover:underline">
-                                                    {contract.customer.business_name || contract.customer.contact_name}
+                                                <Link href={`/dashboard/customers/${jobSite.customer.id}`} className="text-blue-600 hover:underline">
+                                                    {jobSite.customer.business_name || jobSite.customer.contact_name}
                                                 </Link>
                                             </dd>
                                         </div>
                                         <div className="sm:col-span-1">
                                             <dt className="text-sm font-medium text-gray-500">Contact Person</dt>
-                                            <dd className="mt-1 text-sm text-gray-900">{contract.customer.contact_name}</dd>
+                                            <dd className="mt-1 text-sm text-gray-900">{jobSite.customer.contact_name}</dd>
                                         </div>
                                         <div className="sm:col-span-1">
                                             <dt className="text-sm font-medium text-gray-500">Email</dt>
-                                            <dd className="mt-1 text-sm text-gray-900">{contract.customer.email || '-'}</dd>
+                                            <dd className="mt-1 text-sm text-gray-900">{jobSite.customer.email || '-'}</dd>
                                         </div>
                                         <div className="sm:col-span-1">
                                             <dt className="text-sm font-medium text-gray-500">Phone</dt>
-                                            <dd className="mt-1 text-sm text-gray-900">{contract.customer.phone || '-'}</dd>
+                                            <dd className="mt-1 text-sm text-gray-900">{jobSite.customer.phone || '-'}</dd>
                                         </div>
                                     </dl>
                                 ) : (
@@ -261,7 +245,7 @@ export function ContractDetail({ id }: { id: string }) {
                                 </li>
                             ))}
                             {(!jobs || jobs.length === 0) && (
-                                <li className="py-12 text-center text-gray-500">No scheduled jobs found for this contract.</li>
+                                <li className="py-12 text-center text-gray-500">No scheduled jobs found for this site.</li>
                             )}
                         </ul>
                     </div>
@@ -294,68 +278,37 @@ export function ContractDetail({ id }: { id: string }) {
                                 </li>
                             ))}
                             {assignedStaff.length === 0 && (
-                                <li className="py-12 text-center text-gray-500">No workers or contractors assigned to jobs for this contract.</li>
+                                <li className="py-12 text-center text-gray-500">No workers or contractors assigned to jobs at this site.</li>
                             )}
                         </ul>
                     </div>
                 )}
 
-                {activeTab === 'job-sites' && (
-                    <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">
-                        {contract.job_site ? (
-                            <div className="px-4 py-5 sm:p-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h3 className="text-base font-semibold leading-6 text-gray-900">
-                                            <Link href={`/dashboard/job-sites/${contract.job_site_id}`} className="hover:underline text-blue-600">
-                                                {contract.job_site.name}
-                                            </Link>
-                                        </h3>
-                                        <div className="mt-2 text-sm text-gray-500">
-                                            <p>{contract.job_site.address}</p>
-                                            <p>{contract.job_site.city}, {contract.job_site.state} {contract.job_site.postal_code}</p>
-                                            <p>{contract.job_site.country}</p>
-                                        </div>
-                                    </div>
-                                    <Link
-                                        href={`/dashboard/job-sites/${contract.job_site_id}`}
-                                        className="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                                    >
-                                        View Details
-                                    </Link>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="py-12 text-center text-gray-500">No job site linked to this contract.</div>
-                        )}
-                    </div>
-                )}
-
-                {activeTab === 'checklists' && (
+                {activeTab === 'contracts' && (
                     <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">
                         <ul role="list" className="divide-y divide-gray-100">
-                            {checklists?.map((checklist) => (
-                                <li key={checklist.id} className="flex items-center justify-between gap-x-6 py-5 px-6 hover:bg-gray-50">
+                            {contracts?.map((contract) => (
+                                <li key={contract.id} className="flex items-center justify-between gap-x-6 py-5 px-6 hover:bg-gray-50">
                                     <div className="min-w-0">
                                         <div className="flex items-start gap-x-3">
-                                            <p className="text-sm font-semibold leading-6 text-gray-900">{checklist.checklist?.name || 'Untitled Checklist'}</p>
-                                            <p className="text-xs text-gray-500 mt-1">Job: {checklist.job?.title}</p>
+                                            <p className="text-sm font-semibold leading-6 text-gray-900">{contract.name}</p>
+                                            <p className={`rounded-md whitespace-nowrap mt-0.5 px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${contract.status === 'active' ? 'text-green-700 bg-green-50 ring-green-600/20' : 'text-gray-600 bg-gray-50 ring-gray-500/10'}`}>
+                                                {contract.status}
+                                            </p>
                                         </div>
                                         <div className="mt-1 flex items-center gap-x-2 text-xs leading-5 text-gray-500">
-                                            <p className="truncate">
-                                                {checklist.checklist?.description}
-                                            </p>
+                                            <p className="truncate">{contract.type}</p>
                                         </div>
                                     </div>
                                     <div className="flex flex-none items-center gap-x-4">
-                                        <a href={`/dashboard/jobs/${checklist.job_id}`} className="hidden rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:block">
-                                            View Job
+                                        <a href={`/dashboard/contracts/${contract.id}`} className="hidden rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:block">
+                                            View
                                         </a>
                                     </div>
                                 </li>
                             ))}
-                            {(!checklists || checklists.length === 0) && (
-                                <li className="py-12 text-center text-gray-500">No checklists found for jobs at this site.</li>
+                            {(!contracts || contracts.length === 0) && (
+                                <li className="py-12 text-center text-gray-500">No contracts found for this site.</li>
                             )}
                         </ul>
                     </div>
@@ -385,7 +338,67 @@ export function ContractDetail({ id }: { id: string }) {
                                 </li>
                             ))}
                             {(!invoices || invoices.length === 0) && (
-                                <li className="py-12 text-center text-gray-500">No invoices found for this contract.</li>
+                                <li className="py-12 text-center text-gray-500">No invoices found for this site.</li>
+                            )}
+                        </ul>
+                    </div>
+                )}
+
+                {activeTab === 'quotes' && (
+                    <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">
+                        <ul role="list" className="divide-y divide-gray-100">
+                            {quotes?.map((quote) => (
+                                <li key={quote.id} className="flex items-center justify-between gap-x-6 py-5 px-6 hover:bg-gray-50">
+                                    <div className="min-w-0">
+                                        <div className="flex items-start gap-x-3">
+                                            <p className="text-sm font-semibold leading-6 text-gray-900">{quote.title}</p>
+                                            <p className={`rounded-md whitespace-nowrap mt-0.5 px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${quote.status === 'accepted' ? 'text-green-700 bg-green-50 ring-green-600/20' : 'text-gray-600 bg-gray-50 ring-gray-500/10'}`}>
+                                                {quote.status}
+                                            </p>
+                                        </div>
+                                        <div className="mt-1 flex items-center gap-x-2 text-xs leading-5 text-gray-500">
+                                            <p className="truncate">£{quote.total_amount?.toFixed(2) || '0.00'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-none items-center gap-x-4">
+                                        <a href={`/dashboard/quotes/${quote.id}`} className="hidden rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:block">
+                                            View
+                                        </a>
+                                    </div>
+                                </li>
+                            ))}
+                            {(!quotes || quotes.length === 0) && (
+                                <li className="py-12 text-center text-gray-500">No quotes found for this site.</li>
+                            )}
+                        </ul>
+                    </div>
+                )}
+
+                {activeTab === 'checklists' && (
+                    <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">
+                        <ul role="list" className="divide-y divide-gray-100">
+                            {checklists?.map((checklist) => (
+                                <li key={checklist.id} className="flex items-center justify-between gap-x-6 py-5 px-6 hover:bg-gray-50">
+                                    <div className="min-w-0">
+                                        <div className="flex items-start gap-x-3">
+                                            <p className="text-sm font-semibold leading-6 text-gray-900">{checklist.checklist?.name || 'Untitled Checklist'}</p>
+                                            <p className="text-xs text-gray-500 mt-1">Job: {checklist.job?.title}</p>
+                                        </div>
+                                        <div className="mt-1 flex items-center gap-x-2 text-xs leading-5 text-gray-500">
+                                            <p className="truncate">
+                                                {checklist.checklist?.description}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-none items-center gap-x-4">
+                                        <a href={`/dashboard/jobs/${checklist.job_id}`} className="hidden rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:block">
+                                            View Job
+                                        </a>
+                                    </div>
+                                </li>
+                            ))}
+                            {(!checklists || checklists.length === 0) && (
+                                <li className="py-12 text-center text-gray-500">No checklists found for jobs at this site.</li>
                             )}
                         </ul>
                     </div>

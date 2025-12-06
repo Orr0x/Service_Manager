@@ -41,7 +41,10 @@ export const jobSitesRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const { data, error } = await ctx.db
                 .from('job_sites')
-                .select('*')
+                .select(`
+          *,
+          customer:customers(id, business_name, contact_name, email, phone)
+        `)
                 .eq('id', input.id)
                 .eq('tenant_id', ctx.tenantId)
                 .single()

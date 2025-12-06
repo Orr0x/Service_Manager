@@ -18,10 +18,16 @@ import {
 
 export function CustomerDetail({ id }: { id: string }) {
     const router = useRouter()
-    const { data: customer, isLoading } = api.customers.getById.useQuery({ id })
+    const { data: customer, isLoading: isLoadingCustomer } = api.customers.getById.useQuery({ id })
+    const { data: jobSites } = api.jobSites.getByCustomerId.useQuery({ customerId: id })
+    const { data: contracts } = api.contracts.getByCustomerId.useQuery({ customerId: id })
+    const { data: jobs } = api.jobs.getByCustomerId.useQuery({ customerId: id })
+    const { data: invoices } = api.invoices.getByCustomerId.useQuery({ customerId: id })
+    const { data: quotes } = api.quotes.getByCustomerId.useQuery({ customerId: id })
+
     const [activeTab, setActiveTab] = useState('info')
 
-    if (isLoading) {
+    if (isLoadingCustomer) {
         return <div className="p-8 text-center text-gray-500">Loading customer details...</div>
     }
 
@@ -31,10 +37,10 @@ export function CustomerDetail({ id }: { id: string }) {
 
     const tabs = [
         { id: 'info', name: 'Customer Info', icon: User },
-        { id: 'properties', name: 'Job Sites (0)', icon: Building2 },
-        { id: 'contracts', name: 'Contracts (0)', icon: FileText },
-        { id: 'jobs', name: 'Jobs (0)', icon: Briefcase },
-        { id: 'invoices', name: 'Invoices & Quotes', icon: Receipt },
+        { id: 'properties', name: `Job Sites (${jobSites?.length || 0})`, icon: Building2 },
+        { id: 'contracts', name: `Contracts (${contracts?.length || 0})`, icon: FileText },
+        { id: 'jobs', name: `Jobs (${jobs?.length || 0})`, icon: Briefcase },
+        { id: 'invoices', name: `Invoices & Quotes (${(invoices?.length || 0) + (quotes?.length || 0)})`, icon: Receipt },
     ]
 
     return (
@@ -211,9 +217,158 @@ export function CustomerDetail({ id }: { id: string }) {
                     </>
                 )}
 
-                {activeTab !== 'info' && (
-                    <div className="text-center py-12 bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
-                        <p className="text-gray-500">No content for this tab yet.</p>
+                {activeTab === 'properties' && (
+                    <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">
+                        <ul role="list" className="divide-y divide-gray-100">
+                            {jobSites?.map((site) => (
+                                <li key={site.id} className="flex items-center justify-between gap-x-6 py-5 px-6 hover:bg-gray-50">
+                                    <div className="min-w-0">
+                                        <div className="flex items-start gap-x-3">
+                                            <p className="text-sm font-semibold leading-6 text-gray-900">{site.name}</p>
+                                        </div>
+                                        <div className="mt-1 flex items-center gap-x-2 text-xs leading-5 text-gray-500">
+                                            <p className="truncate">{site.address}, {site.city}, {site.postal_code}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-none items-center gap-x-4">
+                                        <a href={`/dashboard/job-sites/${site.id}`} className="hidden rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:block">
+                                            View
+                                        </a>
+                                    </div>
+                                </li>
+                            ))}
+                            {(!jobSites || jobSites.length === 0) && (
+                                <li className="py-12 text-center text-gray-500">No job sites found.</li>
+                            )}
+                        </ul>
+                    </div>
+                )}
+
+                {activeTab === 'contracts' && (
+                    <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">
+                        <ul role="list" className="divide-y divide-gray-100">
+                            {contracts?.map((contract) => (
+                                <li key={contract.id} className="flex items-center justify-between gap-x-6 py-5 px-6 hover:bg-gray-50">
+                                    <div className="min-w-0">
+                                        <div className="flex items-start gap-x-3">
+                                            <p className="text-sm font-semibold leading-6 text-gray-900">{contract.name}</p>
+                                            <p className={`rounded-md whitespace-nowrap mt-0.5 px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${contract.status === 'active' ? 'text-green-700 bg-green-50 ring-green-600/20' : 'text-gray-600 bg-gray-50 ring-gray-500/10'}`}>
+                                                {contract.status}
+                                            </p>
+                                        </div>
+                                        <div className="mt-1 flex items-center gap-x-2 text-xs leading-5 text-gray-500">
+                                            <p className="truncate">{contract.job_site?.name || 'No Job Site'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-none items-center gap-x-4">
+                                        <a href={`/dashboard/contracts/${contract.id}`} className="hidden rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:block">
+                                            View
+                                        </a>
+                                    </div>
+                                </li>
+                            ))}
+                            {(!contracts || contracts.length === 0) && (
+                                <li className="py-12 text-center text-gray-500">No contracts found.</li>
+                            )}
+                        </ul>
+                    </div>
+                )}
+
+                {activeTab === 'jobs' && (
+                    <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">
+                        <ul role="list" className="divide-y divide-gray-100">
+                            {jobs?.map((job) => (
+                                <li key={job.id} className="flex items-center justify-between gap-x-6 py-5 px-6 hover:bg-gray-50">
+                                    <div className="min-w-0">
+                                        <div className="flex items-start gap-x-3">
+                                            <p className="text-sm font-semibold leading-6 text-gray-900">{job.title}</p>
+                                            <p className={`rounded-md whitespace-nowrap mt-0.5 px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${job.status === 'completed' ? 'text-green-700 bg-green-50 ring-green-600/20' : 'text-yellow-800 bg-yellow-50 ring-yellow-600/20'}`}>
+                                                {job.status}
+                                            </p>
+                                        </div>
+                                        <div className="mt-1 flex items-center gap-x-2 text-xs leading-5 text-gray-500">
+                                            <p className="truncate">{job.job_sites?.name || 'No Job Site'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-none items-center gap-x-4">
+                                        <a href={`/dashboard/jobs/${job.id}`} className="hidden rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:block">
+                                            View
+                                        </a>
+                                    </div>
+                                </li>
+                            ))}
+                            {(!jobs || jobs.length === 0) && (
+                                <li className="py-12 text-center text-gray-500">No jobs found.</li>
+                            )}
+                        </ul>
+                    </div>
+                )}
+
+                {activeTab === 'invoices' && (
+                    <div className="space-y-6">
+                        {/* Invoices */}
+                        <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">
+                            <div className="border-b border-gray-200 px-4 py-5 sm:px-6">
+                                <h3 className="text-base font-semibold leading-6 text-gray-900">Invoices</h3>
+                            </div>
+                            <ul role="list" className="divide-y divide-gray-100">
+                                {invoices?.map((invoice) => (
+                                    <li key={invoice.id} className="flex items-center justify-between gap-x-6 py-5 px-6 hover:bg-gray-50">
+                                        <div className="min-w-0">
+                                            <div className="flex items-start gap-x-3">
+                                                <p className="text-sm font-semibold leading-6 text-gray-900">#{invoice.invoice_number}</p>
+                                                <p className={`rounded-md whitespace-nowrap mt-0.5 px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${invoice.status === 'paid' ? 'text-green-700 bg-green-50 ring-green-600/20' : 'text-yellow-800 bg-yellow-50 ring-yellow-600/20'}`}>
+                                                    {invoice.status}
+                                                </p>
+                                            </div>
+                                            <div className="mt-1 flex items-center gap-x-2 text-xs leading-5 text-gray-500">
+                                                <p className="truncate">£{invoice.total_amount.toFixed(2)} - Due {new Date(invoice.due_date).toLocaleDateString('en-GB')}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-none items-center gap-x-4">
+                                            <a href={`/dashboard/invoices/${invoice.id}`} className="hidden rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:block">
+                                                View
+                                            </a>
+                                        </div>
+                                    </li>
+                                ))}
+                                {(!invoices || invoices.length === 0) && (
+                                    <li className="py-6 text-center text-gray-500 text-sm">No invoices found.</li>
+                                )}
+                            </ul>
+                        </div>
+
+                        {/* Quotes */}
+                        <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">
+                            <div className="border-b border-gray-200 px-4 py-5 sm:px-6">
+                                <h3 className="text-base font-semibold leading-6 text-gray-900">Quotes</h3>
+                            </div>
+                            <ul role="list" className="divide-y divide-gray-100">
+                                {quotes?.map((quote) => (
+                                    <li key={quote.id} className="flex items-center justify-between gap-x-6 py-5 px-6 hover:bg-gray-50">
+                                        <div className="min-w-0">
+                                            <div className="flex items-start gap-x-3">
+                                                <p className="text-sm font-semibold leading-6 text-gray-900">{quote.title}</p>
+                                                <p className={`rounded-md whitespace-nowrap mt-0.5 px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${quote.status === 'accepted' ? 'text-green-700 bg-green-50 ring-green-600/20' : 'text-gray-600 bg-gray-50 ring-gray-500/10'}`}>
+                                                    {quote.status}
+                                                </p>
+                                            </div>
+                                            <div className="mt-1 flex items-center gap-x-2 text-xs leading-5 text-gray-500">
+                                                <p className="truncate">£{quote.total_amount?.toFixed(2) || '0.00'}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-none items-center gap-x-4">
+                                            <a href={`/dashboard/quotes/${quote.id}`} className="hidden rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:block">
+                                                View
+                                            </a>
+                                        </div>
+                                    </li>
+                                ))}
+                                {(!quotes || quotes.length === 0) && (
+                                    <li className="py-6 text-center text-gray-500 text-sm">No quotes found.</li>
+                                )}
+                            </ul>
+                        </div>
                     </div>
                 )}
             </div>

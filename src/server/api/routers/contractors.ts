@@ -116,4 +116,103 @@ export const contractorsRouter = createTRPCRouter({
 
             return { success: true }
         }),
+    getByJobSiteId: protectedProcedure
+        .input(z.object({ jobSiteId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            const { data, error } = await ctx.db
+                .from('contractors')
+                .select(`
+          *,
+          job_assignments!inner(
+            job:jobs!inner(job_site_id)
+          )
+        `)
+                .eq('job_assignments.job.job_site_id', input.jobSiteId)
+                .eq('tenant_id', ctx.tenantId)
+                .order('company_name', { ascending: true })
+
+            if (error) {
+                throw new Error(`Failed to fetch contractors for job site: ${error.message}`)
+            }
+
+            // Remove duplicates
+            const uniqueContractors = Array.from(new Map(data.map(item => [item.id, item])).values())
+
+            return uniqueContractors
+        }),
+    getByContractId: protectedProcedure
+        .input(z.object({ contractId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            // First get the contract to find the job site
+            const { data: contract, error: contractError } = await ctx.db
+                .from('contracts')
+                .select('job_site_id')
+                .eq('id', input.contractId)
+                .single()
+
+            if (contractError || !contract || !contract.job_site_id) {
+                return []
+            }
+
+            // Then fetch contractors for this job site
+            const { data, error } = await ctx.db
+                .from('contractors')
+                .select(`
+          *,
+          job_assignments!inner(
+            job:jobs!inner(job_site_id)
+          )
+        `)
+                .eq('job_assignments.job.job_site_id', contract.job_site_id)
+                .eq('tenant_id', ctx.tenantId)
+                .order('company_name', { ascending: true })
+
+            if (error) {
+                throw new Error(`Failed to fetch contractors for contract: ${error.message}`)
+            }
+
+            // Remove duplicates
+            const uniqueContractors = Array.from(new Map(data.map(item => [item.id, item])).values())
+
+            return uniqueContractors
+        }),
+    getByQuoteId: protectedProcedure
+        .input(z.object({ quoteId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            // First fetch the quote to get the job_site_id
+            const { data: quote, error: quoteError } = await ctx.db
+                .from('quotes')
+                .select('job_site_id')
+                .eq('id', input.quoteId)
+                .single()
+
+            if (quoteError) {
+                throw new Error(`Failed to fetch quote details: ${quoteError.message}`)
+            }
+
+            if (!quote.job_site_id) {
+                return []
+            }
+
+            const { data, error } = await ctx.db
+                .from('contractors')
+                .select(`
+          *,
+          job_assignments!inner(
+            job:jobs!inner(job_site_id)
+          )
+        `)
+                .eq('job_assignments.job.job_site_id', quote.job_site_id)
+                .eq('tenant_id', ctx.tenantId)
+                .order('company_name', { ascending: true })
+
+            if (error) {
+                throw new Error(`Failed to fetch contractors for quote: ${error.message}`)
+            }
+
+            // Remove duplicates
+            const uniqueContractors = Array.from(new Map(data.map(item => [item.id, item])).values())
+
+            return uniqueContractors
+        }),
 })

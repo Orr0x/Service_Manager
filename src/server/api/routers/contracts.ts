@@ -27,8 +27,8 @@ export const contractsRouter = createTRPCRouter({
                 .from('contracts')
                 .select(`
           *,
-          customer:customers(business_name, contact_name),
-          job_site:job_sites(name)
+          customer:customers(id, business_name, contact_name, email, phone),
+          job_site:job_sites(*)
         `)
                 .eq('id', input.id)
                 .eq('tenant_id', ctx.tenantId)
@@ -36,6 +36,46 @@ export const contractsRouter = createTRPCRouter({
 
             if (error) {
                 throw new Error(`Failed to fetch contract: ${error.message}`)
+            }
+
+            return data
+        }),
+
+    getByCustomerId: protectedProcedure
+        .input(z.object({ customerId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            const { data, error } = await ctx.db
+                .from('contracts')
+                .select(`
+          *,
+          job_site:job_sites(name)
+        `)
+                .eq('customer_id', input.customerId)
+                .eq('tenant_id', ctx.tenantId)
+                .order('created_at', { ascending: false })
+
+            if (error) {
+                throw new Error(`Failed to fetch contracts for customer: ${error.message}`)
+            }
+
+            return data
+        }),
+
+    getByJobSiteId: protectedProcedure
+        .input(z.object({ jobSiteId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            const { data, error } = await ctx.db
+                .from('contracts')
+                .select(`
+          *,
+          customer:customers(business_name, contact_name)
+        `)
+                .eq('job_site_id', input.jobSiteId)
+                .eq('tenant_id', ctx.tenantId)
+                .order('created_at', { ascending: false })
+
+            if (error) {
+                throw new Error(`Failed to fetch contracts for job site: ${error.message}`)
             }
 
             return data

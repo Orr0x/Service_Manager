@@ -21,6 +21,10 @@ export default function NewWorkerPage() {
         },
     })
 
+    const { data: settings } = api.settings.getSettings.useQuery()
+    const terminology = (settings?.terminology as Record<string, string>) || {}
+    const getLabel = (key: string, defaultLabel: string) => terminology[key] || defaultLabel
+
     async function onSubmit(formData: FormData) {
         const firstName = formData.get('firstName') as string
         const lastName = formData.get('lastName') as string
@@ -168,7 +172,7 @@ export default function NewWorkerPage() {
 
                         <div className="sm:col-span-4">
                             <label htmlFor="email" className="block text-sm font-medium leading-6 text-gray-900">
-                                Email Address
+                                {getLabel('workers.email', 'Email Address')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -183,7 +187,7 @@ export default function NewWorkerPage() {
 
                         <div className="sm:col-span-3">
                             <label htmlFor="phone" className="block text-sm font-medium leading-6 text-gray-900">
-                                Phone Number
+                                {getLabel('workers.phone', 'Phone Number')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -207,7 +211,7 @@ export default function NewWorkerPage() {
                     <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-6">
                         <div className="sm:col-span-2">
                             <label htmlFor="areaPostcode" className="block text-sm font-medium leading-6 text-gray-900">
-                                Area Postcode
+                                {getLabel('workers.areaPostcode', 'Area Postcode')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -246,8 +250,8 @@ export default function NewWorkerPage() {
                                     />
                                 </div>
                                 <div className="ml-3 text-sm leading-6">
-                                    <label htmlFor="hasOwnTransport" className="font-medium text-gray-900">
-                                        Has Own Transport
+                                    <label htmlFor="ownTransport" className="font-medium text-gray-900">
+                                        {getLabel('workers.hasOwnTransport', 'Has Own Transport')}
                                     </label>
                                     <p className="text-gray-500">Worker has their own vehicle for travel.</p>
                                 </div>
@@ -305,7 +309,7 @@ export default function NewWorkerPage() {
 
                         <div className="sm:col-span-2">
                             <label htmlFor="hourlyRate" className="block text-sm font-medium leading-6 text-gray-900">
-                                Hourly Rate
+                                {getLabel('workers.hourlyRate', 'Hourly Rate')}
                             </label>
                             <div className="mt-2 relative rounded-md shadow-sm">
                                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -324,7 +328,7 @@ export default function NewWorkerPage() {
 
                         <div className="col-span-full">
                             <label htmlFor="skills" className="block text-sm font-medium leading-6 text-gray-900">
-                                Skills
+                                {getLabel('workers.skills', 'Skills')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -339,7 +343,7 @@ export default function NewWorkerPage() {
 
                         <div className="col-span-full">
                             <label htmlFor="licenses" className="block text-sm font-medium leading-6 text-gray-900">
-                                Licenses & Certifications
+                                {getLabel('workers.licenses', 'Licenses & Certifications')}
                             </label>
                             <div className="mt-2">
                                 <textarea

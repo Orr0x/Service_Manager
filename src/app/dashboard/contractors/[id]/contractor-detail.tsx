@@ -3,9 +3,10 @@
 import { api } from '@/trpc/react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Briefcase, MapPin, Calendar, Mail, Phone, User, Pencil, Trash2, FileText, Clock } from 'lucide-react'
+import { Briefcase, MapPin, Calendar, Mail, Phone, User, Pencil, Trash2, FileText, Clock, Award } from 'lucide-react'
 import { EntityCalendar } from '@/components/entity-calendar'
 import { ContractorAvailability } from './contractor-availability'
+import CertificationManager from '@/components/certification/CertificationManager'
 import { useState } from 'react'
 import { format } from 'date-fns'
 
@@ -50,6 +51,7 @@ export function ContractorDetail({ id }: { id: string }) {
         { id: 'schedule', name: 'Schedule', icon: Calendar },
         { id: 'availability', name: 'Availability', icon: Clock },
         { id: 'jobs', name: `Assigned Jobs (${jobs?.length || 0})`, icon: Briefcase },
+        { id: 'certification', name: 'Certification', icon: Award },
     ]
 
     return (
@@ -285,6 +287,12 @@ export function ContractorDetail({ id }: { id: string }) {
                                 <li className="py-12 text-center text-gray-500">No jobs assigned to this contractor.</li>
                             )}
                         </ul>
+                    </div>
+                )}
+
+                {activeTab === 'certification' && (
+                    <div className="space-y-6">
+                        <CertificationManager entityType="contractor" entityId={id} />
                     </div>
                 )}
             </div>

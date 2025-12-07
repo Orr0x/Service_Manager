@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { api } from '@/trpc/react'
 import { FileUploader } from '@/components/file-uploader'
 
@@ -15,12 +16,16 @@ export default function NewContractorPage() {
         },
     })
 
-    // Generate a temporary ID for file uploads (or just use undefined if uploader handles it, 
-    // but better to have one if we want to link immediately. 
-    // However, for simplified flow, we upload to a bucket and just get URL)
-    // Actually FileUploader just returns URL, entityId is for folder structure.
-    // Let's generate one.
-    const [tempId] = useState(() => crypto.randomUUID())
+    // Profile picture upload handling
+    // We generate a temporary ID to link the upload to the entity before creation
+    const [profilePictureId, setProfilePictureId] = useState<string>('')
+    useEffect(() => {
+        setProfilePictureId(crypto.randomUUID())
+    }, [])
+
+    const { data: settings } = api.settings.getSettings.useQuery()
+    const terminology = (settings?.terminology as Record<string, string>) || {}
+    const getLabel = (key: string, defaultLabel: string) => terminology[key] || defaultLabel
     const [profilePictureUrl, setProfilePictureUrl] = useState<string | undefined>()
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -89,7 +94,7 @@ export default function NewContractorPage() {
                     <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-6">
                         <div className="col-span-full">
                             <label htmlFor="companyName" className="block text-sm font-medium leading-6 text-gray-900">
-                                Company Name <span className="text-red-500">*</span>
+                                {getLabel('contractors.companyName', 'Company Name')} <span className="text-red-500">*</span>
                             </label>
                             <div className="mt-2">
                                 <input
@@ -104,7 +109,7 @@ export default function NewContractorPage() {
 
                         <div className="sm:col-span-3">
                             <label htmlFor="contactName" className="block text-sm font-medium leading-6 text-gray-900">
-                                Contact Person <span className="text-red-500">*</span>
+                                {getLabel('contractors.contactName', 'Contact Person')} <span className="text-red-500">*</span>
                             </label>
                             <div className="mt-2">
                                 <input
@@ -119,7 +124,7 @@ export default function NewContractorPage() {
 
                         <div className="sm:col-span-3">
                             <label htmlFor="status" className="block text-sm font-medium leading-6 text-gray-900">
-                                Status <span className="text-red-500">*</span>
+                                {getLabel('contractors.status', 'Status')} <span className="text-red-500">*</span>
                             </label>
                             <div className="mt-2">
                                 <select
@@ -144,12 +149,12 @@ export default function NewContractorPage() {
 
                         <div className="col-span-full">
                             <label htmlFor="profile-photo" className="block text-sm font-medium leading-6 text-gray-900">
-                                Profile Picture
+                                {getLabel('contractors.profilePicture', 'Profile Picture')}
                             </label>
                             <div className="mt-2 flex items-center gap-x-3">
                                 <FileUploader
                                     entityType="contractor_profile"
-                                    entityId={tempId}
+                                    entityId={profilePictureId}
                                     bucketName="avatars"
                                     label="Upload Photo"
                                     onUploadComplete={(url) => setProfilePictureUrl(url)}
@@ -162,7 +167,7 @@ export default function NewContractorPage() {
 
                         <div className="sm:col-span-3">
                             <label htmlFor="area-postcode" className="block text-sm font-medium leading-6 text-gray-900">
-                                Area Covered (Postcode)
+                                {getLabel('contractors.area-postcode', 'Area Covered (Postcode)')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -176,7 +181,7 @@ export default function NewContractorPage() {
 
                         <div className="sm:col-span-3">
                             <label htmlFor="area-radius" className="block text-sm font-medium leading-6 text-gray-900">
-                                Area Radius (Miles)
+                                {getLabel('contractors.area-radius', 'Area Radius (Miles)')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -201,7 +206,7 @@ export default function NewContractorPage() {
                                 </div>
                                 <div className="text-sm leading-6">
                                     <label htmlFor="transport" className="font-medium text-gray-900">
-                                        Has Own Transport
+                                        {getLabel('contractors.transport', 'Has Own Transport')}
                                     </label>
                                     <p className="text-gray-500">Contractor has their own vehicle for jobs.</p>
                                 </div>
@@ -210,7 +215,7 @@ export default function NewContractorPage() {
 
                         <div className="col-span-full">
                             <label htmlFor="licenses" className="block text-sm font-medium leading-6 text-gray-900">
-                                Licenses & Certifications
+                                {getLabel('contractors.licenses', 'Licenses & Certifications')}
                             </label>
                             <div className="mt-2">
                                 <textarea
@@ -225,7 +230,7 @@ export default function NewContractorPage() {
 
                         <div className="sm:col-span-3">
                             <label htmlFor="email" className="block text-sm font-medium leading-6 text-gray-900">
-                                Email Address
+                                {getLabel('contractors.email', 'Email Address')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -240,7 +245,7 @@ export default function NewContractorPage() {
 
                         <div className="sm:col-span-3">
                             <label htmlFor="phone" className="block text-sm font-medium leading-6 text-gray-900">
-                                Phone Number
+                                {getLabel('contractors.phone', 'Phone Number')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -255,7 +260,7 @@ export default function NewContractorPage() {
 
                         <div className="col-span-full">
                             <label htmlFor="specialties" className="block text-sm font-medium leading-6 text-gray-900">
-                                Specialties
+                                {getLabel('contractors.specialties', 'Specialties')}
                             </label>
                             <div className="mt-2">
                                 <input

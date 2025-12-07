@@ -10,23 +10,33 @@ const quoteItemSchema = z.object({
 })
 
 export const quotesRouter = createTRPCRouter({
-    getAll: protectedProcedure.query(async ({ ctx }) => {
-        const { data, error } = await ctx.db
-            .from('quotes')
-            .select(`
+    getAll: protectedProcedure
+        .input(z.object({
+            search: z.string().optional()
+        }).optional())
+        .query(async ({ ctx, input }) => {
+            let query = ctx.db
+                .from('quotes')
+                .select(`
         *,
         customer:customers(business_name, contact_name),
         job_site:job_sites(name)
       `)
-            .eq('tenant_id', ctx.tenantId)
-            .order('created_at', { ascending: false })
+                .eq('tenant_id', ctx.tenantId)
 
-        if (error) {
-            throw new Error(`Failed to fetch quotes: ${error.message}`)
-        }
+            if (input?.search) {
+                const search = input.search.toLowerCase()
+                query = query.or(`title.ilike.%${search}%,status.ilike.%${search}%`)
+            }
 
-        return data
-    }),
+            const { data, error } = await query.order('created_at', { ascending: false })
+
+            if (error) {
+                throw new Error(`Failed to fetch quotes: ${error.message}`)
+            }
+
+            return data
+        }),
 
     getDashboardStats: protectedProcedure.query(async ({ ctx }) => {
         const [

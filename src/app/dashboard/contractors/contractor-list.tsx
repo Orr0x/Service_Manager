@@ -4,8 +4,13 @@ import { api } from '@/trpc/react'
 import Link from 'next/link'
 import { Building2, User, Phone, Mail } from 'lucide-react'
 
+import { useSearchParams } from 'next/navigation'
+
 export function ContractorList() {
-    const { data: contractors, isLoading } = api.contractors.getAll.useQuery()
+    const searchParams = useSearchParams()
+    const search = searchParams.get('search') || undefined
+
+    const { data: contractors, isLoading } = api.contractors.getAll.useQuery({ search })
 
     if (isLoading) {
         return <div className="p-8 text-center text-gray-500">Loading contractors...</div>
@@ -60,8 +65,8 @@ export function ContractorList() {
                         <div className="hidden sm:flex sm:flex-col sm:items-end">
                             <div className="flex items-center gap-x-1.5 text-xs leading-5 text-gray-500">
                                 <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${contractor.status === 'active' ? 'bg-green-50 text-green-700 ring-green-600/20' :
-                                        contractor.status === 'blacklisted' ? 'bg-red-50 text-red-700 ring-red-600/20' :
-                                            'bg-gray-50 text-gray-600 ring-gray-500/10'
+                                    contractor.status === 'blacklisted' ? 'bg-red-50 text-red-700 ring-red-600/20' :
+                                        'bg-gray-50 text-gray-600 ring-gray-500/10'
                                     }`}>
                                     {contractor.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                                 </span>

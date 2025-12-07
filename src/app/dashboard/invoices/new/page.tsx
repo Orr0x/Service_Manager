@@ -30,6 +30,10 @@ export default function NewInvoicePage() {
         },
     })
 
+    const { data: settings } = api.settings.getSettings.useQuery()
+    const terminology = (settings?.terminology as Record<string, string>) || {}
+    const getLabel = (key: string, defaultLabel: string) => terminology[key] || defaultLabel
+
     // Calculate item total when quantity or price changes
     const updateItem = (index: number, field: keyof InvoiceItem, value: string | number) => {
         const newItems = [...items]
@@ -120,7 +124,7 @@ export default function NewInvoicePage() {
                     <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-6">
                         <div className="sm:col-span-3">
                             <label htmlFor="customerId" className="block text-sm font-medium leading-6 text-gray-900">
-                                Customer <span className="text-red-500">*</span>
+                                {getLabel('invoices.customerId', 'Customer')} <span className="text-red-500">*</span>
                             </label>
                             <div className="mt-2">
                                 <select
@@ -143,7 +147,7 @@ export default function NewInvoicePage() {
 
                         <div className="sm:col-span-3">
                             <label htmlFor="jobSiteId" className="block text-sm font-medium leading-6 text-gray-900">
-                                Job Site
+                                {getLabel('invoices.jobSiteId', 'Job Site')}
                             </label>
                             <div className="mt-2">
                                 <select
@@ -164,7 +168,7 @@ export default function NewInvoicePage() {
 
                         <div className="sm:col-span-2">
                             <label htmlFor="status" className="block text-sm font-medium leading-6 text-gray-900">
-                                Status <span className="text-red-500">*</span>
+                                {getLabel('invoices.status', 'Status')} <span className="text-red-500">*</span>
                             </label>
                             <div className="mt-2">
                                 <select
@@ -183,7 +187,7 @@ export default function NewInvoicePage() {
 
                         <div className="sm:col-span-2">
                             <label htmlFor="issueDate" className="block text-sm font-medium leading-6 text-gray-900">
-                                Issue Date <span className="text-red-500">*</span>
+                                {getLabel('invoices.issueDate', 'Issue Date')} <span className="text-red-500">*</span>
                             </label>
                             <div className="mt-2">
                                 <input
@@ -199,7 +203,7 @@ export default function NewInvoicePage() {
 
                         <div className="sm:col-span-2">
                             <label htmlFor="dueDate" className="block text-sm font-medium leading-6 text-gray-900">
-                                Due Date <span className="text-red-500">*</span>
+                                {getLabel('invoices.dueDate', 'Due Date')} <span className="text-red-500">*</span>
                             </label>
                             <div className="mt-2">
                                 <input
@@ -302,7 +306,7 @@ export default function NewInvoicePage() {
 
                 <div className="col-span-full">
                     <label htmlFor="notes" className="block text-sm font-medium leading-6 text-gray-900">
-                        Notes
+                        {getLabel('invoices.notes', 'Notes')}
                     </label>
                     <div className="mt-2">
                         <textarea

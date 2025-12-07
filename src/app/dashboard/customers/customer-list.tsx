@@ -3,9 +3,13 @@
 import { api } from '@/trpc/react'
 import Link from 'next/link'
 import { Building2, FileText, Phone, Mail } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 
 export function CustomerList() {
-    const { data: customers, isLoading } = api.customers.getAll.useQuery()
+    const searchParams = useSearchParams()
+    const search = searchParams.get('search') || undefined
+
+    const { data: customers, isLoading } = api.customers.getAll.useQuery({ search })
 
     if (isLoading) {
         return <div className="p-8 text-center text-gray-500">Loading customers...</div>

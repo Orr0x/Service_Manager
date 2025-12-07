@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Palette, Layout, Type, Settings } from 'lucide-react'
+import { Palette, Layout, Type, Settings, Users } from 'lucide-react'
 
 const settingsSections = [
     {
@@ -15,10 +15,16 @@ const settingsSections = [
         icon: Layout,
     },
     {
-        title: 'Terminology',
-        description: 'Rename system entities to match your business language.',
-        href: '/dashboard/settings/terminology',
+        title: 'Form Field Names',
+        description: 'Customize field labels for your data entry forms.',
+        href: '/dashboard/settings/forms',
         icon: Type,
+    },
+    {
+        title: 'User Management',
+        description: 'Manage access for workers and contractors.',
+        href: '/dashboard/settings/users',
+        icon: Users,
     },
 ]
 

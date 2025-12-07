@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { api, HydrateClient } from '@/trpc/server'
 import { Plus, FileText, CheckCircle, AlertCircle, File } from 'lucide-react'
 import { ContractList } from './contract-list'
+import { SearchInput } from '@/components/common/search-input'
 
 export default async function ContractsPage() {
     void api.contracts.getAll.prefetch()
@@ -107,13 +108,7 @@ export default async function ContractsPage() {
                 </div>
 
                 {/* Search Bar */}
-                <div className="relative">
-                    <input
-                        type="text"
-                        className="block w-full rounded-md border-0 py-3 pl-4 pr-10 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                        placeholder="Search contracts by name, customer, or type..."
-                    />
-                </div>
+                <SearchInput placeholder="Search contracts by name, customer, or type..." />
 
                 {/* Contract List */}
                 <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">

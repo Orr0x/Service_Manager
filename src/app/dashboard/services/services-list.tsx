@@ -2,8 +2,13 @@
 
 import { api } from '@/trpc/react'
 
+import { useSearchParams } from 'next/navigation'
+
 export function ServicesList() {
-    const { data: services, isLoading } = api.services.getAll.useQuery()
+    const searchParams = useSearchParams()
+    const search = searchParams.get('search') || undefined
+
+    const { data: services, isLoading } = api.services.getAll.useQuery({ search })
 
     if (isLoading) {
         return <div className="py-4 text-center">Loading services...</div>

@@ -2,22 +2,32 @@ import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '../trpc'
 
 export const jobSitesRouter = createTRPCRouter({
-    getAll: protectedProcedure.query(async ({ ctx }) => {
-        const { data, error } = await ctx.db
-            .from('job_sites')
-            .select(`
+    getAll: protectedProcedure
+        .input(z.object({
+            search: z.string().optional()
+        }).optional())
+        .query(async ({ ctx, input }) => {
+            let query = ctx.db
+                .from('job_sites')
+                .select(`
         *,
         customer:customers(business_name, contact_name)
       `)
-            .eq('tenant_id', ctx.tenantId)
-            .order('name', { ascending: true })
+                .eq('tenant_id', ctx.tenantId)
 
-        if (error) {
-            throw new Error(`Failed to fetch job sites: ${error.message}`)
-        }
+            if (input?.search) {
+                const search = input.search.toLowerCase()
+                query = query.or(`name.ilike.%${search}%,address.ilike.%${search}%,city.ilike.%${search}%`)
+            }
 
-        return data
-    }),
+            const { data, error } = await query.order('name', { ascending: true })
+
+            if (error) {
+                throw new Error(`Failed to fetch job sites: ${error.message}`)
+            }
+
+            return data
+        }),
 
     getDashboardStats: protectedProcedure.query(async ({ ctx }) => {
         const [

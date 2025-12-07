@@ -41,10 +41,17 @@ export const settingsRouter = createTRPCRouter({
     updateBranding: protectedProcedure
         .input(
             z.object({
+                companyName: z.string().optional(),
                 primaryColor: z.string().optional(),
                 secondaryColor: z.string().optional(),
-                companyName: z.string().optional(),
                 logoUrl: z.string().optional(),
+                theme: z.object({
+                    mode: z.enum(['light', 'dark']).optional(),
+                    sidebarBg: z.string().optional(),
+                    sidebarText: z.string().optional(),
+                    headerBg: z.string().optional(),
+                    borderRadius: z.string().optional(),
+                }).optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -59,10 +66,14 @@ export const settingsRouter = createTRPCRouter({
 
             const newBranding = {
                 ...currentBranding,
-                ...(input.primaryColor && { primary_color: input.primaryColor }),
-                ...(input.secondaryColor && { secondary_color: input.secondaryColor }),
-                ...(input.companyName && { company_name: input.companyName }),
-                ...(input.logoUrl && { logo_url: input.logoUrl }),
+                ...(input.companyName !== undefined && { company_name: input.companyName }),
+                ...(input.primaryColor !== undefined && { primary_color: input.primaryColor }),
+                ...(input.secondaryColor !== undefined && { secondary_color: input.secondaryColor }),
+                ...(input.logoUrl !== undefined && { logo_url: input.logoUrl }),
+                theme: {
+                    ...(currentBranding.theme || {}),
+                    ...(input.theme || {}),
+                }
             }
 
             const { data, error } = await ctx.db

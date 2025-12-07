@@ -1,20 +1,55 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '../trpc'
 
+interface Contractor {
+    id: string
+    tenant_id: string
+    company_name: string
+    contact_name: string
+    email: string | null
+    phone: string | null
+    specialties: any
+    status: string
+    created_at: string
+    updated_at: string
+    profile_picture_url?: string | null
+    area_postcode?: string | null
+    area_radius?: number | null
+    has_own_transport?: boolean | null
+    licenses?: string | null
+}
+
 export const contractorsRouter = createTRPCRouter({
-    getAll: protectedProcedure.query(async ({ ctx }) => {
-        const { data, error } = await ctx.db
-            .from('contractors')
-            .select('*')
-            .eq('tenant_id', ctx.tenantId)
-            .order('created_at', { ascending: false })
+    getAll: protectedProcedure
+        .input(z.object({
+            search: z.string().optional()
+        }).optional())
+        .query(async ({ ctx, input }) => {
+            if (input?.search) {
+                const { data, error } = await ctx.db.rpc('search_contractors', {
+                    p_tenant_id: ctx.tenantId,
+                    p_search_text: input.search
+                })
 
-        if (error) {
-            throw new Error(`Failed to fetch contractors: ${error.message}`)
-        }
+                if (error) {
+                    throw new Error(`Failed to search contractors: ${error.message}`)
+                }
 
-        return data
-    }),
+                return data as Contractor[]
+            }
+
+            const { data, error } = await ctx.db
+                .from('contractors')
+                .select('*')
+                .eq('tenant_id', ctx.tenantId)
+                .order('created_at', { ascending: false })
+
+            if (error) {
+                throw new Error(`Failed to fetch contractors: ${error.message}`)
+            }
+
+            return data
+        }),
 
     getDashboardStats: protectedProcedure.query(async ({ ctx }) => {
         const [

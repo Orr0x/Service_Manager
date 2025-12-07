@@ -34,6 +34,11 @@ export default function NewJobPage() {
         }
     })
 
+    // Fetch settings for aliases
+    const { data: settings } = api.settings.getSettings.useQuery()
+    const terminology = (settings?.terminology as Record<string, string>) || {}
+    const getLabel = (key: string, defaultLabel: string) => terminology[key] || defaultLabel
+
     // Fetch Data
     const { data: customers } = api.customers.getAll.useQuery()
     const { data: jobSites } = api.jobSites.getByCustomerId.useQuery({ customerId: selectedCustomer! }, {
@@ -94,7 +99,7 @@ export default function NewJobPage() {
                     <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                         <div className="sm:col-span-4">
                             <label htmlFor="title" className="block text-sm font-medium leading-6 text-gray-900">
-                                Job Title
+                                {getLabel('jobs.title', 'Job Title')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -109,7 +114,7 @@ export default function NewJobPage() {
 
                         <div className="sm:col-span-2">
                             <label htmlFor="priority" className="block text-sm font-medium leading-6 text-gray-900">
-                                Priority
+                                {getLabel('jobs.priority', 'Priority')}
                             </label>
                             <div className="mt-2">
                                 <select
@@ -126,7 +131,7 @@ export default function NewJobPage() {
 
                         <div className="sm:col-span-6">
                             <label htmlFor="description" className="block text-sm font-medium leading-6 text-gray-900">
-                                Description
+                                {getLabel('jobs.description', 'Description')}
                             </label>
                             <div className="mt-2">
                                 <textarea
@@ -146,7 +151,7 @@ export default function NewJobPage() {
                     <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                         <div className="sm:col-span-3">
                             <label htmlFor="customer" className="block text-sm font-medium leading-6 text-gray-900">
-                                Customer
+                                {getLabel('jobs.customerId', 'Customer')}
                             </label>
                             <div className="mt-2">
                                 <select
@@ -166,7 +171,7 @@ export default function NewJobPage() {
 
                         <div className="sm:col-span-3">
                             <label htmlFor="jobSite" className="block text-sm font-medium leading-6 text-gray-900">
-                                Job Site
+                                {getLabel('jobs.jobSiteId', 'Job Site')}
                             </label>
                             <div className="mt-2">
                                 <select
@@ -193,7 +198,7 @@ export default function NewJobPage() {
                     <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                         <div className="sm:col-span-3">
                             <label htmlFor="startTime" className="block text-sm font-medium leading-6 text-gray-900">
-                                Start Time
+                                {getLabel('jobs.startTime', 'Start Time')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -206,7 +211,7 @@ export default function NewJobPage() {
 
                         <div className="sm:col-span-3">
                             <label htmlFor="endTime" className="block text-sm font-medium leading-6 text-gray-900">
-                                End Time
+                                {getLabel('jobs.endTime', 'End Time')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -226,7 +231,7 @@ export default function NewJobPage() {
                     <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
                         <div className="sm:col-span-6">
                             <label className="block text-sm font-medium leading-6 text-gray-900 mb-2">
-                                Assign Workers & Contractors
+                                {getLabel('jobs.assignments', 'Assign Workers & Contractors')}
                             </label>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {/* Internal Workers */}

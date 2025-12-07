@@ -3,9 +3,13 @@
 import { api } from '@/trpc/react'
 import Link from 'next/link'
 import { FileText, Calendar, DollarSign, User } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 
 export function ContractList() {
-    const { data: contracts, isLoading } = api.contracts.getAll.useQuery()
+    const searchParams = useSearchParams()
+    const search = searchParams.get('search') || undefined
+
+    const { data: contracts, isLoading } = api.contracts.getAll.useQuery({ search })
 
     if (isLoading) {
         return <div className="p-8 text-center text-gray-500">Loading contracts...</div>
@@ -60,8 +64,8 @@ export function ContractList() {
                             </div>
                             <div className="mt-1 flex items-center gap-x-1.5 text-xs leading-5 text-gray-500">
                                 <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${contract.status === 'active' ? 'bg-green-50 text-green-700 ring-green-600/20' :
-                                        contract.status === 'draft' ? 'bg-gray-50 text-gray-600 ring-gray-500/10' :
-                                            'bg-red-50 text-red-700 ring-red-600/10'
+                                    contract.status === 'draft' ? 'bg-gray-50 text-gray-600 ring-gray-500/10' :
+                                        'bg-red-50 text-red-700 ring-red-600/10'
                                     }`}>
                                     {contract.status.charAt(0).toUpperCase() + contract.status.slice(1)}
                                 </span>

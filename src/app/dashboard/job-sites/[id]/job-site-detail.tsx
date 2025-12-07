@@ -15,11 +15,13 @@ import {
     Receipt,
     File,
     ClipboardList,
-    Camera
+    Camera,
+    Award
 } from 'lucide-react'
 
 import Link from 'next/link'
 import { AttachmentsSection } from '@/components/attachments-section'
+import CertificationManager from '@/components/certification/CertificationManager'
 
 export function JobSiteDetail({ id }: { id: string }) {
     const router = useRouter()
@@ -69,6 +71,7 @@ export function JobSiteDetail({ id }: { id: string }) {
         { id: 'quotes', name: `Quotes (${quotes?.length || 0})`, icon: File },
         { id: 'checklists', name: `Checklists (${checklists?.length || 0})`, icon: ClipboardList },
         { id: 'attachments', name: 'Photos & Attachments', icon: Camera },
+        { id: 'certification', name: 'Certification', icon: Award },
     ]
 
     return (
@@ -413,6 +416,12 @@ export function JobSiteDetail({ id }: { id: string }) {
                                 <li className="py-12 text-center text-gray-500">No checklists found for jobs at this site.</li>
                             )}
                         </ul>
+                    </div>
+                )}
+
+                {activeTab === 'certification' && (
+                    <div className="space-y-6">
+                        <CertificationManager entityType="job_site" entityId={id} />
                     </div>
                 )}
             </div>

@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '../trpc'
 import { TRPCError } from '@trpc/server'
+import { logActivity } from './utils/activity'
 
 export const jobsRouter = createTRPCRouter({
     getAll: protectedProcedure
@@ -8,6 +9,7 @@ export const jobsRouter = createTRPCRouter({
             status: z.string().optional(),
             customerId: z.string().optional(),
             jobSiteId: z.string().optional(),
+            search: z.string().optional(),
         }).optional())
         .query(async ({ ctx, input }) => {
             let query = ctx.db
@@ -38,6 +40,11 @@ export const jobsRouter = createTRPCRouter({
             if (input?.jobSiteId) {
                 query = query.eq('job_site_id', input.jobSiteId)
             }
+            if (input?.search) {
+                const search = input.search.toLowerCase()
+                // Filter by title or description
+                query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`)
+            }
 
             const { data, error } = await query
 
@@ -56,9 +63,9 @@ export const jobsRouter = createTRPCRouter({
             { count: completedCount }
         ] = await Promise.all([
             ctx.db.from('jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId),
-            ctx.db.from('jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'in_progress'),
-            ctx.db.from('jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'scheduled'),
-            ctx.db.from('jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'completed')
+            ctx.db.from('jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'In Progress'),
+            ctx.db.from('jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'Scheduled'),
+            ctx.db.from('jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'Completed')
         ])
 
         return {
@@ -375,18 +382,6 @@ export const jobsRouter = createTRPCRouter({
                         throw new Error(`Failed to check worker availability: ${conflictError.message}`)
                     }
 
-                    // The .or filter above might be too broad or tricky with Supabase syntax for overlaps.
-                    // Let's refine the overlap check in JS to be safe, or ensure the query is correct.
-                    // Overlap: (StartA <= EndB) and (EndA >= StartB)
-                    // Supabase .or with range overlap is:
-                    // .lte('start_date', input.endTime).gte('end_date', input.startTime) -- wait this checks if record is INSIDE range.
-                    // Correct overlap logic: Unavailability Start <= Job End AND Unavailability End >= Job Start.
-
-                    // Let's simple fetch all unavailability for these workers that might overlap
-                    // Since we can't easily do complex range overlaps in one simple OR string in all versions,
-                    // let's try a safer query:
-                    // Fetch unavailability where start_date <= JobEndTime AND end_date >= JobStartTime
-
                     const { data: unavailabilities } = await ctx.db
                         .from('worker_unavailability')
                         .select('worker_id, workers(first_name, last_name)')
@@ -419,7 +414,7 @@ export const jobsRouter = createTRPCRouter({
                     priority: input.priority || 'normal',
                     start_time: input.startTime,
                     end_time: input.endTime,
-                    status: 'draft',
+                    status: input.startTime ? 'Scheduled' : 'draft',
                 })
                 .select()
                 .single()
@@ -427,6 +422,16 @@ export const jobsRouter = createTRPCRouter({
             if (jobError) {
                 throw new Error(`Failed to create job: ${jobError.message}`)
             }
+
+            await logActivity({
+                tenantId: ctx.tenantId,
+                actorId: ctx.user.id,
+                actionType: 'created',
+                entityType: 'job',
+                entityId: job.id,
+                details: { title: job.title, customer_id: input.customerId },
+                db: ctx.db
+            })
 
             // Create Assignments
             if (input.assignments && input.assignments.length > 0) {
@@ -442,8 +447,17 @@ export const jobsRouter = createTRPCRouter({
                     .insert(assignmentsToInsert)
 
                 if (assignError) {
-                    // Log error but don't fail the whole request (job is created)
                     console.error('Failed to create assignments:', assignError)
+                } else {
+                    await logActivity({
+                        tenantId: ctx.tenantId,
+                        actorId: ctx.user.id,
+                        actionType: 'assigned',
+                        entityType: 'job',
+                        entityId: job.id,
+                        details: { assignment_count: assignmentsToInsert.length },
+                        db: ctx.db
+                    })
                 }
             }
 
@@ -480,6 +494,19 @@ export const jobsRouter = createTRPCRouter({
                 throw new Error(`Failed to update job: ${error.message}`)
             }
 
+            await logActivity({
+                tenantId: ctx.tenantId,
+                actorId: ctx.user.id,
+                actionType: 'updated',
+                entityType: 'job',
+                entityId: input.id,
+                details: {
+                    status: input.status,
+                    title: input.title
+                },
+                db: ctx.db
+            })
+
             return data
         }),
 
@@ -495,6 +522,16 @@ export const jobsRouter = createTRPCRouter({
             if (error) {
                 throw new Error(`Failed to delete job: ${error.message}`)
             }
+
+            await logActivity({
+                tenantId: ctx.tenantId,
+                actorId: ctx.user.id,
+                actionType: 'deleted',
+                entityType: 'job',
+                entityId: input,
+                details: {},
+                db: ctx.db
+            })
 
             return { success: true }
         }),
@@ -640,6 +677,19 @@ export const jobsRouter = createTRPCRouter({
                 if (insertError) {
                     throw new Error(`Failed to update assignments: ${insertError.message}`)
                 }
+
+                await logActivity({
+                    tenantId: ctx.tenantId,
+                    actorId: ctx.user.id,
+                    actionType: 'updated',
+                    entityType: 'job',
+                    entityId: input.jobId,
+                    details: {
+                        update_type: 'assignments',
+                        count: input.assignments.length
+                    },
+                    db: ctx.db
+                })
             }
 
             return { success: true }

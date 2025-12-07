@@ -8,6 +8,13 @@ interface ThemeProviderProps {
     branding: {
         primary_color: string
         secondary_color: string
+        theme?: {
+            mode?: 'light' | 'dark'
+            sidebarBg?: string
+            sidebarText?: string
+            headerBg?: string
+            borderRadius?: string
+        }
     }
 }
 
@@ -19,6 +26,14 @@ export function ThemeProvider({ children, branding }: ThemeProviderProps) {
         const root = document.documentElement
         root.style.setProperty('--primary-color', branding.primary_color)
         root.style.setProperty('--secondary-color', branding.secondary_color)
+
+        // New Theme Variables
+        if (branding.theme) {
+            if (branding.theme.sidebarBg) root.style.setProperty('--sidebar-bg', branding.theme.sidebarBg)
+            if (branding.theme.sidebarText) root.style.setProperty('--sidebar-text', branding.theme.sidebarText)
+            if (branding.theme.headerBg) root.style.setProperty('--header-bg', branding.theme.headerBg)
+            if (branding.theme.borderRadius) root.style.setProperty('--radius', branding.theme.borderRadius)
+        }
     }, [branding])
 
     return <>{children}</>

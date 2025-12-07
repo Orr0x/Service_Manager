@@ -11,19 +11,29 @@ const checklistItemSchema = z.object({
 })
 
 export const checklistsRouter = createTRPCRouter({
-    getAll: protectedProcedure.query(async ({ ctx }) => {
-        const { data, error } = await ctx.db
-            .from('checklists')
-            .select('*')
-            .eq('tenant_id', ctx.tenantId)
-            .order('created_at', { ascending: false })
+    getAll: protectedProcedure
+        .input(z.object({
+            search: z.string().optional()
+        }).optional())
+        .query(async ({ ctx, input }) => {
+            let query = ctx.db
+                .from('checklists')
+                .select('*')
+                .eq('tenant_id', ctx.tenantId)
 
-        if (error) {
-            throw new Error(`Failed to fetch checklists: ${error.message}`)
-        }
+            if (input?.search) {
+                const search = input.search.toLowerCase()
+                query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`)
+            }
 
-        return data
-    }),
+            const { data, error } = await query.order('created_at', { ascending: false })
+
+            if (error) {
+                throw new Error(`Failed to fetch checklists: ${error.message}`)
+            }
+
+            return data
+        }),
 
     getDashboardStats: protectedProcedure.query(async ({ ctx }) => {
         const [

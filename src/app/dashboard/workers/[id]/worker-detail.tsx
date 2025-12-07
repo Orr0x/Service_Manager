@@ -9,6 +9,7 @@ import { format } from 'date-fns'
 import { WorkerAvailability } from './worker-availability'
 import { EntityCalendar } from '@/components/entity-calendar'
 import { AttachmentsSection } from '@/components/attachments-section'
+import CertificationManager from '@/components/certification/CertificationManager'
 
 export function WorkerDetail({ id }: { id: string }) {
     const router = useRouter()
@@ -44,6 +45,7 @@ export function WorkerDetail({ id }: { id: string }) {
         { id: 'schedule', name: 'Schedule', icon: Calendar },
         { id: 'availability', name: 'Availability', icon: Clock },
         { id: 'jobs', name: `Assigned Jobs (${jobs?.length || 0})`, icon: Briefcase },
+        { id: 'certification', name: 'Certification', icon: Award },
     ]
 
     return (
@@ -308,6 +310,12 @@ export function WorkerDetail({ id }: { id: string }) {
                                 <li className="py-12 text-center text-gray-500">No jobs assigned to this worker.</li>
                             )}
                         </ul>
+                    </div>
+                )}
+
+                {activeTab === 'certification' && (
+                    <div className="space-y-6">
+                        <CertificationManager entityType="worker" entityId={worker.id} />
                     </div>
                 )}
             </div>

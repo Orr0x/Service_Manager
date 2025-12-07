@@ -2,20 +2,32 @@ import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '../trpc'
 
 export const customersRouter = createTRPCRouter({
-    getAll: protectedProcedure.query(async ({ ctx }) => {
-        const { data, error } = await ctx.db
-            .from('customers')
-            .select('*')
-            .eq('tenant_id', ctx.tenantId)
-            .order('business_name', { ascending: true, nullsFirst: false })
-            .order('contact_name', { ascending: true })
+    getAll: protectedProcedure
+        .input(z.object({
+            search: z.string().optional()
+        }).optional())
+        .query(async ({ ctx, input }) => {
+            let query = ctx.db
+                .from('customers')
+                .select('*')
+                .eq('tenant_id', ctx.tenantId)
 
-        if (error) {
-            throw new Error(`Failed to fetch customers: ${error.message}`)
-        }
+            if (input?.search) {
+                const search = input.search.toLowerCase()
+                // Simple OR filter for main text fields
+                query = query.or(`business_name.ilike.%${search}%,contact_name.ilike.%${search}%,email.ilike.%${search}%`)
+            }
 
-        return data
-    }),
+            const { data, error } = await query
+                .order('business_name', { ascending: true, nullsFirst: false })
+                .order('contact_name', { ascending: true })
+
+            if (error) {
+                throw new Error(`Failed to fetch customers: ${error.message}`)
+            }
+
+            return data
+        }),
 
     getDashboardStats: protectedProcedure.query(async ({ ctx }) => {
         const [

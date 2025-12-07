@@ -13,6 +13,10 @@ export default function NewServicePage() {
         },
     })
 
+    const { data: settings } = api.settings.getSettings.useQuery()
+    const terminology = (settings?.terminology as Record<string, string>) || {}
+    const getLabel = (key: string, defaultLabel: string) => terminology[key] || defaultLabel
+
     async function onSubmit(formData: FormData) {
         const name = formData.get('name') as string
         const category = formData.get('category') as string
@@ -55,7 +59,7 @@ export default function NewServicePage() {
                 <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
                     <div className="sm:col-span-4">
                         <label htmlFor="name" className="block text-sm font-medium leading-6 text-gray-900">
-                            Service Name
+                            {getLabel('services.name', 'Service Name')} <span className="text-red-500">*</span>
                         </label>
                         <div className="mt-2">
                             <input
@@ -70,7 +74,7 @@ export default function NewServicePage() {
 
                     <div className="sm:col-span-3">
                         <label htmlFor="category" className="block text-sm font-medium leading-6 text-gray-900">
-                            Category
+                            {getLabel('services.category', 'Category')}
                         </label>
                         <div className="mt-2">
                             <select
@@ -92,7 +96,7 @@ export default function NewServicePage() {
 
                     <div className="sm:col-span-3">
                         <label htmlFor="basePrice" className="block text-sm font-medium leading-6 text-gray-900">
-                            Base Price ($)
+                            {getLabel('services.basePrice', 'Base Price')}
                         </label>
                         <div className="mt-2">
                             <input
@@ -108,8 +112,8 @@ export default function NewServicePage() {
                     </div>
 
                     <div className="sm:col-span-3">
-                        <label htmlFor="durationMinutes" className="block text-sm font-medium leading-6 text-gray-900">
-                            Duration (minutes)
+                        <label htmlFor="duration" className="block text-sm font-medium leading-6 text-gray-900">
+                            {getLabel('services.duration', 'Duration (minutes)')}
                         </label>
                         <div className="mt-2">
                             <input
@@ -125,7 +129,7 @@ export default function NewServicePage() {
 
                     <div className="col-span-full">
                         <label htmlFor="description" className="block text-sm font-medium leading-6 text-gray-900">
-                            Description
+                            {getLabel('services.description', 'Description')}
                         </label>
                         <div className="mt-2">
                             <textarea

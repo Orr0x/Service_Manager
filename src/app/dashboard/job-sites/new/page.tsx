@@ -16,6 +16,10 @@ export default function NewJobSitePage() {
         setSiteId(crypto.randomUUID())
     }, [])
 
+    const { data: settings } = api.settings.getSettings.useQuery()
+    const terminology = (settings?.terminology as Record<string, string>) || {}
+    const getLabel = (key: string, defaultLabel: string) => terminology[key] || defaultLabel
+
     const createJobSite = api.jobSites.create.useMutation({
         onSuccess: () => {
             router.push('/dashboard/job-sites')
@@ -135,7 +139,7 @@ export default function NewJobSitePage() {
                     <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-6">
                         <div className="sm:col-span-4">
                             <label htmlFor="customerId" className="block text-sm font-medium leading-6 text-gray-900">
-                                Customer <span className="text-red-500">*</span>
+                                {getLabel('job_sites.customerId', 'Customer')} <span className="text-red-500">*</span>
                             </label>
                             <div className="mt-2">
                                 <select
@@ -156,7 +160,7 @@ export default function NewJobSitePage() {
 
                         <div className="sm:col-span-4">
                             <label htmlFor="name" className="block text-sm font-medium leading-6 text-gray-900">
-                                Site Name <span className="text-red-500">*</span>
+                                {getLabel('job_sites.name', 'Site Name')} <span className="text-red-500">*</span>
                             </label>
                             <div className="mt-2">
                                 <input
@@ -172,7 +176,7 @@ export default function NewJobSitePage() {
 
                         <div className="col-span-full">
                             <label htmlFor="address" className="block text-sm font-medium leading-6 text-gray-900">
-                                Address <span className="text-red-500">*</span>
+                                {getLabel('job_sites.address', 'Address')} <span className="text-red-500">*</span>
                             </label>
                             <div className="mt-2">
                                 <input
@@ -188,7 +192,7 @@ export default function NewJobSitePage() {
 
                         <div className="sm:col-span-2 sm:col-start-1">
                             <label htmlFor="siteType" className="block text-sm font-medium leading-6 text-gray-900">
-                                Site Type
+                                {getLabel('job_sites.siteType', 'Site Type')}
                             </label>
                             <div className="mt-2">
                                 <select
@@ -214,7 +218,7 @@ export default function NewJobSitePage() {
 
                         <div className="sm:col-span-2">
                             <label htmlFor="city" className="block text-sm font-medium leading-6 text-gray-900">
-                                City
+                                {getLabel('job_sites.city', 'City')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -229,7 +233,7 @@ export default function NewJobSitePage() {
 
                         <div className="sm:col-span-2">
                             <label htmlFor="postalCode" className="block text-sm font-medium leading-6 text-gray-900">
-                                Postcode
+                                {getLabel('job_sites.postalCode', 'Postcode')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -244,7 +248,7 @@ export default function NewJobSitePage() {
 
                         <div className="sm:col-span-2">
                             <label htmlFor="country" className="block text-sm font-medium leading-6 text-gray-900">
-                                Country
+                                {getLabel('job_sites.country', 'Country')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -270,7 +274,7 @@ export default function NewJobSitePage() {
                     <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-6">
                         <div className="sm:col-span-2">
                             <label htmlFor="latitude" className="block text-sm font-medium leading-6 text-gray-900">
-                                Latitude
+                                {getLabel('job_sites.latitude', 'Latitude')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -286,7 +290,7 @@ export default function NewJobSitePage() {
 
                         <div className="sm:col-span-2">
                             <label htmlFor="longitude" className="block text-sm font-medium leading-6 text-gray-900">
-                                Longitude
+                                {getLabel('job_sites.longitude', 'Longitude')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -302,7 +306,7 @@ export default function NewJobSitePage() {
 
                         <div className="sm:col-span-2">
                             <label htmlFor="what3words" className="block text-sm font-medium leading-6 text-gray-900">
-                                What3Words
+                                {getLabel('job_sites.what3words', 'What3Words')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -327,7 +331,7 @@ export default function NewJobSitePage() {
                     <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-6">
                         <div className="col-span-full">
                             <label htmlFor="accessInstructions" className="block text-sm font-medium leading-6 text-gray-900">
-                                Access Instructions
+                                {getLabel('job_sites.accessInstructions', 'Access Instructions')}
                             </label>
                             <div className="mt-2">
                                 <textarea
@@ -342,7 +346,7 @@ export default function NewJobSitePage() {
 
                         <div className="sm:col-span-3">
                             <label htmlFor="securityCodes" className="block text-sm font-medium leading-6 text-gray-900">
-                                Security Codes
+                                {getLabel('job_sites.securityCodes', 'Security Codes')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -357,7 +361,7 @@ export default function NewJobSitePage() {
 
                         <div className="sm:col-span-3">
                             <label htmlFor="keyHolder" className="block text-sm font-medium leading-6 text-gray-900">
-                                Key Holder
+                                {getLabel('job_sites.keyHolder', 'Key Holder')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -372,7 +376,7 @@ export default function NewJobSitePage() {
 
                         <div className="col-span-full">
                             <label htmlFor="parkingInfo" className="block text-sm font-medium leading-6 text-gray-900">
-                                Parking Information
+                                {getLabel('job_sites.parkingInfo', 'Parking Information')}
                             </label>
                             <div className="mt-2">
                                 <textarea
@@ -387,7 +391,7 @@ export default function NewJobSitePage() {
 
                         <div className="col-span-full">
                             <label htmlFor="facilities" className="block text-sm font-medium leading-6 text-gray-900">
-                                Facilities
+                                {getLabel('job_sites.facilities', 'Facilities')}
                             </label>
                             <div className="mt-2">
                                 <textarea

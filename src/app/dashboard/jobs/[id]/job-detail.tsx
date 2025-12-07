@@ -16,12 +16,14 @@ import {
     Briefcase,
     Building2,
     File,
-    Clock
+    Clock,
+    Award
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { NotesSection } from '@/components/notes-section'
 import { AttachmentsSection } from '@/components/attachments-section'
+import CertificationManager from '@/components/certification/CertificationManager'
 import { useState } from 'react'
 
 export function JobDetail({ id }: { id: string }) {
@@ -94,7 +96,9 @@ export function JobDetail({ id }: { id: string }) {
         { id: 'notes', name: 'Notes', icon: StickyNote },
         { id: 'invoices', name: `Invoices (${job.invoices?.length || 0})`, icon: Receipt },
         { id: 'contracts', name: `Contracts (${job.customers?.contracts?.length || 0})`, icon: FileText },
+        { id: 'contracts', name: `Contracts (${job.customers?.contracts?.length || 0})`, icon: FileText },
         { id: 'quotes', name: `Quotes (${job.customers?.quotes?.length || 0})`, icon: File },
+        { id: 'certification', name: 'Certification', icon: Award },
     ]
 
     return (
@@ -478,6 +482,12 @@ export function JobDetail({ id }: { id: string }) {
                                 <li className="py-12 text-center text-gray-500">No quotes found for this customer.</li>
                             )}
                         </ul>
+                    </div>
+                )}
+
+                {activeTab === 'certification' && (
+                    <div className="space-y-6">
+                        <CertificationManager entityType="job" entityId={job.id} />
                     </div>
                 )}
             </div>

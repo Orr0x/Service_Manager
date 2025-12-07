@@ -4,8 +4,13 @@ import { api } from '@/trpc/react'
 import Link from 'next/link'
 import { FileText, CheckSquare, LayoutTemplate } from 'lucide-react'
 
+import { useSearchParams } from 'next/navigation'
+
 export function ChecklistList() {
-    const { data: checklists, isLoading } = api.checklists.getAll.useQuery()
+    const searchParams = useSearchParams()
+    const search = searchParams.get('search') || undefined
+
+    const { data: checklists, isLoading } = api.checklists.getAll.useQuery({ search })
 
     if (isLoading) {
         return <div className="p-8 text-center text-gray-500">Loading checklists...</div>

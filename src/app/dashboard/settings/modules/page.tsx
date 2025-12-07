@@ -4,6 +4,8 @@ import { api } from '@/trpc/react'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { Switch } from '@headlessui/react'
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 
 const defaultModules = [
     { key: 'customers', label: 'Customers' },
@@ -16,8 +18,8 @@ const defaultModules = [
     { key: 'contractors', label: 'External Contractors' },
     { key: 'jobs', label: 'Jobs' },
     { key: 'schedule', label: 'Scheduling' },
-    { key: 'financials', label: 'Financials' },
-    { key: 'legals', label: 'Legals' },
+    { key: 'services', label: 'Services' },
+    { key: 'certification', label: 'Certification' },
 ]
 
 export default function ModulesSettingsPage() {
@@ -73,6 +75,12 @@ export default function ModulesSettingsPage() {
 
     return (
         <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <div className="mb-6">
+                <Link href="/dashboard/settings" className="flex items-center text-sm text-gray-500 hover:text-gray-900 transition-colors">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to System Settings
+                </Link>
+            </div>
             <div className="md:flex md:items-center md:justify-between">
                 <div className="min-w-0 flex-1">
                     <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">

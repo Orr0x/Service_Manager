@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { api, HydrateClient } from '@/trpc/server'
 import { Plus, Wrench, CheckCircle, DollarSign, Clock } from 'lucide-react'
 import { ServicesList } from './services-list'
+import { SearchInput } from '@/components/common/search-input'
 
 export default async function ServicesPage() {
     // Prefetch services on the server
@@ -106,10 +107,8 @@ export default async function ServicesPage() {
                     </div>
                 </div>
 
-                {/* Services List */}
-                <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
-                    <ServicesList />
-                </div>
+                {/* Search Bar */}
+                <SearchInput placeholder="Search services by name, description, or category..." />
             </div>
         </HydrateClient>
     )

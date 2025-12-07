@@ -4,8 +4,13 @@ import { api } from '@/trpc/react'
 import Link from 'next/link'
 import { User, Mail, Phone, Briefcase } from 'lucide-react'
 
+import { useSearchParams } from 'next/navigation'
+
 export function WorkerList() {
-    const { data: workers, isLoading } = api.workers.getAll.useQuery()
+    const searchParams = useSearchParams()
+    const search = searchParams.get('search') || undefined
+
+    const { data: workers, isLoading } = api.workers.getAll.useQuery({ search })
 
     if (isLoading) {
         return <div className="p-8 text-center text-gray-500">Loading workers...</div>

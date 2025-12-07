@@ -3,9 +3,13 @@
 import { api } from '@/trpc/react'
 import Link from 'next/link'
 import { FileText, Calendar, DollarSign, User } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 
 export function QuoteList() {
-    const { data: quotes, isLoading } = api.quotes.getAll.useQuery()
+    const searchParams = useSearchParams()
+    const search = searchParams.get('search') || undefined
+
+    const { data: quotes, isLoading } = api.quotes.getAll.useQuery({ search })
 
     if (isLoading) {
         return <div className="p-8 text-center text-gray-500">Loading quotes...</div>
@@ -60,9 +64,9 @@ export function QuoteList() {
                             </div>
                             <div className="mt-1 flex items-center gap-x-1.5 text-xs leading-5 text-gray-500">
                                 <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${quote.status === 'accepted' ? 'bg-green-50 text-green-700 ring-green-600/20' :
-                                        quote.status === 'sent' ? 'bg-blue-50 text-blue-700 ring-blue-600/20' :
-                                            quote.status === 'draft' ? 'bg-gray-50 text-gray-600 ring-gray-500/10' :
-                                                'bg-red-50 text-red-700 ring-red-600/10'
+                                    quote.status === 'sent' ? 'bg-blue-50 text-blue-700 ring-blue-600/20' :
+                                        quote.status === 'draft' ? 'bg-gray-50 text-gray-600 ring-gray-500/10' :
+                                            'bg-red-50 text-red-700 ring-red-600/10'
                                     }`}>
                                     {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
                                 </span>

@@ -24,6 +24,7 @@ import {
     Wrench
 } from 'lucide-react'
 import { ThemeProvider } from '@/components/theme-provider'
+import { SearchInput } from '@/components/common/search-input'
 
 export default async function DashboardLayout({
     children,
@@ -59,7 +60,13 @@ export default async function DashboardLayout({
         primary_color: '#2563eb',
         secondary_color: '#1e40af',
         company_name: tenantData?.name || 'Service Manager',
-        logo_url: null
+        logo_url: null,
+        theme: {
+            sidebarBg: '#ffffff',
+            sidebarText: '#374151',
+            headerBg: '#ffffff',
+            borderRadius: '0.5rem'
+        }
     }
     const terminology = (settingsData?.terminology as Record<string, string>) || {}
     const navSettings = (settingsData?.navigation as Record<string, { enabled: boolean, label: string }>) || {}
@@ -78,7 +85,7 @@ export default async function DashboardLayout({
         { key: 'schedule', name: 'Scheduling', href: '/dashboard/schedule', icon: CalendarDays },
         { key: 'services', name: 'Services', href: '/dashboard/services', icon: Wrench },
         { key: 'certification', name: 'Certification', href: '/dashboard/certification', icon: Award },
-        { key: 'settings', name: 'App Settings', href: '/dashboard/settings', icon: Settings },
+
     ]
 
     const navigation = defaultNavigation
@@ -95,18 +102,12 @@ export default async function DashboardLayout({
         <ThemeProvider branding={branding}>
             <div className="min-h-screen bg-gray-50">
                 {/* Sidebar */}
-                <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out md:translate-x-0">
-                    <div className="flex h-16 items-center px-6 border-b">
-                        {branding.logo_url ? (
-                            <img src={branding.logo_url} alt={branding.company_name} className="h-8 w-auto" />
-                        ) : (
-                            <div className="h-8 w-8 rounded flex items-center justify-center text-white font-bold" style={{ backgroundColor: branding.primary_color }}>
-                                {branding.company_name.substring(0, 1).toUpperCase()}
-                            </div>
-                        )}
-                        <span className="ml-3 text-xl font-bold" style={{ color: branding.primary_color }}>
-                            {branding.company_name}
-                        </span>
+                <div
+                    className="fixed inset-y-0 left-0 z-50 w-64 shadow-lg transform transition-transform duration-300 ease-in-out md:translate-x-0"
+                    style={{ backgroundColor: 'var(--sidebar-bg, #ffffff)' }}
+                >
+                    <div className="flex h-16 items-center px-4 border-b border-black/5">
+                        {/* Search removed as per user request */}
                     </div>
 
                     <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
@@ -114,57 +115,45 @@ export default async function DashboardLayout({
                             <Link
                                 key={item.name}
                                 href={item.href}
-                                className="group flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 rounded-md hover:bg-blue-50 transition-colors"
+                                className="group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors hover:bg-black/5"
+                                style={{ color: 'var(--sidebar-text, #374151)' }}
                             >
-                                <item.icon className="mr-3 h-5 w-5 text-gray-400 group-hover:text-[var(--primary-color)]" aria-hidden="true" />
+                                <item.icon
+                                    className="mr-3 h-5 w-5 opacity-70 group-hover:opacity-100 group-hover:text-[var(--primary-color)]"
+                                    aria-hidden="true"
+                                />
                                 <span className="group-hover:text-[var(--primary-color)]">{item.name}</span>
                             </Link>
                         ))}
                     </nav>
 
-                    <div className="border-t p-4">
-                        <UserNav user={user} />
+                    <div className="border-t border-black/5 p-4">
+                        {/* UserNav moved to header */}
                     </div>
                 </div>
 
                 {/* Main Content */}
                 <div className="md:pl-64 flex flex-col min-h-screen">
                     {/* Top Header */}
-                    <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
-                        <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
-                            <form className="relative flex flex-1" action="#" method="GET">
-                                <label htmlFor="search-field" className="sr-only">
-                                    Search...
-                                </label>
-                                <div className="relative w-full text-gray-400 focus-within:text-gray-600">
-                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
-                                        <Search className="h-5 w-5" aria-hidden="true" />
-                                    </div>
-                                    <input
-                                        id="search-field"
-                                        className="block h-full w-full border-0 py-0 pl-10 pr-0 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm"
-                                        placeholder="Search..."
-                                        type="search"
-                                        name="search"
-                                    />
+                    <header
+                        className="sticky top-0 z-40 flex h-20 shrink-0 items-center justify-between gap-x-4 border-b border-gray-200 px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8"
+                        style={{ backgroundColor: 'var(--header-bg, #ffffff)' }}
+                    >
+                        <div className="flex items-center gap-x-4">
+                            {branding.logo_url ? (
+                                <img src={branding.logo_url} alt={branding.company_name} className="h-10 w-auto" />
+                            ) : (
+                                <div className="h-10 w-10 rounded-lg flex items-center justify-center text-white font-bold shadow-sm" style={{ backgroundColor: branding.primary_color }}>
+                                    {branding.company_name.substring(0, 1).toUpperCase()}
                                 </div>
-                            </form>
-                            <div className="flex items-center gap-x-4 lg:gap-x-6">
-                                <button type="button" className="-m-2.5 p-2.5 text-gray-400 hover:text-gray-500">
-                                    <span className="sr-only">View notifications</span>
-                                    <Bell className="h-6 w-6" aria-hidden="true" />
-                                </button>
-                                <div className="hidden lg:block lg:h-6 lg:w-px lg:bg-gray-200" aria-hidden="true" />
+                            )}
+                            <span className="text-2xl font-bold tracking-tight text-gray-900">
+                                {branding.company_name}
+                            </span>
+                        </div>
 
-                                {/* Profile dropdown */}
-                                <div className="relative">
-                                    <form action={signOut}>
-                                        <button type="submit" className="text-sm font-semibold leading-6 text-gray-900 hover:text-[var(--primary-color)]">
-                                            Sign out
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
+                        <div className="flex items-center gap-x-4 lg:gap-x-6">
+                            <UserNav user={user} />
                         </div>
                     </header>
 
@@ -174,7 +163,7 @@ export default async function DashboardLayout({
                         </div>
                     </main>
                 </div>
-            </div>
-        </ThemeProvider>
+            </div >
+        </ThemeProvider >
     )
 }

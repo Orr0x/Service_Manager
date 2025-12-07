@@ -10,25 +10,56 @@ const invoiceItemSchema = z.object({
 })
 
 export const invoicesRouter = createTRPCRouter({
-    getAll: protectedProcedure.query(async ({ ctx }) => {
-        const { data, error } = await ctx.db
-            .from('invoices')
-            .select(`
+    getAll: protectedProcedure
+        .input(z.object({
+            search: z.string().optional()
+        }).optional())
+        .query(async ({ ctx, input }) => {
+            if (input?.search) {
+                const { data, error } = await ctx.db.rpc('search_invoices', {
+                    p_tenant_id: ctx.tenantId,
+                    p_search_text: input.search
+                })
+
+                if (error) {
+                    throw new Error(`Failed to search invoices: ${error.message}`)
+                }
+
+                // Map RPC result back to expected shape with nested customer
+                // The RPC returns flattened columns: customer_business_name, customer_contact_name
+                // Cast data to any[] to allow mapping without TS errors about unknown type
+                return (data as any[]).map((inv: any) => ({
+                    ...inv,
+                    customers: {
+                        id: inv.customer_id,
+                        business_name: inv.customer_business_name,
+                        contact_name: inv.customer_contact_name
+                    },
+                    job_site: inv.job_site_id ? { name: inv.job_site_name, address: inv.job_site_address } : null,
+                    job: inv.job_id ? { title: inv.job_title } : null,
+                    quote: inv.quote_id ? { title: inv.quote_title, quote_number: inv.quote_quote_number } : null,
+                }))
+            }
+
+            // Standard query without search (or fallback if empty search)
+            const { data, error } = await ctx.db
+                .from('invoices')
+                .select(`
         *,
         customer:customers(contact_name, business_name),
         job_site:job_sites(name, address),
         job:jobs(title),
         quote:quotes(title, quote_number)
       `)
-            .eq('tenant_id', ctx.tenantId)
-            .order('created_at', { ascending: false })
+                .eq('tenant_id', ctx.tenantId)
+                .order('created_at', { ascending: false })
 
-        if (error) {
-            throw new Error(`Failed to fetch invoices: ${error.message}`)
-        }
+            if (error) {
+                throw new Error(`Failed to fetch invoices: ${error.message}`)
+            }
 
-        return data
-    }),
+            return data
+        }),
 
     getDashboardStats: protectedProcedure.query(async ({ ctx }) => {
         const [

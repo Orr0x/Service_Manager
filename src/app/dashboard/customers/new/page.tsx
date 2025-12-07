@@ -8,6 +8,15 @@ export default function NewCustomerPage() {
     const router = useRouter()
     const [customerType, setCustomerType] = useState<'individual' | 'business'>('business')
 
+    // Fetch settings for form field aliases
+    const { data: settings } = api.settings.getSettings.useQuery()
+    const terminology = (settings?.terminology as Record<string, string>) || {}
+
+    // Helper to get label
+    const getLabel = (key: string, defaultLabel: string) => {
+        return terminology[key] || defaultLabel
+    }
+
     const createCustomer = api.customers.create.useMutation({
         onSuccess: () => {
             router.push('/dashboard/customers')
@@ -75,7 +84,7 @@ export default function NewCustomerPage() {
                     <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-6">
                         <div className="sm:col-span-4">
                             <label htmlFor="businessName" className="block text-sm font-medium leading-6 text-gray-900">
-                                Business Name {customerType === 'individual' && <span className="text-gray-400 font-normal">(Optional)</span>}
+                                {getLabel('customers.business_name', 'Business Name')} {customerType === 'individual' && <span className="text-gray-400 font-normal">(Optional)</span>}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -91,7 +100,7 @@ export default function NewCustomerPage() {
 
                         <div className="sm:col-span-4">
                             <label htmlFor="contactName" className="block text-sm font-medium leading-6 text-gray-900">
-                                Contact Person Name <span className="text-red-500">*</span>
+                                {getLabel('customers.contact_name', 'Contact Person Name')} <span className="text-red-500">*</span>
                             </label>
                             <div className="mt-2">
                                 <input
@@ -107,7 +116,7 @@ export default function NewCustomerPage() {
 
                         <div className="sm:col-span-3">
                             <label htmlFor="customerType" className="block text-sm font-medium leading-6 text-gray-900">
-                                Customer Type <span className="text-red-500">*</span>
+                                {getLabel('customers.type', 'Customer Type')} <span className="text-red-500">*</span>
                             </label>
                             <div className="mt-2">
                                 <select
@@ -134,7 +143,7 @@ export default function NewCustomerPage() {
                     <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-6">
                         <div className="sm:col-span-4">
                             <label htmlFor="email" className="block text-sm font-medium leading-6 text-gray-900">
-                                Email Address
+                                {getLabel('customers.email', 'Email Address')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -149,7 +158,7 @@ export default function NewCustomerPage() {
 
                         <div className="sm:col-span-4">
                             <label htmlFor="phone" className="block text-sm font-medium leading-6 text-gray-900">
-                                Phone Number
+                                {getLabel('customers.phone', 'Phone Number')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -163,8 +172,8 @@ export default function NewCustomerPage() {
                         </div>
 
                         <div className="col-span-full">
-                            <label htmlFor="address" className="block text-sm font-medium leading-6 text-gray-900">
-                                Address Line 1
+                            <label htmlFor="businessName" className="block text-sm font-medium leading-6 text-gray-900">
+                                {getLabel('customers.business_name', 'Business Name')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -179,7 +188,7 @@ export default function NewCustomerPage() {
 
                         <div className="sm:col-span-2 sm:col-start-1">
                             <label htmlFor="city" className="block text-sm font-medium leading-6 text-gray-900">
-                                City
+                                {getLabel('customers.city', 'City')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -194,7 +203,7 @@ export default function NewCustomerPage() {
 
                         <div className="sm:col-span-2">
                             <label htmlFor="postalCode" className="block text-sm font-medium leading-6 text-gray-900">
-                                Postcode
+                                {getLabel('customers.postal_code', 'Postcode')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -209,7 +218,7 @@ export default function NewCustomerPage() {
 
                         <div className="sm:col-span-2">
                             <label htmlFor="country" className="block text-sm font-medium leading-6 text-gray-900">
-                                Country
+                                {getLabel('customers.country', 'Country')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -240,8 +249,8 @@ export default function NewCustomerPage() {
                                 defaultChecked
                                 className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-600"
                             />
-                            <label htmlFor="contract" className="block text-sm font-medium leading-6 text-gray-900">
-                                Contract
+                            <label htmlFor="type" className="block text-sm font-medium leading-6 text-gray-900">
+                                {getLabel('customers.type', 'Customer Type')}
                             </label>
                         </div>
                         <div className="flex items-center gap-x-3">
@@ -267,7 +276,7 @@ export default function NewCustomerPage() {
                     <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-6">
                         <div className="sm:col-span-4">
                             <label htmlFor="paymentTerms" className="block text-sm font-medium leading-6 text-gray-900">
-                                Payment Terms
+                                {getLabel('customers.payment_terms', 'Payment Terms')}
                             </label>
                             <div className="mt-2">
                                 <select

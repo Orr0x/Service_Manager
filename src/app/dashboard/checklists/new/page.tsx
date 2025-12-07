@@ -33,6 +33,10 @@ export default function NewChecklistPage() {
         },
     })
 
+    const { data: settings } = api.settings.getSettings.useQuery()
+    const terminology = (settings?.terminology as Record<string, string>) || {}
+    const getLabel = (key: string, defaultLabel: string) => terminology[key] || defaultLabel
+
     // Update item field
     const updateItem = (index: number, field: keyof ChecklistItem, value: any) => {
         const newItems = [...items]
@@ -116,7 +120,7 @@ export default function NewChecklistPage() {
                     <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-6">
                         <div className="sm:col-span-4">
                             <label htmlFor="name" className="block text-sm font-medium leading-6 text-gray-900">
-                                Name <span className="text-red-500">*</span>
+                                {getLabel('checklists.name', 'Checklist Name')} <span className="text-red-500">*</span>
                             </label>
                             <div className="mt-2">
                                 <input
@@ -132,7 +136,7 @@ export default function NewChecklistPage() {
 
                         <div className="col-span-full">
                             <label htmlFor="description" className="block text-sm font-medium leading-6 text-gray-900">
-                                Description
+                                {getLabel('checklists.description', 'Description')}
                             </label>
                             <div className="mt-2">
                                 <textarea
@@ -170,8 +174,8 @@ export default function NewChecklistPage() {
                 <div className="space-y-6">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h3 className="text-base font-semibold leading-7 text-gray-900">Checklist Items</h3>
-                            <p className="mt-1 text-sm leading-6 text-gray-600">Add tasks to be completed.</p>
+                            <h3 className="text-base font-semibold leading-7 text-gray-900">{getLabel('checklists.tasks', 'Tasks')}</h3>
+                            <p className="mt-1 text-sm leading-6 text-gray-600">Add tasks to be completed in this checklist.</p>
                         </div>
                         <button
                             type="button"

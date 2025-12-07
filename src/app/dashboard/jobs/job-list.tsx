@@ -4,9 +4,13 @@ import { api } from '@/trpc/react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { Calendar, MapPin, User, Clock, Plus } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 
 export function JobList() {
-    const { data: jobs, isLoading } = api.jobs.getAll.useQuery({})
+    const searchParams = useSearchParams()
+    const search = searchParams.get('search') || undefined
+
+    const { data: jobs, isLoading } = api.jobs.getAll.useQuery({ search })
 
     if (isLoading) {
         return <div className="animate-pulse space-y-4">

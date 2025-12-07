@@ -24,6 +24,10 @@ export default function NewContractPage() {
         },
     })
 
+    const { data: settings } = api.settings.getSettings.useQuery()
+    const terminology = (settings?.terminology as Record<string, string>) || {}
+    const getLabel = (key: string, defaultLabel: string) => terminology[key] || defaultLabel
+
     async function onSubmit(formData: FormData) {
         const customerId = formData.get('customerId') as string
         const jobSiteId = formData.get('jobSiteId') as string
@@ -104,7 +108,7 @@ export default function NewContractPage() {
                     <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-6">
                         <div className="sm:col-span-3">
                             <label htmlFor="customerId" className="block text-sm font-medium leading-6 text-gray-900">
-                                Customer <span className="text-red-500">*</span>
+                                {getLabel('contracts.customerId', 'Customer')} <span className="text-red-500">*</span>
                             </label>
                             <div className="mt-2">
                                 <select
@@ -127,7 +131,7 @@ export default function NewContractPage() {
 
                         <div className="sm:col-span-3">
                             <label htmlFor="jobSiteId" className="block text-sm font-medium leading-6 text-gray-900">
-                                Job Site
+                                {getLabel('contracts.jobSiteId', 'Job Site')}
                             </label>
                             <div className="mt-2">
                                 <select
@@ -148,7 +152,7 @@ export default function NewContractPage() {
 
                         <div className="sm:col-span-4">
                             <label htmlFor="name" className="block text-sm font-medium leading-6 text-gray-900">
-                                Contract Name <span className="text-red-500">*</span>
+                                {getLabel('contracts.name', 'Contract Name')} <span className="text-red-500">*</span>
                             </label>
                             <div className="mt-2">
                                 <input
@@ -164,7 +168,7 @@ export default function NewContractPage() {
 
                         <div className="sm:col-span-2">
                             <label htmlFor="type" className="block text-sm font-medium leading-6 text-gray-900">
-                                Type <span className="text-red-500">*</span>
+                                {getLabel('contracts.type', 'Type')} <span className="text-red-500">*</span>
                             </label>
                             <div className="mt-2">
                                 <select
@@ -184,7 +188,7 @@ export default function NewContractPage() {
 
                         <div className="sm:col-span-2">
                             <label htmlFor="status" className="block text-sm font-medium leading-6 text-gray-900">
-                                Status <span className="text-red-500">*</span>
+                                {getLabel('contracts.status', 'Status')} <span className="text-red-500">*</span>
                             </label>
                             <div className="mt-2">
                                 <select
@@ -204,7 +208,7 @@ export default function NewContractPage() {
 
                         <div className="sm:col-span-2">
                             <label htmlFor="startDate" className="block text-sm font-medium leading-6 text-gray-900">
-                                Start Date
+                                {getLabel('contracts.startDate', 'Start Date')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -218,7 +222,7 @@ export default function NewContractPage() {
 
                         <div className="sm:col-span-2">
                             <label htmlFor="endDate" className="block text-sm font-medium leading-6 text-gray-900">
-                                End Date
+                                {getLabel('contracts.endDate', 'End Date')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -232,7 +236,7 @@ export default function NewContractPage() {
 
                         <div className="sm:col-span-2">
                             <label htmlFor="amount" className="block text-sm font-medium leading-6 text-gray-900">
-                                Value
+                                {getLabel('contracts.amount', 'Value')}
                             </label>
                             <div className="mt-2 relative rounded-md shadow-sm">
                                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -251,7 +255,7 @@ export default function NewContractPage() {
 
                         <div className="sm:col-span-2">
                             <label htmlFor="billingFrequency" className="block text-sm font-medium leading-6 text-gray-900">
-                                Billing Frequency
+                                {getLabel('contracts.billingFrequency', 'Billing Frequency')}
                             </label>
                             <div className="mt-2">
                                 <select
@@ -270,7 +274,7 @@ export default function NewContractPage() {
 
                         <div className="col-span-full">
                             <label htmlFor="description" className="block text-sm font-medium leading-6 text-gray-900">
-                                Description
+                                {getLabel('contracts.description', 'Description')}
                             </label>
                             <div className="mt-2">
                                 <textarea

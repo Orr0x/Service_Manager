@@ -4,8 +4,13 @@ import { api } from '@/trpc/react'
 import Link from 'next/link'
 import { FileText, User, Calendar } from 'lucide-react'
 
+import { useSearchParams } from 'next/navigation'
+
 export function InvoiceList() {
-    const { data: invoices, isLoading } = api.invoices.getAll.useQuery()
+    const searchParams = useSearchParams()
+    const search = searchParams.get('search') || undefined
+
+    const { data: invoices, isLoading } = api.invoices.getAll.useQuery({ search })
 
     if (isLoading) {
         return <div className="p-8 text-center text-gray-500">Loading invoices...</div>
@@ -46,7 +51,7 @@ export function InvoiceList() {
                             <div className="mt-1 flex items-center gap-x-2 text-xs leading-5 text-gray-500">
                                 <User className="h-4 w-4 text-gray-400" />
                                 <p className="truncate">
-                                    {invoice.customer?.company_name || `${invoice.customer?.first_name} ${invoice.customer?.last_name}`}
+                                    {invoice.customers?.business_name || invoice.customers?.contact_name || 'Unknown Customer'}
                                 </p>
                                 <span className="text-gray-300">|</span>
                                 <Calendar className="h-4 w-4 text-gray-400" />

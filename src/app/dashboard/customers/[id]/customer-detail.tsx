@@ -13,8 +13,10 @@ import {
     Mail,
     MapPin,
     Edit,
-    ArrowLeft
+    ArrowLeft,
+    Award
 } from 'lucide-react'
+import CertificationManager from '@/components/certification/CertificationManager'
 
 export function CustomerDetail({ id }: { id: string }) {
     const router = useRouter()
@@ -40,7 +42,8 @@ export function CustomerDetail({ id }: { id: string }) {
         { id: 'properties', name: `Job Sites (${jobSites?.length || 0})`, icon: Building2 },
         { id: 'contracts', name: `Contracts (${contracts?.length || 0})`, icon: FileText },
         { id: 'jobs', name: `Jobs (${jobs?.length || 0})`, icon: Briefcase },
-        { id: 'invoices', name: `Invoices & Quotes (${(invoices?.length || 0) + (quotes?.length || 0)})`, icon: Receipt },
+        { id: 'invoices', name: `Invoices & Kpi (${(invoices?.length || 0) + (quotes?.length || 0)})`, icon: Receipt },
+        { id: 'certification', name: 'Certification', icon: Award },
     ]
 
     return (
@@ -369,6 +372,12 @@ export function CustomerDetail({ id }: { id: string }) {
                                 )}
                             </ul>
                         </div>
+                    </div>
+                )}
+
+                {activeTab === 'certification' && (
+                    <div className="space-y-6">
+                        <CertificationManager entityType="customer" entityId={id} />
                     </div>
                 )}
             </div>

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { api, HydrateClient } from '@/trpc/server'
 import { Plus, Receipt, CheckCircle, AlertCircle, FileText } from 'lucide-react'
 import { InvoiceList } from './invoice-list'
+import { SearchInput } from '@/components/common/search-input'
 
 export default async function InvoicesPage() {
     void api.invoices.getAll.prefetch()
@@ -107,13 +108,7 @@ export default async function InvoicesPage() {
                 </div>
 
                 {/* Search Bar */}
-                <div className="relative">
-                    <input
-                        type="text"
-                        className="block w-full rounded-md border-0 py-3 pl-4 pr-10 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                        placeholder="Search invoices by number or customer..."
-                    />
-                </div>
+                <SearchInput placeholder="Search invoices by number, status, or notes..." />
 
                 {/* Invoice List */}
                 <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">

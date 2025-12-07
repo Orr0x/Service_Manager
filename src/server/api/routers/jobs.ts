@@ -23,7 +23,8 @@ export const jobsRouter = createTRPCRouter({
             contractor_id,
             workers(first_name, last_name, email),
             contractors(company_name, contact_name)
-          )
+          ),
+          job_checklists(id, items, checklists(name))
         `)
                 .eq('tenant_id', ctx.tenantId)
                 .order('created_at', { ascending: false })

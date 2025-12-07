@@ -1,8 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/trpc/react'
-import { useState } from 'react'
+import { FileUploader } from '@/components/file-uploader'
 
 export default function NewContractorPage() {
     const router = useRouter()
@@ -14,7 +15,18 @@ export default function NewContractorPage() {
         },
     })
 
-    async function onSubmit(formData: FormData) {
+    // Generate a temporary ID for file uploads (or just use undefined if uploader handles it, 
+    // but better to have one if we want to link immediately. 
+    // However, for simplified flow, we upload to a bucket and just get URL)
+    // Actually FileUploader just returns URL, entityId is for folder structure.
+    // Let's generate one.
+    const [tempId] = useState(() => crypto.randomUUID())
+    const [profilePictureUrl, setProfilePictureUrl] = useState<string | undefined>()
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+        const formData = new FormData(e.currentTarget)
+
         const companyName = formData.get('companyName') as string
         const contactName = formData.get('contactName') as string
         const email = formData.get('email') as string
@@ -24,13 +36,23 @@ export default function NewContractorPage() {
 
         const specialties = specialtiesStr ? specialtiesStr.split(',').map(s => s.trim()).filter(s => s !== '') : []
 
+        const areaPostcode = formData.get('area-postcode') as string
+        const areaRadius = formData.get('area-radius') ? parseInt(formData.get('area-radius') as string) : undefined
+        const hasOwnTransport = formData.get('transport') === 'on'
+        const licenses = formData.get('licenses') as string
+
         createContractor.mutate({
             companyName,
             contactName,
-            email: email || undefined,
-            phone: phone || undefined,
-            specialties,
+            email: email || undefined, // Keep original logic for optional email
+            phone: phone || undefined, // Keep original logic for optional phone
             status,
+            specialties,
+            profilePictureUrl,
+            areaPostcode: areaPostcode || undefined,
+            areaRadius,
+            hasOwnTransport,
+            licenses: licenses || undefined,
         })
     }
 
@@ -44,7 +66,7 @@ export default function NewContractorPage() {
                 </div>
             </div>
 
-            <form action={onSubmit} className="mt-8 space-y-8">
+            <form onSubmit={handleSubmit} className="mt-8 space-y-8">
                 {createContractor.error && (
                     <div className="rounded-md bg-red-50 p-4">
                         <div className="flex">
@@ -111,6 +133,93 @@ export default function NewContractorPage() {
                                     <option value="inactive">Inactive</option>
                                     <option value="blacklisted">Blacklisted</option>
                                 </select>
+                            </div>
+                        </div>
+
+                        {/* Additional Details */}
+                        <div className="col-span-full">
+                            <h3 className="text-base font-semibold leading-7 text-gray-900">Additional Details</h3>
+                            <p className="mt-1 text-sm leading-6 text-gray-600">Provide more information about the contractor.</p>
+                        </div>
+
+                        <div className="col-span-full">
+                            <label htmlFor="profile-photo" className="block text-sm font-medium leading-6 text-gray-900">
+                                Profile Picture
+                            </label>
+                            <div className="mt-2 flex items-center gap-x-3">
+                                <FileUploader
+                                    entityType="contractor_profile"
+                                    entityId={tempId}
+                                    bucketName="avatars"
+                                    label="Upload Photo"
+                                    onUploadComplete={(url) => setProfilePictureUrl(url)}
+                                />
+                                {profilePictureUrl && (
+                                    <img src={profilePictureUrl} alt="Profile Preview" className="h-12 w-12 rounded-full object-cover" />
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="sm:col-span-3">
+                            <label htmlFor="area-postcode" className="block text-sm font-medium leading-6 text-gray-900">
+                                Area Covered (Postcode)
+                            </label>
+                            <div className="mt-2">
+                                <input
+                                    type="text"
+                                    name="area-postcode"
+                                    id="area-postcode"
+                                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="sm:col-span-3">
+                            <label htmlFor="area-radius" className="block text-sm font-medium leading-6 text-gray-900">
+                                Area Radius (Miles)
+                            </label>
+                            <div className="mt-2">
+                                <input
+                                    type="number"
+                                    name="area-radius"
+                                    id="area-radius"
+                                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="col-span-full">
+                            <div className="relative flex gap-x-3">
+                                <div className="flex h-6 items-center">
+                                    <input
+                                        id="transport"
+                                        name="transport"
+                                        type="checkbox"
+                                        defaultChecked={true}
+                                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600"
+                                    />
+                                </div>
+                                <div className="text-sm leading-6">
+                                    <label htmlFor="transport" className="font-medium text-gray-900">
+                                        Has Own Transport
+                                    </label>
+                                    <p className="text-gray-500">Contractor has their own vehicle for jobs.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="col-span-full">
+                            <label htmlFor="licenses" className="block text-sm font-medium leading-6 text-gray-900">
+                                Licenses & Certifications
+                            </label>
+                            <div className="mt-2">
+                                <textarea
+                                    id="licenses"
+                                    name="licenses"
+                                    rows={3}
+                                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                                    placeholder="List licenses (e.g., CSCS, Gas Safe)..."
+                                />
                             </div>
                         </div>
 

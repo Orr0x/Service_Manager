@@ -30,6 +30,7 @@ export function CalendarView() {
     const utils = api.useUtils()
     const { data: jobs } = api.jobs.getAll.useQuery({})
     const { data: unavailability } = api.workers.getAllUnavailability.useQuery()
+    const { data: contractorUnavailability } = api.contractors.getAllUnavailability.useQuery()
 
     const [view, setView] = useState<View>(Views.WEEK)
     const [date, setDate] = useState(new Date())
@@ -67,7 +68,7 @@ export function CalendarView() {
             ? unavailability
                 .map(item => ({
                     id: item.id,
-                    title: `BLOCKED: ${(item.workers as any)?.first_name} ${(item.workers as any)?.last_name}${item.reason ? ` - ${item.reason}` : ''}`,
+                    title: `BLOCKED (W): ${(item.workers as any)?.first_name} ${(item.workers as any)?.last_name}${item.reason ? ` - ${item.reason}` : ''}`,
                     start: new Date(item.start_date),
                     end: new Date(item.end_date),
                     resource: item,
@@ -76,8 +77,21 @@ export function CalendarView() {
                 }))
             : []
 
-        return [...jobEvents, ...unavailabilityEvents]
-    }, [jobs, unavailability])
+        const contractorUnavailabilityEvents = contractorUnavailability
+            ? contractorUnavailability
+                .map(item => ({
+                    id: item.id,
+                    title: `BLOCKED (C): ${(item.contractors as any)?.company_name}${item.reason ? ` - ${item.reason}` : ''}`,
+                    start: new Date(item.start_date),
+                    end: new Date(item.end_date),
+                    resource: item,
+                    type: 'blocked',
+                    allDay: true
+                }))
+            : []
+
+        return [...jobEvents, ...unavailabilityEvents, ...contractorUnavailabilityEvents]
+    }, [jobs, unavailability, contractorUnavailability])
 
     const handleSelectEvent = (event: any) => {
         if (event.type === 'job') {

@@ -23,6 +23,15 @@ export const settingsRouter = createTRPCRouter({
                 },
                 terminology: {},
                 navigation: {},
+                kanban_settings: {
+                    columns: {
+                        backlog: 'Backlog',
+                        unscheduled: 'Unscheduled',
+                        scheduled: 'Scheduled',
+                        in_progress: 'In Progress',
+                        completed: 'Completed',
+                    },
+                },
             }
         }
 
@@ -131,6 +140,47 @@ export const settingsRouter = createTRPCRouter({
 
             if (error) {
                 throw new Error(`Failed to update navigation: ${error.message}`)
+            }
+
+            return data
+        }),
+
+    updateKanbanSettings: protectedProcedure
+        .input(z.object({
+            columns: z.record(z.string(), z.string()).optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const { data: existing } = await ctx.db
+                .from('tenant_settings')
+                .select('kanban_settings')
+                .eq('tenant_id', ctx.tenantId)
+                .single()
+
+            const currentSettings = (existing?.kanban_settings as Record<string, any>) || {}
+
+            // Merge columns
+            const currentColumns = currentSettings.columns || {}
+            const newColumns = {
+                ...currentColumns,
+                ...(input.columns || {}),
+            }
+
+            const newSettings = {
+                ...currentSettings,
+                columns: newColumns,
+            }
+
+            const { data, error } = await ctx.db
+                .from('tenant_settings')
+                .upsert({
+                    tenant_id: ctx.tenantId,
+                    kanban_settings: newSettings,
+                })
+                .select()
+                .single()
+
+            if (error) {
+                throw new Error(`Failed to update kanban settings: ${error.message}`)
             }
 
             return data

@@ -73,6 +73,12 @@ export const contractorsRouter = createTRPCRouter({
                 phone: z.string().optional(),
                 specialties: z.array(z.string()).optional(),
                 status: z.string().min(1),
+                // New fields
+                profilePictureUrl: z.string().optional(),
+                areaPostcode: z.string().optional(),
+                areaRadius: z.number().optional(),
+                hasOwnTransport: z.boolean().optional(),
+                licenses: z.string().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -86,6 +92,11 @@ export const contractorsRouter = createTRPCRouter({
                     phone: input.phone,
                     specialties: input.specialties ? JSON.stringify(input.specialties) : '[]',
                     status: input.status,
+                    profile_picture_url: input.profilePictureUrl,
+                    area_postcode: input.areaPostcode,
+                    area_radius: input.areaRadius,
+                    has_own_transport: input.hasOwnTransport,
+                    licenses: input.licenses,
                 })
                 .select()
                 .single()
@@ -107,6 +118,12 @@ export const contractorsRouter = createTRPCRouter({
                 phone: z.string().optional(),
                 specialties: z.array(z.string()).optional(),
                 status: z.string().min(1).optional(),
+                // New fields
+                profilePictureUrl: z.string().optional(),
+                areaPostcode: z.string().optional(),
+                areaRadius: z.number().optional(),
+                hasOwnTransport: z.boolean().optional(),
+                licenses: z.string().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -119,6 +136,11 @@ export const contractorsRouter = createTRPCRouter({
                     phone: input.phone,
                     specialties: input.specialties ? JSON.stringify(input.specialties) : undefined,
                     status: input.status,
+                    profile_picture_url: input.profilePictureUrl,
+                    area_postcode: input.areaPostcode,
+                    area_radius: input.areaRadius,
+                    has_own_transport: input.hasOwnTransport,
+                    licenses: input.licenses,
                 })
                 .eq('id', input.id)
                 .eq('tenant_id', ctx.tenantId)
@@ -147,6 +169,84 @@ export const contractorsRouter = createTRPCRouter({
 
             return { success: true }
         }),
+
+    // Unavailability Procedures
+    getUnavailability: protectedProcedure
+        .input(z.object({ contractorId: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            const { data, error } = await ctx.db
+                .from('contractor_unavailability')
+                .select('*')
+                .eq('contractor_id', input.contractorId)
+                .eq('tenant_id', ctx.tenantId)
+                .order('start_date', { ascending: true })
+
+            if (error) {
+                throw new Error(`Failed to fetch availability: ${error.message}`)
+            }
+
+            return data
+        }),
+
+    getAllUnavailability: protectedProcedure
+        .query(async ({ ctx }) => {
+            const { data, error } = await ctx.db
+                .from('contractor_unavailability')
+                .select('*, contractors(company_name, contact_name)')
+                .eq('tenant_id', ctx.tenantId)
+
+            if (error) {
+                throw new Error(`Failed to fetch all contractor unavailability: ${error.message}`)
+            }
+
+            return data
+        }),
+
+    addUnavailability: protectedProcedure
+        .input(
+            z.object({
+                contractorId: z.string().uuid(),
+                startDate: z.string().or(z.date()),
+                endDate: z.string().or(z.date()),
+                reason: z.string().optional(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const { data, error } = await ctx.db
+                .from('contractor_unavailability')
+                .insert({
+                    tenant_id: ctx.tenantId,
+                    contractor_id: input.contractorId,
+                    start_date: new Date(input.startDate).toISOString(),
+                    end_date: new Date(input.endDate).toISOString(),
+                    reason: input.reason,
+                })
+                .select()
+                .single()
+
+            if (error) {
+                throw new Error(`Failed to add availability: ${error.message}`)
+            }
+
+            return data
+        }),
+
+    removeUnavailability: protectedProcedure
+        .input(z.object({ id: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+            const { error } = await ctx.db
+                .from('contractor_unavailability')
+                .delete()
+                .eq('id', input.id)
+                .eq('tenant_id', ctx.tenantId)
+
+            if (error) {
+                throw new Error(`Failed to remove availability: ${error.message}`)
+            }
+
+            return { success: true }
+        }),
+
     getByJobSiteId: protectedProcedure
         .input(z.object({ jobSiteId: z.string().uuid() }))
         .query(async ({ ctx, input }) => {

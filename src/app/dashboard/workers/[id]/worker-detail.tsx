@@ -3,10 +3,11 @@
 import { api } from '@/trpc/react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Mail, Phone, Briefcase, DollarSign, User, Pencil, Trash2, FileText, Calendar, MapPin, Truck, Award } from 'lucide-react'
+import { ArrowLeft, Mail, Phone, Briefcase, DollarSign, User, Pencil, Trash2, FileText, Calendar, MapPin, Truck, Award, Clock } from 'lucide-react'
 import { useState } from 'react'
 import { format } from 'date-fns'
 import { WorkerAvailability } from './worker-availability'
+import { EntityCalendar } from '@/components/entity-calendar'
 import { AttachmentsSection } from '@/components/attachments-section'
 
 export function WorkerDetail({ id }: { id: string }) {
@@ -39,8 +40,9 @@ export function WorkerDetail({ id }: { id: string }) {
     const skills = (Array.isArray(worker.skills) ? worker.skills : typeof worker.skills === 'string' ? JSON.parse(worker.skills) : []) as string[]
 
     const tabs = [
-        { id: 'info', name: 'Worker Info', icon: FileText },
-        { id: 'availability', name: 'Availability', icon: Calendar },
+        { id: 'overview', name: 'Overview', icon: FileText },
+        { id: 'schedule', name: 'Schedule', icon: Calendar },
+        { id: 'availability', name: 'Availability', icon: Clock },
         { id: 'jobs', name: `Assigned Jobs (${jobs?.length || 0})`, icon: Briefcase },
     ]
 
@@ -252,6 +254,12 @@ export function WorkerDetail({ id }: { id: string }) {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {activeTab === 'schedule' && (
+                    <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
+                        <EntityCalendar entityType="worker" entityId={worker.id} />
                     </div>
                 )}
 

@@ -125,7 +125,7 @@ export const servicesRouter = createTRPCRouter({
 
             await logActivity({
                 tenantId: ctx.tenantId,
-                actorId: ctx.user?.id || null,
+                actorId: ctx.user?.id,
                 actionType: 'created',
                 entityType: 'service',
                 entityId: data.id,
@@ -175,7 +175,7 @@ export const servicesRouter = createTRPCRouter({
 
             await logActivity({
                 tenantId: ctx.tenantId,
-                actorId: ctx.user?.id || null,
+                actorId: ctx.user?.id,
                 actionType: 'updated',
                 entityType: 'service',
                 entityId: data.id,
@@ -200,7 +200,7 @@ export const servicesRouter = createTRPCRouter({
 
             await logActivity({
                 tenantId: ctx.tenantId,
-                actorId: ctx.user?.id || null,
+                actorId: ctx.user?.id,
                 actionType: 'deleted',
                 entityType: 'service',
                 entityId: input.id,

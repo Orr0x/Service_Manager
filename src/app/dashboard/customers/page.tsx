@@ -111,9 +111,8 @@ export default async function CustomersPage() {
                 <SearchInput placeholder="Search customers by name, email, or phone..." />
 
                 {/* Customer List */}
-                <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
-                    <CustomerList />
-                </div>
+                {/* Customer List */}
+                <CustomerList />
             </div>
         </HydrateClient>
     )

@@ -111,9 +111,8 @@ export default async function ContractsPage() {
                 <SearchInput placeholder="Search contracts by name, customer, or type..." />
 
                 {/* Contract List */}
-                <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
-                    <ContractList />
-                </div>
+                {/* Contract List */}
+                <ContractList />
             </div>
         </HydrateClient>
     )

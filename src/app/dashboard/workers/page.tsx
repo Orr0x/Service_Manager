@@ -111,9 +111,8 @@ export default async function WorkersPage() {
                 <SearchInput placeholder="Search workers by name, role, or email..." />
 
                 {/* Worker List */}
-                <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
-                    <WorkerList />
-                </div>
+                {/* Worker List */}
+                <WorkerList />
             </div>
         </HydrateClient>
     )

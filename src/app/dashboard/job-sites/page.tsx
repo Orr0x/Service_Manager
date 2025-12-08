@@ -111,9 +111,8 @@ export default async function JobSitesPage() {
                 <SearchInput placeholder="Search job sites by name, address, or customer..." />
 
                 {/* Job Site List */}
-                <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
-                    <JobSiteList />
-                </div>
+                {/* Job Site List */}
+                <JobSiteList />
             </div>
         </HydrateClient>
     )

@@ -111,9 +111,8 @@ export default async function QuotesPage() {
                 <SearchInput placeholder="Search quotes by title, customer, or status..." />
 
                 {/* Quote List */}
-                <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
-                    <QuoteList />
-                </div>
+                {/* Quote List */}
+                <QuoteList />
             </div>
         </HydrateClient>
     )

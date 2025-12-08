@@ -111,9 +111,8 @@ export default async function InvoicesPage() {
                 <SearchInput placeholder="Search invoices by number, status, or notes..." />
 
                 {/* Invoice List */}
-                <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
-                    <InvoiceList />
-                </div>
+                {/* Invoice List */}
+                <InvoiceList />
             </div>
         </HydrateClient>
     )

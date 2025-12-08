@@ -111,9 +111,8 @@ export default async function ChecklistsPage() {
                 <SearchInput placeholder="Search checklists by name..." />
 
                 {/* Checklist List */}
-                <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
-                    <ChecklistList />
-                </div>
+                {/* Checklist List */}
+                <ChecklistList />
             </div>
         </HydrateClient>
     )

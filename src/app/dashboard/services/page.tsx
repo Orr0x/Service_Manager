@@ -111,9 +111,8 @@ export default async function ServicesPage() {
                 <SearchInput placeholder="Search services by name, description, or category..." />
 
                 {/* Services List */}
-                <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
-                    <ServicesList />
-                </div>
+                {/* Services List */}
+                <ServicesList />
             </div>
         </HydrateClient>
     )

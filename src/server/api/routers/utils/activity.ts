@@ -5,7 +5,7 @@ interface LogActivityParams {
     tenantId: string
     actorId?: string
     actionType: 'created' | 'updated' | 'deleted' | 'assigned' | 'unassigned' | 'status_change'
-    entityType: 'job' | 'worker' | 'contractor' | 'site' | 'invoice' | 'quote' | 'user'
+    entityType: 'job' | 'worker' | 'contractor' | 'site' | 'invoice' | 'quote' | 'user' | 'service'
     entityId: string
     details?: Record<string, any>
     db: SupabaseClient
@@ -21,7 +21,8 @@ export async function logActivity({
     db
 }: LogActivityParams) {
     try {
-        await db.from('activity_logs').insert({
+        console.log('Logging activity attempt:', { tenantId, actorId, actionType, entityType, entityId });
+        const { error } = await db.from('activity_logs').insert({
             tenant_id: tenantId,
             actor_id: actorId || null,
             action_type: actionType,
@@ -29,8 +30,12 @@ export async function logActivity({
             entity_id: entityId,
             details: details
         })
+        if (error) {
+            console.error('Supabase insert error:', error)
+            throw error
+        }
+        console.log('Activity logged successfully');
     } catch (error) {
         console.error('Failed to log activity:', error)
-        // We don't throw here to avoid failing the main action if logging fails
     }
 }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { UserNav } from '@/components/dashboard/user-nav'
 import { cn } from '@/lib/utils'
 import {
@@ -53,6 +54,7 @@ export function DashboardLayoutClient({
     user
 }: DashboardLayoutClientProps) {
     const [collapsed, setCollapsed] = useState(false)
+    const pathname = usePathname()
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
@@ -97,28 +99,43 @@ export function DashboardLayoutClient({
                 <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto overflow-x-hidden">
                     {navigation.map((item) => {
                         const Icon = iconMap[item.key]
+                        const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href + '/')) || (item.href !== '/dashboard' && pathname === item.href)
+
                         return (
                             <Link
                                 key={item.name}
                                 href={item.href}
                                 className={cn(
-                                    "group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors hover:bg-black/5 whitespace-nowrap",
+                                    "group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap",
+                                    isActive
+                                        ? "bg-black/5 text-[var(--primary-color)]"
+                                        : "hover:bg-black/5",
                                     collapsed ? "justify-center" : ""
                                 )}
-                                style={{ color: branding?.theme?.sidebarText || '#374151' }}
+                                style={{
+                                    color: isActive ? undefined : (branding?.theme?.sidebarText || '#374151')
+                                }}
                                 title={collapsed ? item.name : undefined}
                             >
                                 {Icon && (
                                     <Icon
                                         className={cn(
-                                            "h-5 w-5 opacity-70 group-hover:opacity-100 group-hover:text-[var(--primary-color)] transition-colors",
+                                            "h-5 w-5 transition-colors",
+                                            isActive
+                                                ? "opacity-100 text-[var(--primary-color)]"
+                                                : "opacity-70 group-hover:opacity-100 group-hover:text-[var(--primary-color)]",
                                             collapsed ? "" : "mr-3"
                                         )}
                                         aria-hidden="true"
                                     />
                                 )}
                                 {!collapsed && (
-                                    <span className="group-hover:text-[var(--primary-color)] opacity-100 transition-opacity duration-300">
+                                    <span className={cn(
+                                        "transition-opacity duration-300",
+                                        isActive
+                                            ? "text-[var(--primary-color)] font-semibold"
+                                            : "group-hover:text-[var(--primary-color)] opacity-100"
+                                    )}>
                                         {item.name}
                                     </span>
                                 )}

@@ -13,6 +13,7 @@ import { settingsRouter } from './routers/settings'
 import { jobsRouter } from './routers/jobs'
 import { notesRouter } from './routers/notes'
 import { attachmentsRouter } from './routers/attachments'
+import { locationRouter } from './routers/location'
 
 import { adminRouter } from './routers/admin'
 import { activityRouter } from "@/server/api/routers/activity";
@@ -40,6 +41,7 @@ export const appRouter = createTRPCRouter({
     activity: activityRouter,
     dashboard: dashboardRouter,
     certification: certificationRouter,
+    location: locationRouter,
 })
 
 export const createCaller = createCallerFactory(appRouter)

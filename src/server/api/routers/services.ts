@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '../trpc'
+import { logActivity } from './utils/activity'
 
 export const servicesRouter = createTRPCRouter({
     getAll: protectedProcedure
@@ -25,6 +26,24 @@ export const servicesRouter = createTRPCRouter({
 
             return data
         }),
+
+    getById: protectedProcedure
+        .input(z.object({ id: z.string().uuid() }))
+        .query(async ({ ctx, input }) => {
+            const { data, error } = await ctx.db
+                .from('services')
+                .select('*')
+                .eq('id', input.id)
+                .eq('tenant_id', ctx.tenantId)
+                .single()
+
+            if (error) {
+                throw new Error(`Failed to fetch service: ${error.message}`)
+            }
+
+            return data
+        }),
+
 
     getDashboardStats: protectedProcedure.query(async ({ ctx }) => {
         const [
@@ -104,6 +123,15 @@ export const servicesRouter = createTRPCRouter({
                 throw new Error(`Failed to create service: ${error.message}`)
             }
 
+            await logActivity({
+                tenantId: ctx.tenantId,
+                actorId: ctx.user?.id || null,
+                actionType: 'created',
+                entityType: 'service',
+                entityId: data.id,
+                details: { name: input.name, category: input.category }
+            })
+
             return data
         }),
 
@@ -145,6 +173,15 @@ export const servicesRouter = createTRPCRouter({
                 throw new Error(`Failed to update service: ${error.message}`)
             }
 
+            await logActivity({
+                tenantId: ctx.tenantId,
+                actorId: ctx.user?.id || null,
+                actionType: 'updated',
+                entityType: 'service',
+                entityId: data.id,
+                details: input
+            })
+
             return data
         }),
 
@@ -161,6 +198,16 @@ export const servicesRouter = createTRPCRouter({
                 throw new Error(`Failed to delete service: ${error.message}`)
             }
 
+            await logActivity({
+                tenantId: ctx.tenantId,
+                actorId: ctx.user?.id || null,
+                actionType: 'deleted',
+                entityType: 'service',
+                entityId: input.id,
+                details: { id: input.id }
+            })
+
             return { success: true }
         }),
 })
+

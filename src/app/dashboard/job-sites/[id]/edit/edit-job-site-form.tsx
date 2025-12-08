@@ -32,6 +32,17 @@ export function EditJobSiteForm({ jobSite }: EditJobSiteFormProps) {
     const router = useRouter()
     const [error, setError] = useState<string | null>(null)
 
+    // Controlled state for location fields
+    const [latitude, setLatitude] = useState<string>(jobSite.latitude?.toString() || '')
+    const [longitude, setLongitude] = useState<string>(jobSite.longitude?.toString() || '')
+    const [what3words, setWhat3words] = useState<string>(jobSite.what3words || '')
+
+    // Loading states
+    const [isLocating, setIsLocating] = useState(false)
+
+    // TRPC Mutations
+    const getCoordinates = api.location.getCoordinates.useMutation()
+
     const updateJobSite = api.jobSites.update.useMutation({
         onSuccess: () => {
             router.push(`/dashboard/job-sites/${jobSite.id}`)
@@ -41,6 +52,40 @@ export function EditJobSiteForm({ jobSite }: EditJobSiteFormProps) {
             setError(e.message)
         },
     })
+
+    const handleFindCoordinates = async () => {
+        const addressInput = document.getElementById('address') as HTMLInputElement
+        const cityInput = document.getElementById('city') as HTMLInputElement
+        const countryInput = document.getElementById('country') as HTMLInputElement
+
+        const fullAddress = [
+            addressInput.value,
+            cityInput.value,
+            countryInput.value
+        ].filter(Boolean).join(', ')
+
+        if (!fullAddress) {
+            setError('Please enter an address first')
+            return
+        }
+
+        setIsLocating(true)
+        setError(null)
+
+        try {
+            const result = await getCoordinates.mutateAsync({ address: fullAddress })
+            if (result) {
+                setLatitude(result.latitude.toString())
+                setLongitude(result.longitude.toString())
+            } else {
+                setError('Could not find coordinates for this address')
+            }
+        } catch (e) {
+            setError('Failed to fetch coordinates')
+        } finally {
+            setIsLocating(false)
+        }
+    }
 
     async function onSubmit(formData: FormData) {
         const name = formData.get('name') as string
@@ -248,7 +293,20 @@ export function EditJobSiteForm({ jobSite }: EditJobSiteFormProps) {
 
                 {/* Geolocation Section */}
                 <div className="mt-8 pt-8 border-t border-gray-900/10">
-                    <h3 className="text-base font-semibold leading-7 text-gray-900">Geolocation</h3>
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-base font-semibold leading-7 text-gray-900">Geolocation</h3>
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={handleFindCoordinates}
+                                disabled={isLocating}
+                                className="text-sm font-semibold text-blue-600 hover:text-blue-500 disabled:opacity-50"
+                            >
+                                {isLocating ? 'Locating...' : 'Find Coordinates'}
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="mt-6 grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-6">
                         <div className="sm:col-span-2">
                             <label htmlFor="latitude" className="block text-sm font-medium leading-6 text-gray-900">
@@ -260,7 +318,8 @@ export function EditJobSiteForm({ jobSite }: EditJobSiteFormProps) {
                                     step="any"
                                     name="latitude"
                                     id="latitude"
-                                    defaultValue={jobSite.latitude || ''}
+                                    value={latitude}
+                                    onChange={(e) => setLatitude(e.target.value)}
                                     className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
                                 />
                             </div>
@@ -275,7 +334,8 @@ export function EditJobSiteForm({ jobSite }: EditJobSiteFormProps) {
                                     step="any"
                                     name="longitude"
                                     id="longitude"
-                                    defaultValue={jobSite.longitude || ''}
+                                    value={longitude}
+                                    onChange={(e) => setLongitude(e.target.value)}
                                     className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
                                 />
                             </div>
@@ -291,7 +351,8 @@ export function EditJobSiteForm({ jobSite }: EditJobSiteFormProps) {
                                         type="text"
                                         name="what3words"
                                         id="what3words"
-                                        defaultValue={jobSite.what3words || ''}
+                                        value={what3words}
+                                        onChange={(e) => setWhat3words(e.target.value)}
                                         className="block flex-1 border-0 bg-transparent py-1.5 pl-1 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm sm:leading-6"
                                         placeholder="word.word.word"
                                     />

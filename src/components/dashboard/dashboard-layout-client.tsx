@@ -66,6 +66,15 @@ export function DashboardLayoutClient({
                 )}
                 style={{ backgroundColor: branding?.theme?.sidebarBg || '#ffffff' }}
             >
+                {/* Toggle Button (Border Overlay) */}
+                <button
+                    onClick={() => setCollapsed(!collapsed)}
+                    className="absolute -right-3 top-24 z-50 flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white shadow-md hover:bg-gray-100 focus:outline-none"
+                    title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                >
+                    {collapsed ? <ChevronRight className="h-3 w-3 text-gray-500" /> : <ChevronLeft className="h-3 w-3 text-gray-500" />}
+                </button>
+
                 {/* Logo Area */}
                 <div
                     className={cn(
@@ -96,7 +105,11 @@ export function DashboardLayoutClient({
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto overflow-x-hidden">
+                <nav className={cn(
+                    "flex-1 space-y-1 px-3 py-4 overflow-y-auto overflow-x-hidden",
+                    // Custom scrollbar styling if needed, but 'overflow-y-auto' should be sufficient
+                    // and removing the footer gives more space.
+                )}>
                     {navigation.map((item) => {
                         const Icon = iconMap[item.key]
                         const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href + '/')) || (item.href !== '/dashboard' && pathname === item.href)
@@ -143,16 +156,6 @@ export function DashboardLayoutClient({
                         )
                     })}
                 </nav>
-
-                {/* Collapse Toggle */}
-                <div className="border-t border-black/5 p-4 flex justify-end">
-                    <button
-                        onClick={() => setCollapsed(!collapsed)}
-                        className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 transition-colors"
-                    >
-                        {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-                    </button>
-                </div>
             </div>
 
             {/* Main Content Wrapper */}

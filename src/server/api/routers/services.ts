@@ -129,7 +129,8 @@ export const servicesRouter = createTRPCRouter({
                 actionType: 'created',
                 entityType: 'service',
                 entityId: data.id,
-                details: { name: input.name, category: input.category }
+                details: { name: input.name, category: input.category },
+                db: ctx.db
             })
 
             return data
@@ -179,7 +180,8 @@ export const servicesRouter = createTRPCRouter({
                 actionType: 'updated',
                 entityType: 'service',
                 entityId: data.id,
-                details: input
+                details: input,
+                db: ctx.db
             })
 
             return data
@@ -204,7 +206,8 @@ export const servicesRouter = createTRPCRouter({
                 actionType: 'deleted',
                 entityType: 'service',
                 entityId: input.id,
-                details: { id: input.id }
+                details: { id: input.id },
+                db: ctx.db
             })
 
             return { success: true }

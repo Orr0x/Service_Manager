@@ -7,7 +7,10 @@ export const activityRouter = createTRPCRouter({
     getRecent: protectedProcedure
         .input(z.object({
             limit: z.number().default(10),
-            range: z.enum(['today', 'week', 'month', 'year', 'all']).default('all')
+            range: z.enum(['today', 'week', 'month', 'year', 'all']).default('all'),
+            entityType: z.string().optional(),
+            entityId: z.string().uuid().optional(),
+            customerId: z.string().uuid().optional(),
         }))
         .query(async ({ ctx, input }) => {
             const now = new Date();
@@ -37,6 +40,8 @@ export const activityRouter = createTRPCRouter({
                     break;
             }
 
+            const { entityType, entityId, customerId, limit } = input;
+
             let query = ctx.db
                 .from('activity_logs')
                 .select(`
@@ -45,7 +50,19 @@ export const activityRouter = createTRPCRouter({
         `)
                 .eq('tenant_id', ctx.user.user_metadata.tenant_id)
                 .order('created_at', { ascending: false })
-                .limit(input.limit);
+                .limit(limit);
+
+            if (entityType) {
+                query = query.eq('entity_type', entityType)
+            }
+
+            if (entityId) {
+                query = query.eq('entity_id', entityId)
+            }
+
+            if (customerId) {
+                query = query.eq('customer_id', customerId)
+            }
 
             if (startDate && endDate) {
                 query = query.gte('created_at', startDate).lte('created_at', endDate);

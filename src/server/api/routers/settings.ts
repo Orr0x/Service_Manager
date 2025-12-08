@@ -25,7 +25,7 @@ export const settingsRouter = createTRPCRouter({
                 navigation: {},
                 kanban_settings: {
                     columns: {
-                        backlog: 'Backlog',
+                        draft: 'Draft',
                         unscheduled: 'Unscheduled',
                         scheduled: 'Scheduled',
                         in_progress: 'In Progress',

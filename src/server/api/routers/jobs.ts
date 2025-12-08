@@ -63,9 +63,9 @@ export const jobsRouter = createTRPCRouter({
             { count: completedCount }
         ] = await Promise.all([
             ctx.db.from('jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId),
-            ctx.db.from('jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'In Progress'),
-            ctx.db.from('jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'Scheduled'),
-            ctx.db.from('jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'Completed')
+            ctx.db.from('jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'in_progress'),
+            ctx.db.from('jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'scheduled'),
+            ctx.db.from('jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', ctx.tenantId).eq('status', 'completed')
         ])
 
         return {

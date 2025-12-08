@@ -78,6 +78,9 @@ export const servicesRouter = createTRPCRouter({
                 basePrice: z.number().min(0),
                 durationMinutes: z.number().min(1),
                 category: z.string().min(1),
+                coverageArea: z.string().optional(),
+                imageUrl: z.string().optional(),
+                unitOfMeasure: z.string().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -90,6 +93,9 @@ export const servicesRouter = createTRPCRouter({
                     base_price: input.basePrice,
                     duration_minutes: input.durationMinutes,
                     category: input.category,
+                    coverage_area: input.coverageArea,
+                    image_url: input.imageUrl,
+                    unit_of_measure: input.unitOfMeasure,
                 })
                 .select()
                 .single()
@@ -111,6 +117,9 @@ export const servicesRouter = createTRPCRouter({
                 durationMinutes: z.number().min(1).optional(),
                 category: z.string().min(1).optional(),
                 isActive: z.boolean().optional(),
+                coverageArea: z.string().optional(),
+                imageUrl: z.string().optional(),
+                unitOfMeasure: z.string().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -123,6 +132,9 @@ export const servicesRouter = createTRPCRouter({
                     duration_minutes: input.durationMinutes,
                     category: input.category,
                     is_active: input.isActive,
+                    coverage_area: input.coverageArea,
+                    image_url: input.imageUrl,
+                    unit_of_measure: input.unitOfMeasure,
                 })
                 .eq('id', input.id)
                 .eq('tenant_id', ctx.tenantId)

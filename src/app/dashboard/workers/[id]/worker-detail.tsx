@@ -10,6 +10,8 @@ import { WorkerAvailability } from './worker-availability'
 import { EntityCalendar } from '@/components/entity-calendar'
 import { AttachmentsSection } from '@/components/attachments-section'
 import CertificationManager from '@/components/certification/CertificationManager'
+import { ActivityFeed } from '@/components/common/activity-feed'
+import { Activity } from 'lucide-react'
 
 export function WorkerDetail({ id }: { id: string }) {
     const router = useRouter()
@@ -46,6 +48,7 @@ export function WorkerDetail({ id }: { id: string }) {
         { id: 'availability', name: 'Availability', icon: Clock },
         { id: 'jobs', name: `Assigned Jobs (${jobs?.length || 0})`, icon: Briefcase },
         { id: 'certification', name: 'Certification', icon: Award },
+        { id: 'activity', name: 'Activity', icon: Activity },
     ]
 
     return (
@@ -316,6 +319,13 @@ export function WorkerDetail({ id }: { id: string }) {
                 {activeTab === 'certification' && (
                     <div className="space-y-6">
                         <CertificationManager entityType="worker" entityId={worker.id} />
+                    </div>
+                )}
+
+                {activeTab === 'activity' && (
+                    <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
+                        <h3 className="text-base font-semibold leading-6 text-gray-900 mb-6">Recent Activity</h3>
+                        <ActivityFeed entityType="worker" entityId={worker.id} limit={20} />
                     </div>
                 )}
             </div>

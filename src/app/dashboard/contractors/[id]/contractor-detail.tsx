@@ -3,10 +3,12 @@
 import { api } from '@/trpc/react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Briefcase, MapPin, Calendar, Mail, Phone, User, Pencil, Trash2, FileText, Clock, Award } from 'lucide-react'
+import { Briefcase, MapPin, Calendar, Mail, Phone, User, Pencil, Trash2, FileText, Clock, Award, Activity } from 'lucide-react'
 import { EntityCalendar } from '@/components/entity-calendar'
 import { ContractorAvailability } from './contractor-availability'
+import { AttachmentsSection } from '@/components/attachments-section'
 import CertificationManager from '@/components/certification/CertificationManager'
+import { ActivityFeed } from '@/components/common/activity-feed'
 import { useState } from 'react'
 import { format } from 'date-fns'
 
@@ -52,6 +54,7 @@ export function ContractorDetail({ id }: { id: string }) {
         { id: 'availability', name: 'Availability', icon: Clock },
         { id: 'jobs', name: `Assigned Jobs (${jobs?.length || 0})`, icon: Briefcase },
         { id: 'certification', name: 'Certification', icon: Award },
+        { id: 'activity', name: 'Activity', icon: Activity },
     ]
 
     return (
@@ -292,7 +295,14 @@ export function ContractorDetail({ id }: { id: string }) {
 
                 {activeTab === 'certification' && (
                     <div className="space-y-6">
-                        <CertificationManager entityType="contractor" entityId={id} />
+                        <CertificationManager entityType="contractor" entityId={contractor.id} />
+                    </div>
+                )}
+
+                {activeTab === 'activity' && (
+                    <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
+                        <h3 className="text-base font-semibold leading-6 text-gray-900 mb-6">Recent Activity</h3>
+                        <ActivityFeed entityType="contractor" entityId={contractor.id} limit={20} />
                     </div>
                 )}
             </div>

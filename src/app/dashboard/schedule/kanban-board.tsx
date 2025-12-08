@@ -58,7 +58,7 @@ export function KanbanBoard() {
     // Columns Configuration
     const columnConfig = useMemo(() => {
         const defaultColumns = {
-            backlog: 'Backlog',
+            draft: 'Draft',
             unscheduled: 'Unscheduled',
             scheduled: 'Scheduled',
             in_progress: 'In Progress',
@@ -71,10 +71,10 @@ export function KanbanBoard() {
 
     // Group Jobs
     const columns = useMemo(() => {
-        if (!jobs) return { backlog: [], unscheduled: [], scheduled: [], in_progress: [], completed: [] }
+        if (!jobs) return { draft: [], unscheduled: [], scheduled: [], in_progress: [], completed: [] }
 
         return {
-            backlog: jobs.filter(j => j.status === 'draft'),
+            draft: jobs.filter(j => j.status === 'draft'),
             unscheduled: jobs.filter(j => j.status === 'pending'), // Approved but not scheduled
             scheduled: jobs.filter(j => j.status === 'scheduled'),
             in_progress: jobs.filter(j => j.status === 'in_progress'),
@@ -94,6 +94,7 @@ export function KanbanBoard() {
         if (!over) return
 
         const activeType = active.data.current?.type
+        const activeColumnId = active.data.current?.sortable?.containerId // Add this if needed or rely on target logic
         const overType = over.data.current?.type
 
         // 1. Dragging a Job Card to a Column
@@ -105,7 +106,7 @@ export function KanbanBoard() {
             let updates: any = {}
             let newStatus = '' // Keep track for later comparison
 
-            if (targetColumn === 'backlog') {
+            if (targetColumn === 'draft') {
                 newStatus = 'draft'
                 updates = { status: 'draft' }
             } else if (targetColumn === 'unscheduled') {
@@ -240,17 +241,17 @@ export function KanbanBoard() {
             >
                 {/* Board Area */}
                 <div className="flex-1 flex overflow-x-auto p-4 gap-4 bg-gray-50/50">
-                    {/* Backlog */}
+                    {/* Draft */}
                     <div className="flex-1 min-w-[280px] h-full">
                         <KanbanColumn
-                            id="backlog"
-                            title={columnConfig.backlog}
-                            jobs={columns.backlog}
+                            id="draft"
+                            title={columnConfig.draft}
+                            jobs={columns.draft}
                             color="bg-gray-100"
                             onViewJob={handleViewJob}
-                            isEditing={editingColumnId === 'backlog'}
+                            isEditing={editingColumnId === 'draft'}
                             onTitleChange={setTempColumnTitle}
-                            onSaveTitle={() => editingColumnId === 'backlog' ? saveTitle() : startEditing('backlog', columnConfig.backlog)}
+                            onSaveTitle={() => editingColumnId === 'draft' ? saveTitle() : startEditing('draft', columnConfig.draft)}
                         />
                     </div>
 
@@ -326,8 +327,8 @@ export function KanbanBoard() {
                         ) : (
                             <div className="flex items-center p-2 bg-white rounded shadow-lg border-2 border-[var(--primary-color)] w-60 cursor-grabbing">
                                 <div className={`p-1.5 rounded-full mr-3 ${activeDragItem.type === 'worker' ? 'bg-blue-100 text-blue-600' :
-                                        activeDragItem.type === 'contractor' ? 'bg-purple-100 text-purple-600' :
-                                            'bg-emerald-100 text-emerald-600'
+                                    activeDragItem.type === 'contractor' ? 'bg-purple-100 text-purple-600' :
+                                        'bg-emerald-100 text-emerald-600'
                                     }`}>
                                     {activeDragItem.type === 'worker' && <User className="h-4 w-4" />}
                                     {activeDragItem.type === 'contractor' && <Briefcase className="h-4 w-4" />}

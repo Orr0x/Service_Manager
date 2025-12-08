@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SearchInput } from '@/components/common/search-input'
+import { DashboardLayoutClient } from '@/components/dashboard/dashboard-layout-client'
 
 export default async function DashboardLayout({
     children,
@@ -94,76 +95,20 @@ export default async function DashboardLayout({
             return navSettings[item.key]?.enabled ?? true
         })
         .map(item => ({
-            ...item,
+            key: item.key,
+            href: item.href,
             name: navSettings[item.key]?.label || terminology[item.key] || item.name
         }))
 
     return (
         <ThemeProvider branding={branding}>
-            <div className="min-h-screen bg-gray-50">
-                {/* Sidebar */}
-                <div
-                    className="fixed inset-y-0 left-0 z-50 w-64 shadow-lg transform transition-transform duration-300 ease-in-out md:translate-x-0"
-                    style={{ backgroundColor: 'var(--sidebar-bg, #ffffff)' }}
-                >
-                    <div className="flex h-16 items-center px-4 border-b border-black/5">
-                        {/* Search removed as per user request */}
-                    </div>
-
-                    <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
-                        {navigation.map((item) => (
-                            <Link
-                                key={item.name}
-                                href={item.href}
-                                className="group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors hover:bg-black/5"
-                                style={{ color: 'var(--sidebar-text, #374151)' }}
-                            >
-                                <item.icon
-                                    className="mr-3 h-5 w-5 opacity-70 group-hover:opacity-100 group-hover:text-[var(--primary-color)]"
-                                    aria-hidden="true"
-                                />
-                                <span className="group-hover:text-[var(--primary-color)]">{item.name}</span>
-                            </Link>
-                        ))}
-                    </nav>
-
-                    <div className="border-t border-black/5 p-4">
-                        {/* UserNav moved to header */}
-                    </div>
-                </div>
-
-                {/* Main Content */}
-                <div className="md:pl-64 flex flex-col min-h-screen">
-                    {/* Top Header */}
-                    <header
-                        className="sticky top-0 z-40 flex h-20 shrink-0 items-center justify-between gap-x-4 border-b border-gray-200 px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8"
-                        style={{ backgroundColor: 'var(--header-bg, #ffffff)' }}
-                    >
-                        <div className="flex items-center gap-x-4">
-                            {branding.logo_url ? (
-                                <img src={branding.logo_url} alt={branding.company_name} className="h-10 w-auto" />
-                            ) : (
-                                <div className="h-10 w-10 rounded-lg flex items-center justify-center text-white font-bold shadow-sm" style={{ backgroundColor: branding.primary_color }}>
-                                    {branding.company_name.substring(0, 1).toUpperCase()}
-                                </div>
-                            )}
-                            <span className="text-2xl font-bold tracking-tight text-gray-900">
-                                {branding.company_name}
-                            </span>
-                        </div>
-
-                        <div className="flex items-center gap-x-4 lg:gap-x-6">
-                            <UserNav user={user} />
-                        </div>
-                    </header>
-
-                    <main className="flex-1 py-8">
-                        <div className="px-4 sm:px-6 lg:px-8">
-                            {children}
-                        </div>
-                    </main>
-                </div>
-            </div >
-        </ThemeProvider >
+            <DashboardLayoutClient
+                branding={branding}
+                navigation={navigation}
+                user={user}
+            >
+                {children}
+            </DashboardLayoutClient>
+        </ThemeProvider>
     )
 }

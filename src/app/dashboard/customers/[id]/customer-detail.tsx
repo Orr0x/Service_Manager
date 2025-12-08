@@ -14,8 +14,12 @@ import {
     MapPin,
     Edit,
     ArrowLeft,
-    Award
+    Award,
+    Activity,
+    File
 } from 'lucide-react'
+import { AttachmentsSection } from '@/components/attachments-section'
+import { ActivityFeed } from '@/components/common/activity-feed'
 import CertificationManager from '@/components/certification/CertificationManager'
 
 export function CustomerDetail({ id }: { id: string }) {
@@ -37,13 +41,14 @@ export function CustomerDetail({ id }: { id: string }) {
         return <div className="p-8 text-center text-gray-500">Customer not found</div>
     }
 
-    const tabs = [
+    const tabs: { id: string; name: string; icon: React.ElementType }[] = [
         { id: 'info', name: 'Customer Info', icon: User },
         { id: 'properties', name: `Job Sites (${jobSites?.length || 0})`, icon: Building2 },
         { id: 'contracts', name: `Contracts (${contracts?.length || 0})`, icon: FileText },
         { id: 'jobs', name: `Jobs (${jobs?.length || 0})`, icon: Briefcase },
-        { id: 'invoices', name: `Invoices & Kpi (${(invoices?.length || 0) + (quotes?.length || 0)})`, icon: Receipt },
+        { id: 'quotes', name: `Quotes (${quotes?.length || 0})`, icon: File },
         { id: 'certification', name: 'Certification', icon: Award },
+        { id: 'activity', name: 'Activity', icon: Activity },
     ]
 
     return (
@@ -377,7 +382,14 @@ export function CustomerDetail({ id }: { id: string }) {
 
                 {activeTab === 'certification' && (
                     <div className="space-y-6">
-                        <CertificationManager entityType="customer" entityId={id} />
+                        <CertificationManager entityType="customer" entityId={customer.id} />
+                    </div>
+                )}
+
+                {activeTab === 'activity' && (
+                    <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
+                        <h3 className="text-base font-semibold leading-6 text-gray-900 mb-6">Recent Activity</h3>
+                        <ActivityFeed customerId={customer.id} limit={20} />
                     </div>
                 )}
             </div>

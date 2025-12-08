@@ -5,7 +5,7 @@ interface LogActivityParams {
     tenantId: string
     actorId?: string
     actionType: 'created' | 'updated' | 'deleted' | 'assigned' | 'unassigned' | 'status_change'
-    entityType: 'job' | 'worker' | 'contractor' | 'site' | 'invoice' | 'quote' | 'user' | 'service'
+    entityType: 'job' | 'worker' | 'contractor' | 'site' | 'invoice' | 'quote' | 'user' | 'service' | 'customer'
     entityId: string
     details?: Record<string, any>
     db: SupabaseClient

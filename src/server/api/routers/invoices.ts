@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '../trpc'
+import { logActivity } from './utils/activity'
 
 // Define a schema for invoice items
 const invoiceItemSchema = z.object({
@@ -294,6 +295,40 @@ export const invoicesRouter = createTRPCRouter({
                 throw new Error(`Failed to create invoice: ${error.message}`)
             }
 
+            await logActivity({
+                tenantId: ctx.tenantId,
+                actorId: ctx.user.id,
+                actionType: 'created',
+                entityType: 'invoice',
+                entityId: data.id,
+                details: { status: input.status, customer_id: input.customerId, amount: input.totalAmount },
+                db: ctx.db
+            })
+
+            // Log to Customer Timeline
+            await logActivity({
+                tenantId: ctx.tenantId,
+                actorId: ctx.user.id,
+                actionType: 'updated',
+                entityType: 'customer',
+                entityId: input.customerId,
+                details: { type: 'invoice_created', invoice_id: data.id, invoice_number: data.invoice_number },
+                db: ctx.db
+            })
+
+            // Log to Job Timeline if linked
+            if (input.jobId) {
+                await logActivity({
+                    tenantId: ctx.tenantId,
+                    actorId: ctx.user.id,
+                    actionType: 'updated',
+                    entityType: 'job',
+                    entityId: input.jobId,
+                    details: { type: 'invoice_created', invoice_id: data.id, invoice_number: data.invoice_number },
+                    db: ctx.db
+                })
+            }
+
             return data
         }),
 
@@ -341,6 +376,16 @@ export const invoicesRouter = createTRPCRouter({
                 throw new Error(`Failed to update invoice: ${error.message}`)
             }
 
+            await logActivity({
+                tenantId: ctx.tenantId,
+                actorId: ctx.user.id,
+                actionType: 'updated',
+                entityType: 'invoice',
+                entityId: input.id,
+                details: { status: input.status, amount: input.totalAmount },
+                db: ctx.db
+            })
+
             return data
         }),
 
@@ -356,6 +401,16 @@ export const invoicesRouter = createTRPCRouter({
             if (error) {
                 throw new Error(`Failed to delete invoice: ${error.message}`)
             }
+
+            await logActivity({
+                tenantId: ctx.tenantId,
+                actorId: ctx.user.id,
+                actionType: 'deleted',
+                entityType: 'invoice',
+                entityId: input.id,
+                details: {},
+                db: ctx.db
+            })
 
             return { success: true }
         }),

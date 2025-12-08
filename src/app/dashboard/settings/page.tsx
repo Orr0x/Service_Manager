@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Palette, Layout, Type, Settings, Users } from 'lucide-react'
+import { Palette, Layout, Type, Settings, Users, Wrench } from 'lucide-react'
 
 const settingsSections = [
     {
@@ -25,6 +25,12 @@ const settingsSections = [
         description: 'Manage access for workers and contractors.',
         href: '/dashboard/settings/users',
         icon: Users,
+    },
+    {
+        title: 'Service Configuration',
+        description: 'Configure service categories and defaults.',
+        href: '/dashboard/settings/services',
+        icon: Wrench,
     },
 ]
 

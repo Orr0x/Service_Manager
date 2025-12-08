@@ -32,11 +32,56 @@ export const settingsRouter = createTRPCRouter({
                         completed: 'Completed',
                     },
                 },
+                services_settings: {
+                    default_currency: 'GBP',
+                    default_duration: 60,
+                    enabled_categories: ['general'],
+                },
             }
         }
 
         return data
     }),
+
+
+
+    updateServiceSettings: protectedProcedure
+        .input(z.object({
+            defaultCurrency: z.string().optional(),
+            defaultDuration: z.number().optional(),
+            enabledCategories: z.array(z.string()).optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const { data: existing } = await ctx.db
+                .from('tenant_settings')
+                .select('services_settings')
+                .eq('tenant_id', ctx.tenantId)
+                .single()
+
+            const currentSettings = (existing?.services_settings as Record<string, any>) || {}
+
+            const newSettings = {
+                ...currentSettings,
+                ...(input.defaultCurrency !== undefined && { default_currency: input.defaultCurrency }),
+                ...(input.defaultDuration !== undefined && { default_duration: input.defaultDuration }),
+                ...(input.enabledCategories !== undefined && { enabled_categories: input.enabledCategories }),
+            }
+
+            const { data, error } = await ctx.db
+                .from('tenant_settings')
+                .upsert({
+                    tenant_id: ctx.tenantId,
+                    services_settings: newSettings,
+                })
+                .select()
+                .single()
+
+            if (error) {
+                throw new Error(`Failed to update service settings: ${error.message}`)
+            }
+
+            return data
+        }),
 
     updateBranding: protectedProcedure
         .input(

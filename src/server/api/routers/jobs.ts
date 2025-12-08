@@ -458,6 +458,32 @@ export const jobsRouter = createTRPCRouter({
                         details: { assignment_count: assignmentsToInsert.length },
                         db: ctx.db
                     })
+
+                    // Log for each assigned worker/contractor
+                    for (const assignment of assignmentsToInsert) {
+                        if (assignment.worker_id) {
+                            await logActivity({
+                                tenantId: ctx.tenantId,
+                                actorId: ctx.user.id,
+                                actionType: 'assigned',
+                                entityType: 'worker',
+                                entityId: assignment.worker_id,
+                                details: { job_id: job.id, job_title: job.title },
+                                db: ctx.db
+                            })
+                        }
+                        if (assignment.contractor_id) {
+                            await logActivity({
+                                tenantId: ctx.tenantId,
+                                actorId: ctx.user.id,
+                                actionType: 'assigned',
+                                entityType: 'contractor',
+                                entityId: assignment.contractor_id,
+                                details: { job_id: job.id, job_title: job.title },
+                                db: ctx.db
+                            })
+                        }
+                    }
                 }
             }
 
@@ -616,7 +642,7 @@ export const jobsRouter = createTRPCRouter({
             // 1. Get Job details for timing
             const { data: job, error: jobFetchError } = await ctx.db
                 .from('jobs')
-                .select('start_time, end_time')
+                .select('title, start_time, end_time')
                 .eq('id', input.jobId)
                 .single()
 
@@ -690,6 +716,32 @@ export const jobsRouter = createTRPCRouter({
                     },
                     db: ctx.db
                 })
+
+                // Log for each assigned worker/contractor
+                for (const assignment of assignmentsToInsert) {
+                    if (assignment.worker_id) {
+                        await logActivity({
+                            tenantId: ctx.tenantId,
+                            actorId: ctx.user.id,
+                            actionType: 'assigned',
+                            entityType: 'worker',
+                            entityId: assignment.worker_id,
+                            details: { job_id: input.jobId, job_title: job.title || 'Job' }, // job.title isn't fetched, fallback
+                            db: ctx.db
+                        })
+                    }
+                    if (assignment.contractor_id) {
+                        await logActivity({
+                            tenantId: ctx.tenantId,
+                            actorId: ctx.user.id,
+                            actionType: 'assigned',
+                            entityType: 'contractor',
+                            entityId: assignment.contractor_id,
+                            details: { job_id: input.jobId, job_title: job.title || 'Job' },
+                            db: ctx.db
+                        })
+                    }
+                }
             }
 
             return { success: true }

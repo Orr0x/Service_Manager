@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Service Manager
+
+Service Manager is a comprehensive dashboard application designed for service-based businesses to manage their operations, including customers, jobs, workers, contractors, and financial documents.
+
+## Features
+
+### Core Management
+- **Customers**: Manage customer profiles, contact details, and service history.
+- **Jobs**: Track job assignments, status, and scheduling.
+- **Workers & Contractors**: Manage internal staff and external contractors, including availability and assignments.
+- **Job Sites**: Track multiple locations for customers.
+
+### Financials
+- **Quotes**: Create and manage quotes with detailed line items.
+- **Contracts**: Manage service agreements and contracts.
+- **Invoices**: Generate and track invoices.
+
+### Operations & Tools
+- **Checklists**: Create and assign standard operating procedure checklists to jobs.
+- **Services Catalog**: Configure service offerings with categories, default pricing, and durations.
+- **Search**: Global search across all entities.
+- **Activity Feeds**: Comprehensive audit trails for all key entities (Jobs, Customers, Workers, etc.).
+
+### UI/UX
+- **List/Grid Views**: Toggle between detailed list views and visual grid/card views for all major entities.
+- **Responsive Design**: Optimized for desktop and tablet use.
+- **Theming**: Customizable branding and appearance settings.
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+- Node.js (v18+)
+- Postgres Database (Supabase recommended)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Orr0x/Service_Manager.git
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Set up environment variables:
+   Copy `.env.example` to `.env.local` and populate with your database credentials.
+
+4. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Tech Stack
+- **Framework**: [Next.js](https://nextjs.org) (App Router)
+- **Database**: Postgres (Supabase)
+- **ORM**: Drizzle ORM
+- **API**: tRPC
+- **Styling**: Tailwind CSS
+- **Icons**: Lucide React

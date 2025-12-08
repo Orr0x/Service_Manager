@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '../trpc'
+import { logActivity } from './utils/activity'
 
 // Define a schema for quote items
 const quoteItemSchema = z.object({
@@ -180,6 +181,27 @@ export const quotesRouter = createTRPCRouter({
                 throw new Error(`Failed to create quote: ${error.message}`)
             }
 
+            await logActivity({
+                tenantId: ctx.tenantId,
+                actorId: ctx.user.id,
+                actionType: 'created',
+                entityType: 'quote',
+                entityId: data.id,
+                details: { title: input.title, customer_id: input.customerId, amount: input.totalAmount },
+                db: ctx.db
+            })
+
+            // Log to Customer Timeline
+            await logActivity({
+                tenantId: ctx.tenantId,
+                actorId: ctx.user.id,
+                actionType: 'updated',
+                entityType: 'customer',
+                entityId: input.customerId,
+                details: { type: 'quote_created', quote_id: data.id, title: input.title },
+                db: ctx.db
+            })
+
             return data
         }),
 
@@ -225,6 +247,16 @@ export const quotesRouter = createTRPCRouter({
                 throw new Error(`Failed to update quote: ${error.message}`)
             }
 
+            await logActivity({
+                tenantId: ctx.tenantId,
+                actorId: ctx.user.id,
+                actionType: 'updated',
+                entityType: 'quote',
+                entityId: input.id,
+                details: { status: input.status, title: input.title, amount: input.totalAmount },
+                db: ctx.db
+            })
+
             return data
         }),
 
@@ -240,6 +272,16 @@ export const quotesRouter = createTRPCRouter({
             if (error) {
                 throw new Error(`Failed to delete quote: ${error.message}`)
             }
+
+            await logActivity({
+                tenantId: ctx.tenantId,
+                actorId: ctx.user.id,
+                actionType: 'deleted',
+                entityType: 'quote',
+                entityId: input.id,
+                details: {},
+                db: ctx.db
+            })
 
             return { success: true }
         }),

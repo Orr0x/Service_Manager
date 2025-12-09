@@ -23,7 +23,11 @@ export const checklistsRouter = createTRPCRouter({
 
             if (input?.search) {
                 const search = input.search.toLowerCase()
-                query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`)
+                // Use Full Text Search on the generated column
+                query = query.textSearch('search_vector', search, {
+                    type: 'websearch',
+                    config: 'english'
+                })
             }
 
             const { data, error } = await query.order('created_at', { ascending: false })

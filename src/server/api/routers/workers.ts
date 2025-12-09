@@ -13,8 +13,10 @@ export const workersRouter = createTRPCRouter({
                 .eq('tenant_id', ctx.tenantId)
 
             if (input?.search) {
-                const search = input.search.toLowerCase()
-                query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%,role.ilike.%${search}%`)
+                const search = input.search.trim()
+                if (search) {
+                    query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%,role.ilike.%${search}%,phone.ilike.%${search}%`)
+                }
             }
 
             const { data, error } = await query.order('created_at', { ascending: false })

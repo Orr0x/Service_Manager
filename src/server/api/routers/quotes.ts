@@ -26,8 +26,34 @@ export const quotesRouter = createTRPCRouter({
                 .eq('tenant_id', ctx.tenantId)
 
             if (input?.search) {
-                const search = input.search.toLowerCase()
-                query = query.or(`title.ilike.%${search}%,status.ilike.%${search}%`)
+                const search = input.search
+
+                // Optimized Search Strategy:
+                // 1. Find matching customers first
+                const { data: matchedCustomers } = await ctx.db
+                    .from('customers')
+                    .select('id')
+                    .or(`business_name.ilike.%${search}%,contact_name.ilike.%${search}%`)
+                    .eq('tenant_id', ctx.tenantId)
+
+                const customerIds = matchedCustomers?.map(c => c.id) || []
+
+                // 2. Search Quotes: Title OR Number OR Customer IDs
+                // Note: We use simple ILIKE for robustness as 'textSearch' missed related fields.
+                // We handle numeric search explicitly.
+                const isNumeric = !isNaN(Number(search)) && search.trim() !== ''
+
+                let orConditions = `title.ilike.%${search}%`
+
+                if (isNumeric) {
+                    orConditions += `,quote_number.eq.${search}`
+                }
+
+                if (customerIds.length > 0) {
+                    orConditions += `,customer_id.in.(${customerIds.join(',')})`
+                }
+
+                query = query.or(orConditions)
             }
 
             const { data, error } = await query.order('created_at', { ascending: false })

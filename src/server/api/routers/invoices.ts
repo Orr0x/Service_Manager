@@ -16,34 +16,42 @@ export const invoicesRouter = createTRPCRouter({
             search: z.string().optional()
         }).optional())
         .query(async ({ ctx, input }) => {
+            // Optimized Search Strategy for Invoices
+            let matchesConditions: string[] = []
+
             if (input?.search) {
-                const { data, error } = await ctx.db.rpc('search_invoices', {
-                    p_tenant_id: ctx.tenantId,
-                    p_search_text: input.search
-                })
+                const search = input.search.trim()
+                if (search) {
+                    // 1. Fetch matching customers
+                    const { data: matchedCustomers } = await ctx.db
+                        .from('customers')
+                        .select('id')
+                        .or(`business_name.ilike.%${search}%,contact_name.ilike.%${search}%`)
+                        .eq('tenant_id', ctx.tenantId)
 
-                if (error) {
-                    throw new Error(`Failed to search invoices: ${error.message}`)
+                    const customerIds = matchedCustomers?.map(c => c.id) || []
+
+                    // 2. Build Query
+                    // invoice_number is integer, so we must use eq and only if search is numeric
+                    const isNumeric = !isNaN(Number(search)) && search.trim() !== ''
+
+                    let orConditions = `status.ilike.%${search}%`
+
+                    if (isNumeric) {
+                        orConditions += `,invoice_number.eq.${search}`
+                    }
+
+                    if (customerIds.length > 0) {
+                        orConditions += `,customer_id.in.(${customerIds.join(',')})`
+                    }
+
+                    // Note: We modify the base query below to include these conditions
+                    matchesConditions.push(orConditions)
                 }
-
-                // Map RPC result back to expected shape with nested customer
-                // The RPC returns flattened columns: customer_business_name, customer_contact_name
-                // Cast data to any[] to allow mapping without TS errors about unknown type
-                return (data as any[]).map((inv: any) => ({
-                    ...inv,
-                    customers: {
-                        id: inv.customer_id,
-                        business_name: inv.customer_business_name,
-                        contact_name: inv.customer_contact_name
-                    },
-                    job_site: inv.job_site_id ? { name: inv.job_site_name, address: inv.job_site_address } : null,
-                    job: inv.job_id ? { title: inv.job_title } : null,
-                    quote: inv.quote_id ? { title: inv.quote_title, quote_number: inv.quote_quote_number } : null,
-                }))
             }
 
-            // Standard query without search (or fallback if empty search)
-            const { data, error } = await ctx.db
+            // Standard query
+            let query = ctx.db
                 .from('invoices')
                 .select(`
         *,
@@ -55,11 +63,14 @@ export const invoicesRouter = createTRPCRouter({
                 .eq('tenant_id', ctx.tenantId)
                 .order('created_at', { ascending: false })
 
-            if (error) {
-                throw new Error(`Failed to fetch invoices: ${error.message}`)
+            if (matchesConditions.length > 0) {
+                query = query.or(matchesConditions[0])
             }
 
+            const { data, error } = await query
             return data
+
+
         }),
 
     getDashboardStats: protectedProcedure.query(async ({ ctx }) => {

@@ -41,9 +41,33 @@ export const jobsRouter = createTRPCRouter({
                 query = query.eq('job_site_id', input.jobSiteId)
             }
             if (input?.search) {
-                const search = input.search.toLowerCase()
-                // Filter by title or description
-                query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`)
+                const search = input.search.trim()
+                if (search) {
+                    // 1. Fetch matching related entities
+                    const [matchedCustomers, matchedSites] = await Promise.all([
+                        ctx.db.from('customers').select('id')
+                            .or(`business_name.ilike.%${search}%,contact_name.ilike.%${search}%`)
+                            .eq('tenant_id', ctx.tenantId),
+                        ctx.db.from('job_sites').select('id')
+                            .or(`name.ilike.%${search}%,address.ilike.%${search}%`)
+                            .eq('tenant_id', ctx.tenantId)
+                    ])
+
+                    const custIds = matchedCustomers.data?.map(c => c.id) || []
+                    const siteIds = matchedSites.data?.map(s => s.id) || []
+
+                    // 2. Build Query
+                    let orConditions = `title.ilike.%${search}%,description.ilike.%${search}%,status.ilike.%${search}%`
+
+                    if (custIds.length > 0) {
+                        orConditions += `,customer_id.in.(${custIds.join(',')})`
+                    }
+                    if (siteIds.length > 0) {
+                        orConditions += `,job_site_id.in.(${siteIds.join(',')})`
+                    }
+
+                    query = query.or(orConditions)
+                }
             }
 
             const { data, error } = await query

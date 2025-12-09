@@ -16,8 +16,26 @@ export const jobSitesRouter = createTRPCRouter({
                 .eq('tenant_id', ctx.tenantId)
 
             if (input?.search) {
-                const search = input.search.toLowerCase()
-                query = query.or(`name.ilike.%${search}%,address.ilike.%${search}%,city.ilike.%${search}%`)
+                const search = input.search.trim()
+                if (search) {
+                    // 1. Fetch matching customers
+                    const { data: matchedCustomers } = await ctx.db
+                        .from('customers')
+                        .select('id')
+                        .or(`business_name.ilike.%${search}%,contact_name.ilike.%${search}%`)
+                        .eq('tenant_id', ctx.tenantId)
+
+                    const customerIds = matchedCustomers?.map(c => c.id) || []
+
+                    // 2. Build Query
+                    let orConditions = `name.ilike.%${search}%,address.ilike.%${search}%,city.ilike.%${search}%,state.ilike.%${search}%,postal_code.ilike.%${search}%`
+
+                    if (customerIds.length > 0) {
+                        orConditions += `,customer_id.in.(${customerIds.join(',')})`
+                    }
+
+                    query = query.or(orConditions)
+                }
             }
 
             const { data, error } = await query.order('name', { ascending: true })

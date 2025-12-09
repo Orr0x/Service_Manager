@@ -14,8 +14,10 @@ export const servicesRouter = createTRPCRouter({
                 .eq('tenant_id', ctx.tenantId)
 
             if (input?.search) {
-                const search = input.search.toLowerCase()
-                query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%,category.ilike.%${search}%`)
+                const search = input.search.trim()
+                if (search) {
+                    query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%,category.ilike.%${search}%`)
+                }
             }
 
             const { data, error } = await query.order('name')

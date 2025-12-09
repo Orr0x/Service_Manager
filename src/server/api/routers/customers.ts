@@ -13,9 +13,10 @@ export const customersRouter = createTRPCRouter({
                 .eq('tenant_id', ctx.tenantId)
 
             if (input?.search) {
-                const search = input.search.toLowerCase()
-                // Simple OR filter for main text fields
-                query = query.or(`business_name.ilike.%${search}%,contact_name.ilike.%${search}%,email.ilike.%${search}%`)
+                const search = input.search.trim()
+                if (search) {
+                    query = query.or(`business_name.ilike.%${search}%,contact_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%,city.ilike.%${search}%`)
+                }
             }
 
             const { data, error } = await query

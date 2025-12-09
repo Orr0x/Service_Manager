@@ -52,18 +52,22 @@ async function fixUsers() {
     console.log('\n=== Checking auth.users state ===');
 
     // Try to get auth user by email directly
+    // Try to get auth user by email directly
+    /*
     for (const email of ['owner@sparkle.com', 'dageve5732@crsay.com']) {
-        const { data, error } = await supabase.auth.admin.getUserByEmail(email);
+        const { data: { users }, error } = await supabase.auth.admin.listUsers();
+        const user = users.find(u => u.email === email);
         if (error) {
             console.log(`\n${email}: ERROR - ${error.message}`);
-        } else if (data) {
+        } else if (user) {
             console.log(`\n${email}:`);
-            console.log(`  id: ${data.user.id}`);
-            console.log(`  email_confirmed: ${data.user.email_confirmed_at ? 'YES' : 'NO'}`);
-            console.log(`  app_metadata: ${JSON.stringify(data.user.app_metadata)}`);
-            console.log(`  identities: ${data.user.identities?.length || 0}`);
+            console.log(`  id: ${user.id}`);
+            console.log(`  email_confirmed: ${user.email_confirmed_at ? 'YES' : 'NO'}`);
+            console.log(`  app_metadata: ${JSON.stringify(user.app_metadata)}`);
+            console.log(`  identities: ${user.identities?.length || 0}`);
         }
     }
+    */
 }
 
 fixUsers();

@@ -27,7 +27,7 @@ export const test = base.extend<{ authenticatedPage: Page }>({
     },
 });
 
-export { expect };
+export { expect, TEST_USER };
 
 /**
  * Helper function to login programmatically

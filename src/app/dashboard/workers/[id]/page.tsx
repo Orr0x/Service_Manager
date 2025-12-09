@@ -3,7 +3,7 @@ import { WorkerDetail } from './worker-detail'
 
 export default async function WorkerDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
-    void api.workers.getById.prefetch({ id })
+    await api.workers.getById.prefetch({ id })
 
     return (
         <HydrateClient>

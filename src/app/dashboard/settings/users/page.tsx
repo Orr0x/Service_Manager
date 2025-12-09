@@ -49,10 +49,9 @@ export default function UsersPage() {
     const [inviteRole, setInviteRole] = useState('provider')
 
     // Filtered Users
-    const filteredUsers = users?.filter(user =>
-        user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.last_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredUsers = users?.filter(item =>
+        item.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.name?.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
     // Handlers
@@ -142,6 +141,7 @@ export default function UsersPage() {
                                 <thead className="bg-gray-50">
                                     <tr>
                                         <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Name</th>
+                                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Type</th>
                                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Email</th>
                                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Role</th>
                                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Linked Entity</th>
@@ -153,93 +153,113 @@ export default function UsersPage() {
                                 </thead>
                                 <tbody className="divide-y divide-gray-200 bg-white">
                                     {isLoading ? (
-                                        <tr><td colSpan={6} className="text-center py-4">Loading...</td></tr>
+                                        <tr><td colSpan={7} className="text-center py-4">Loading...</td></tr>
                                     ) : filteredUsers?.length === 0 ? (
-                                        <tr><td colSpan={6} className="text-center py-4">No users found</td></tr>
+                                        <tr><td colSpan={7} className="text-center py-4">No users found</td></tr>
                                     ) : (
-                                        filteredUsers?.map((user) => (
-                                            <tr key={user.id}>
+                                        filteredUsers?.map((item) => (
+                                            <tr key={`${item.type}-${item.id}`}>
                                                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                                                    {user.first_name || user.workers?.[0]?.first_name || '—'} {user.last_name || user.workers?.[0]?.last_name || ''}
+                                                    {item.name}
                                                 </td>
-                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.email}</td>
-                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 capitalize">{user.role}</td>
+                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 capitalize">
+                                                    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset 
+                                                        ${item.type === 'user' ? 'bg-indigo-50 text-indigo-700 ring-indigo-700/10' :
+                                                            item.type === 'worker' ? 'bg-green-50 text-green-700 ring-green-600/20' :
+                                                                item.type === 'contractor' ? 'bg-blue-50 text-blue-700 ring-blue-700/10' :
+                                                                    'bg-purple-50 text-purple-700 ring-purple-700/10'}`}>
+                                                        {item.type}
+                                                    </span>
+                                                </td>
+                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{item.email || '—'}</td>
+                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 capitalize">{item.role || '—'}</td>
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                                    {user.workers?.[0] ? (
-                                                        <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-                                                            Worker: {user.workers[0].first_name}
-                                                        </span>
-                                                    ) : user.contractors?.[0] ? (
-                                                        <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
-                                                            Contractor: {user.contractors[0].company_name}
+                                                    {item.linkedEntity ? (
+                                                        <span className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
+                                                            {item.linkedEntity.name}
                                                         </span>
                                                     ) : (
                                                         <span className="text-gray-400 italic">Unlinked</span>
                                                     )}
                                                 </td>
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                                    <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${user.is_active
-                                                        ? 'bg-green-100 text-green-700'
-                                                        : 'bg-red-100 text-red-700'
+                                                    <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${item.status === 'Active' ? 'bg-green-100 text-green-700' :
+                                                        item.status === 'Blocked' ? 'bg-red-100 text-red-700' :
+                                                            'bg-gray-100 text-gray-600'
                                                         }`}>
-                                                        {user.is_active ? 'Active' : 'Blocked'}
+                                                        {item.status}
                                                     </span>
                                                 </td>
                                                 <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                                                    <Menu as="div" className="relative inline-block text-left">
-                                                        <Menu.Button className="-m-2 flex items-center rounded-full p-2 text-gray-400 hover:text-gray-600">
-                                                            <span className="sr-only">Open options</span>
-                                                            <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
-                                                        </Menu.Button>
-                                                        <Transition
-                                                            as={Fragment}
-                                                            enter="transition ease-out duration-100"
-                                                            enterFrom="transform opacity-0 scale-95"
-                                                            enterTo="transform opacity-100 scale-100"
-                                                            leave="transition ease-in duration-75"
-                                                            leaveFrom="transform opacity-100 scale-100"
-                                                            leaveTo="transform opacity-0 scale-95"
+                                                    {item.type === 'user' ? (
+                                                        <Menu as="div" className="relative inline-block text-left">
+                                                            <Menu.Button className="-m-2 flex items-center rounded-full p-2 text-gray-400 hover:text-gray-600">
+                                                                <span className="sr-only">Open options</span>
+                                                                <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
+                                                            </Menu.Button>
+                                                            <Transition
+                                                                as={Fragment}
+                                                                enter="transition ease-out duration-100"
+                                                                enterFrom="transform opacity-0 scale-95"
+                                                                enterTo="transform opacity-100 scale-100"
+                                                                leave="transition ease-in duration-75"
+                                                                leaveFrom="transform opacity-100 scale-100"
+                                                                leaveTo="transform opacity-0 scale-95"
+                                                            >
+                                                                <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                                                                    <div className="py-1">
+                                                                        <Menu.Item>
+                                                                            {({ active }) => (
+                                                                                <button
+                                                                                    onClick={() => toggleStatus.mutate({ userId: item.id, isActive: item.status !== 'Active' })}
+                                                                                    className={classNames(
+                                                                                        active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
+                                                                                        'block w-full px-4 py-2 text-left text-sm'
+                                                                                    )}
+                                                                                >
+                                                                                    {item.status === 'Active' ? (
+                                                                                        <><Lock className="inline-block h-4 w-4 mr-2" /> Block Access</>
+                                                                                    ) : (
+                                                                                        <><Unlock className="inline-block h-4 w-4 mr-2" /> Unblock Access</>
+                                                                                    )}
+                                                                                </button>
+                                                                            )}
+                                                                        </Menu.Item>
+                                                                        <Menu.Item>
+                                                                            {({ active }) => (
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        if (confirm(`Send password reset link to ${item.email}?`)) {
+                                                                                            resetPassword.mutate({ email: item.email! })
+                                                                                        }
+                                                                                    }}
+                                                                                    className={classNames(
+                                                                                        active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
+                                                                                        'block w-full px-4 py-2 text-left text-sm'
+                                                                                    )}
+                                                                                >
+                                                                                    <Key className="inline-block h-4 w-4 mr-2" /> Reset Password
+                                                                                </button>
+                                                                            )}
+                                                                        </Menu.Item>
+                                                                    </div>
+                                                                </Menu.Items>
+                                                            </Transition>
+                                                        </Menu>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            className="text-indigo-600 hover:text-indigo-900 items-center hidden" // Hidden for now, or 'Invite' if we want to wire it up
+                                                            onClick={() => {
+                                                                // Future: Pre-fill invite modal
+                                                                setInviteModalOpen(true);
+                                                                if (item.type === 'worker') { setSelectedEntityType('worker'); setSelectedEntityId(item.id); }
+                                                                if (item.type === 'contractor') { setSelectedEntityType('contractor'); setSelectedEntityId(item.id); }
+                                                            }}
                                                         >
-                                                            <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                                                                <div className="py-1">
-                                                                    <Menu.Item>
-                                                                        {({ active }) => (
-                                                                            <button
-                                                                                onClick={() => toggleStatus.mutate({ userId: user.id, isActive: !user.is_active })}
-                                                                                className={classNames(
-                                                                                    active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
-                                                                                    'block w-full px-4 py-2 text-left text-sm'
-                                                                                )}
-                                                                            >
-                                                                                {user.is_active ? (
-                                                                                    <><Lock className="inline-block h-4 w-4 mr-2" /> Block Access</>
-                                                                                ) : (
-                                                                                    <><Unlock className="inline-block h-4 w-4 mr-2" /> Unblock Access</>
-                                                                                )}
-                                                                            </button>
-                                                                        )}
-                                                                    </Menu.Item>
-                                                                    <Menu.Item>
-                                                                        {({ active }) => (
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    if (confirm(`Send password reset link to ${user.email}?`)) {
-                                                                                        resetPassword.mutate({ email: user.email! })
-                                                                                    }
-                                                                                }}
-                                                                                className={classNames(
-                                                                                    active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
-                                                                                    'block w-full px-4 py-2 text-left text-sm'
-                                                                                )}
-                                                                            >
-                                                                                <Key className="inline-block h-4 w-4 mr-2" /> Reset Password
-                                                                            </button>
-                                                                        )}
-                                                                    </Menu.Item>
-                                                                </div>
-                                                            </Menu.Items>
-                                                        </Transition>
-                                                    </Menu>
+                                                            Invite
+                                                        </button>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))

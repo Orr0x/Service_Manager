@@ -6,7 +6,7 @@ import { SearchInput } from '@/components/common/search-input'
 
 export default async function ServicesPage() {
     // Prefetch services on the server
-    void api.services.getAll.prefetch()
+    await api.services.getAll.prefetch()
     const stats = await api.services.getDashboardStats()
 
     return (

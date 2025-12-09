@@ -5,7 +5,7 @@ import { WorkerList } from './worker-list'
 import { SearchInput } from '@/components/common/search-input'
 
 export default async function WorkersPage() {
-    void api.workers.getAll.prefetch()
+    await api.workers.getAll.prefetch()
     const stats = await api.workers.getDashboardStats()
 
     return (

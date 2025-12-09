@@ -5,7 +5,7 @@ import { CustomerList } from './customer-list'
 import { SearchInput } from '@/components/common/search-input'
 
 export default async function CustomersPage() {
-    void api.customers.getAll.prefetch()
+    await api.customers.getAll.prefetch()
     const stats = await api.customers.getDashboardStats()
 
     return (

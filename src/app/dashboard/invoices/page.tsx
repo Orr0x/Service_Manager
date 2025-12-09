@@ -5,7 +5,7 @@ import { InvoiceList } from './invoice-list'
 import { SearchInput } from '@/components/common/search-input'
 
 export default async function InvoicesPage() {
-    void api.invoices.getAll.prefetch()
+    await api.invoices.getAll.prefetch()
     const stats = await api.invoices.getDashboardStats()
 
     return (

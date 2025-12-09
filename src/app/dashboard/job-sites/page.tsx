@@ -5,7 +5,7 @@ import { JobSiteList } from './job-site-list'
 import { SearchInput } from '@/components/common/search-input'
 
 export default async function JobSitesPage() {
-    void api.jobSites.getAll.prefetch()
+    await api.jobSites.getAll.prefetch()
     const stats = await api.jobSites.getDashboardStats()
 
     return (

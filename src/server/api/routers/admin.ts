@@ -10,7 +10,8 @@ export const adminRouter = createTRPCRouter({
             throw new TRPCError({ code: 'FORBIDDEN', message: 'Only admins can view users' })
         }
 
-        const { data: users, error } = await ctx.db
+        // 1. Fetch Existing Users
+        const { data: users } = await ctx.db
             .from('users')
             .select(`
                 *,
@@ -20,8 +21,75 @@ export const adminRouter = createTRPCRouter({
             .eq('tenant_id', ctx.tenantId)
             .order('email')
 
-        if (error) throw error
-        return users
+        // 2. Fetch Unlinked Workers
+        const { data: workers } = await ctx.db
+            .from('workers')
+            .select('id, first_name, last_name, email, role')
+            .eq('tenant_id', ctx.tenantId)
+            .is('user_id', null)
+
+        // 3. Fetch Unlinked Contractors
+        const { data: contractors } = await ctx.db
+            .from('contractors')
+            .select('id, company_name, contact_name, email')
+            .eq('tenant_id', ctx.tenantId)
+            .is('user_id', null)
+
+        // 4. Fetch Customers (Potential Users)
+        const { data: customers } = await ctx.db
+            .from('customers')
+            .select('id, business_name, contact_name, email')
+            .eq('tenant_id', ctx.tenantId)
+
+        // Combine into unified list
+        const unifiedList = [
+            ...(users?.map(u => ({
+                id: u.id,
+                type: 'user' as const,
+                name: u.first_name ? `${u.first_name} ${u.last_name}` :
+                    u.workers?.[0] ? `${u.workers[0].first_name} ${u.workers[0].last_name}` :
+                        u.contractors?.[0] ? u.contractors[0].company_name :
+                            'Unknown User',
+                email: u.email,
+                role: u.role,
+                status: u.is_active ? 'Active' : 'Blocked',
+                linkedEntity: u.workers?.[0] ? { type: 'worker', name: `${u.workers[0].first_name} ${u.workers[0].last_name}` } :
+                    u.contractors?.[0] ? { type: 'contractor', name: u.contractors[0].company_name } :
+                        null
+            })) || []),
+
+            ...(workers?.map(w => ({
+                id: w.id,
+                type: 'worker' as const,
+                name: `${w.first_name} ${w.last_name}`,
+                email: w.email,
+                role: w.role, // 'Manager' | 'Technician' etc.
+                status: 'Unlinked',
+                linkedEntity: null
+            })) || []),
+
+            ...(contractors?.map(c => ({
+                id: c.id,
+                type: 'contractor' as const,
+                name: c.company_name,
+                email: c.email,
+                role: 'Contractor',
+                status: 'Unlinked',
+                linkedEntity: null
+            })) || []),
+
+            ...(customers?.map(c => ({
+                id: c.id,
+                type: 'customer' as const,
+                name: c.business_name || c.contact_name,
+                email: c.email,
+                role: 'Customer',
+                status: 'Unlinked',
+                linkedEntity: null
+            })) || [])
+        ]
+
+        return unifiedList
     }),
 
     inviteUser: protectedProcedure

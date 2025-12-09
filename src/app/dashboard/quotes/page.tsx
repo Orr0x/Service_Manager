@@ -5,7 +5,7 @@ import { QuoteList } from './quote-list'
 import { SearchInput } from '@/components/common/search-input'
 
 export default async function QuotesPage() {
-    void api.quotes.getAll.prefetch()
+    await api.quotes.getAll.prefetch()
     const stats = await api.quotes.getDashboardStats()
 
     return (

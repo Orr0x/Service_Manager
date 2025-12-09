@@ -5,7 +5,7 @@ import { ContractList } from './contract-list'
 import { SearchInput } from '@/components/common/search-input'
 
 export default async function ContractsPage() {
-    void api.contracts.getAll.prefetch()
+    await api.contracts.getAll.prefetch()
     const stats = await api.contracts.getDashboardStats()
 
     return (

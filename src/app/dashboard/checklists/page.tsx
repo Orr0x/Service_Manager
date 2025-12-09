@@ -5,7 +5,7 @@ import { ChecklistList } from './checklist-list'
 import { SearchInput } from '@/components/common/search-input'
 
 export default async function ChecklistsPage() {
-    void api.checklists.getAll.prefetch()
+    await api.checklists.getAll.prefetch()
     const stats = await api.checklists.getDashboardStats()
 
     return (

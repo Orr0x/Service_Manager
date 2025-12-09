@@ -3,7 +3,7 @@
 import { api } from '@/trpc/react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Mail, Phone, Briefcase, DollarSign, User, Pencil, Trash2, FileText, Calendar, MapPin, Truck, Award, Clock } from 'lucide-react'
+import { ArrowLeft, Mail, Phone, Briefcase, DollarSign, User, Pencil, Trash2, FileText, Calendar, MapPin, Truck, Award, Clock, Download } from 'lucide-react'
 import { useState } from 'react'
 import { format } from 'date-fns'
 import { WorkerAvailability } from './worker-availability'
@@ -86,6 +86,14 @@ export function WorkerDetail({ id }: { id: string }) {
                     </div>
                     <div className="mt-4 flex md:ml-4 md:mt-0 gap-x-3">
                         <button
+                            type="button"
+                            onClick={() => window.print()}
+                            className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                        >
+                            <Download className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
+                            Download PDF
+                        </button>
+                        <button
                             onClick={handleDelete}
                             className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-red-600 shadow-sm ring-1 ring-inset ring-red-300 hover:bg-red-50"
                         >
@@ -131,7 +139,7 @@ export function WorkerDetail({ id }: { id: string }) {
             </div>
 
             {/* Tab Content */}
-            <div className="space-y-6">
+            <div id="printable-content" className="space-y-6">
                 {activeTab === 'info' && (
                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                         {/* Main Info Card */}

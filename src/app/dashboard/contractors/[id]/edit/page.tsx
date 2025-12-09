@@ -1,8 +1,9 @@
 import { api, HydrateClient } from '@/trpc/server'
 import { EditContractorForm } from './edit-contractor-form'
 
-export default async function EditContractorPage({ params }: { params: { id: string } }) {
-    const contractor = await api.contractors.getById({ id: params.id })
+export default async function EditContractorPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params
+    const contractor = await api.contractors.getById({ id })
 
     return (
         <HydrateClient>

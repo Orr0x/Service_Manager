@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 import { api } from '@/trpc/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -12,7 +14,8 @@ import {
     MapPin,
     Tag,
     Activity,
-    ImageIcon
+    ImageIcon,
+    Download
 } from 'lucide-react'
 import { ActivityFeed } from '@/components/common/activity-feed'
 
@@ -73,14 +76,22 @@ export function ServiceDetail({ id }: { id: string }) {
                             </div>
                         </div>
                     </div>
-                    <div className="mt-4 flex md:ml-4 md:mt-0">
-                        <a
+                    <div className="mt-4 flex md:ml-4 md:mt-0 gap-x-3">
+                        <button
+                            type="button"
+                            onClick={() => window.print()}
+                            className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                        >
+                            <Download className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
+                            Download PDF
+                        </button>
+                        <Link
                             href={`/dashboard/services/${id}/edit`}
                             className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                         >
                             <Edit className="-ml-0.5 mr-1.5 h-5 w-5 text-gray-400" aria-hidden="true" />
                             Edit
-                        </a>
+                        </Link>
                     </div>
                 </div>
 
@@ -113,7 +124,7 @@ export function ServiceDetail({ id }: { id: string }) {
             </div>
 
             {/* Tab Content */}
-            <div className="space-y-6">
+            <div id="printable-content" className="space-y-6">
                 {activeTab === 'overview' && (
                     <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
                         <div className="border-b border-gray-200 px-4 py-5 sm:px-6">

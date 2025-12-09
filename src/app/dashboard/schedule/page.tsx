@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { CalendarView } from './calendar-view'
 import { KanbanBoard } from './kanban-board'
-import { Plus, LayoutGrid, Calendar as CalendarIcon, Briefcase, CheckCircle, PlayCircle } from 'lucide-react'
+import { Plus, LayoutGrid, Calendar as CalendarIcon, Briefcase, CheckCircle, PlayCircle, Download } from 'lucide-react'
 import Link from 'next/link'
 import { api } from '@/trpc/react'
 
@@ -12,7 +12,7 @@ export default function SchedulePage() {
     const { data: stats } = api.jobs.getDashboardStats.useQuery()
 
     return (
-        <div className="h-[calc(100vh-8rem)] flex flex-col space-y-4">
+        <div id="printable-content" className="h-[calc(100vh-8rem)] flex flex-col space-y-4">
             <div className="space-y-4 shrink-0">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
@@ -42,13 +42,23 @@ export default function SchedulePage() {
                         </div>
                     </div>
 
-                    <Link
-                        href="/dashboard/jobs/new"
-                        className="inline-flex items-center rounded-md bg-[var(--primary-color)] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                    >
-                        <Plus className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
-                        New Job
-                    </Link>
+                    <div className="flex items-center space-x-3">
+                        <button
+                            type="button"
+                            onClick={() => window.print()}
+                            className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                        >
+                            <Download className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
+                            Download
+                        </button>
+                        <Link
+                            href="/dashboard/jobs/new"
+                            className="inline-flex items-center rounded-md bg-[var(--primary-color)] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                        >
+                            <Plus className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
+                            New Job
+                        </Link>
+                    </div>
                 </div>
 
                 {/* Stats Cards */}

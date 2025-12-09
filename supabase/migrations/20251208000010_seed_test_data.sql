@@ -14,7 +14,7 @@ DECLARE
     pw_hash text := '$2b$12$TpY44NI/PjlMqT1N3lJ/FeTPTLP5hJKrlN5MYPuBdzn/FahA9hMXi'; -- "password123"
     
     -- Tenant 1: Sparkle Cleaners
-    t1_id uuid := gen_random_uuid();
+    t1_id uuid;
     u_sp_owner uuid := gen_random_uuid();
     u_sp_lead1 uuid := gen_random_uuid();
     u_sp_lead2 uuid := gen_random_uuid();
@@ -22,7 +22,7 @@ DECLARE
     j_sp_job uuid;
     
     -- Tenant 2: FixIt Right
-    t2_id uuid := gen_random_uuid();
+    t2_id uuid;
     u_fx_owner uuid := gen_random_uuid();
     
     -- Loop vars
@@ -31,49 +31,88 @@ DECLARE
     new_worker_id uuid;
     new_cust_id uuid;
     new_site_id uuid;
+    
+    -- Temp vars
+    existing_t1 uuid;
+    existing_t2 uuid;
 BEGIN
     ---------------------------------------------------------------------------
     -- TENANT 1: SPARKLE CLEANERS
     ---------------------------------------------------------------------------
-    INSERT INTO public.tenants (id, name, slug) VALUES (t1_id, 'Sparkle Cleaners', 'sparkle-cleaners');
     
-    -- Settings
-    INSERT INTO public.tenant_settings (tenant_id, services_settings)
-    VALUES (t1_id, '{"default_currency": "USD", "default_duration": 120, "enabled_categories": ["cleaning", "janitorial", "sanitization"]}');
+    -- Check for existing tenant
+    SELECT id INTO existing_t1 FROM public.tenants WHERE slug = 'sparkle-cleaners';
+    
+    IF existing_t1 IS NOT NULL THEN
+        t1_id := existing_t1;
+        -- Optional: Update settings if needed, but for now we skip invalid duplications
+        -- We won't re-insert if it exists to avoid conflicts, or use UPSERT if preferred. 
+        -- Simplest fix for "already exists" is just to reuse ID.
+        -- We DO need to ensure we don't break downstream constraints if we re-run.
+        -- But first solving the immediate blocker.
+    ELSE
+        t1_id := gen_random_uuid();
+        INSERT INTO public.tenants (id, name, slug) VALUES (t1_id, 'Sparkle Cleaners', 'sparkle-cleaners');
+        
+        -- Settings (only insert if tenant is new)
+        INSERT INTO public.tenant_settings (tenant_id, services_settings)
+        VALUES (t1_id, '{"default_currency": "USD", "default_duration": 120, "enabled_categories": ["cleaning", "janitorial", "sanitization"]}');
+    END IF;
 
-    -- 1. USERS (Owner, Leads, Workers)
-    
     -- Owner
+    -- Clean up any existing record to ensure we create a valid one with identities
+    DELETE FROM public.users WHERE email = 'owner@sparkle.com';
+    DELETE FROM auth.users WHERE email = 'owner@sparkle.com';
+    
     INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
     VALUES ('00000000-0000-0000-0000-000000000000', u_sp_owner, 'authenticated', 'authenticated', 'owner@sparkle.com', pw_hash, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Sarah Sparkle"}'::jsonb, now(), now());
+    
+    INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+    VALUES (gen_random_uuid(), u_sp_owner, u_sp_owner::text, jsonb_build_object('sub', u_sp_owner, 'email', 'owner@sparkle.com'), 'email', now(), now(), now());
+
     INSERT INTO public.users (id, tenant_id, role, first_name, last_name, email)
     VALUES (u_sp_owner, t1_id, 'admin', 'Sarah', 'Sparkle', 'owner@sparkle.com');
 
     -- Team Lead 1
+    DELETE FROM public.users WHERE email = 'lead1@sparkle.com';
+    DELETE FROM auth.users WHERE email = 'lead1@sparkle.com';
+    
     INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
     VALUES ('00000000-0000-0000-0000-000000000000', u_sp_lead1, 'authenticated', 'authenticated', 'lead1@sparkle.com', pw_hash, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Liam Lead"}'::jsonb, now(), now());
+    
+    INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+    VALUES (gen_random_uuid(), u_sp_lead1, u_sp_lead1::text, jsonb_build_object('sub', u_sp_lead1, 'email', 'lead1@sparkle.com'), 'email', now(), now(), now());
+
     INSERT INTO public.users (id, tenant_id, role, first_name, last_name, email)
     VALUES (u_sp_lead1, t1_id, 'manager', 'Liam', 'Lead', 'lead1@sparkle.com');
 
     -- Team Lead 2
+    DELETE FROM public.users WHERE email = 'lead2@sparkle.com';
+    DELETE FROM auth.users WHERE email = 'lead2@sparkle.com';
+    
     INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
     VALUES ('00000000-0000-0000-0000-000000000000', u_sp_lead2, 'authenticated', 'authenticated', 'lead2@sparkle.com', pw_hash, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Lisa Lead"}'::jsonb, now(), now());
+    
+    INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+    VALUES (gen_random_uuid(), u_sp_lead2, u_sp_lead2::text, jsonb_build_object('sub', u_sp_lead2, 'email', 'lead2@sparkle.com'), 'email', now(), now(), now());
+
     INSERT INTO public.users (id, tenant_id, role, first_name, last_name, email)
     VALUES (u_sp_lead2, t1_id, 'manager', 'Lisa', 'Lead', 'lead2@sparkle.com');
 
     -- 7 Workers
     FOR i IN 1..7 LOOP
+        -- Clean up
+        DELETE FROM public.workers WHERE email = 'worker' || i || '@sparkle.com';
+        DELETE FROM public.users WHERE email = 'worker' || i || '@sparkle.com';
+        DELETE FROM auth.users WHERE email = 'worker' || i || '@sparkle.com';
+        
         new_user_id := gen_random_uuid();
         INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
         VALUES ('00000000-0000-0000-0000-000000000000', new_user_id, 'authenticated', 'authenticated', 'worker' || i || '@sparkle.com', pw_hash, now(), '{"provider":"email","providers":["email"]}'::jsonb, ('{"full_name":"Worker ' || i || '"}')::jsonb, now(), now());
         
-        -- Also insert into workers table if it exists as a separate entity linked to user, 
-        -- OR just public.users if roles assume worker status. 
-        -- Based on schema, we have 'workers' table likely linking to users? 
-        -- Let's check: actually earlier logs showed `workers(first_name, last_name, email)` in assignments.
-        -- Assuming `workers` table exists and is separate or linked. 
-        -- Typically: public.workers (id, tenant_id, user_id, ...)
-        
+        INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+        VALUES (gen_random_uuid(), new_user_id, new_user_id::text, jsonb_build_object('sub', new_user_id, 'email', 'worker' || i || '@sparkle.com'), 'email', now(), now(), now());
+
         INSERT INTO public.users (id, tenant_id, role, first_name, last_name, email)
         VALUES (new_user_id, t1_id, 'worker', 'Clean', 'Worker ' || i, 'worker' || i || '@sparkle.com');
         
@@ -128,22 +167,44 @@ BEGIN
     ---------------------------------------------------------------------------
     -- TENANT 2: FIXIT RIGHT (Maintenance)
     ---------------------------------------------------------------------------
-    INSERT INTO public.tenants (id, name, slug) VALUES (t2_id, 'FixIt Right', 'fixit-right');
-     INSERT INTO public.tenant_settings (tenant_id, services_settings)
-    VALUES (t2_id, '{"default_currency": "GBP", "default_duration": 60, "enabled_categories": ["maintenance", "carpentry", "electrical"]}');
+    SELECT id INTO existing_t2 FROM public.tenants WHERE slug = 'fixit-right';
+
+    IF existing_t2 IS NOT NULL THEN
+        t2_id := existing_t2;
+    ELSE
+        t2_id := gen_random_uuid();
+        INSERT INTO public.tenants (id, name, slug) VALUES (t2_id, 'FixIt Right', 'fixit-right');
+        INSERT INTO public.tenant_settings (tenant_id, services_settings)
+        VALUES (t2_id, '{"default_currency": "GBP", "default_duration": 60, "enabled_categories": ["maintenance", "carpentry", "electrical"]}');
+    END IF;
 
     -- Owner
+    DELETE FROM public.users WHERE email = 'manager@fixit.com';
+    DELETE FROM auth.users WHERE email = 'manager@fixit.com';
+    
     INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
     VALUES ('00000000-0000-0000-0000-000000000000', u_fx_owner, 'authenticated', 'authenticated', 'manager@fixit.com', pw_hash, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Frank Fixit"}'::jsonb, now(), now());
+    
+    INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+    VALUES (gen_random_uuid(), u_fx_owner, u_fx_owner::text, jsonb_build_object('sub', u_fx_owner, 'email', 'manager@fixit.com'), 'email', now(), now(), now());
+    
     INSERT INTO public.users (id, tenant_id, role, first_name, last_name, email)
     VALUES (u_fx_owner, t2_id, 'admin', 'Frank', 'Fixit', 'manager@fixit.com');
 
     -- Workers (5)
     FOR i IN 1..5 LOOP
+        -- Clean up
+        DELETE FROM public.workers WHERE email = 'tech' || i || '@fixit.com';
+        DELETE FROM public.users WHERE email = 'tech' || i || '@fixit.com';
+        DELETE FROM auth.users WHERE email = 'tech' || i || '@fixit.com';
+        
         new_user_id := gen_random_uuid();
         INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
         VALUES ('00000000-0000-0000-0000-000000000000', new_user_id, 'authenticated', 'authenticated', 'tech' || i || '@fixit.com', pw_hash, now(), '{"provider":"email","providers":["email"]}'::jsonb, ('{"full_name":"Tech ' || i || '"}')::jsonb, now(), now());
         
+        INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+        VALUES (gen_random_uuid(), new_user_id, new_user_id::text, jsonb_build_object('sub', new_user_id, 'email', 'tech' || i || '@fixit.com'), 'email', now(), now(), now());
+
         INSERT INTO public.users (id, tenant_id, role, first_name, last_name, email)
         VALUES (new_user_id, t2_id, 'worker', 'Tech', 'Num ' || i, 'tech' || i || '@fixit.com');
         

@@ -1,17 +1,30 @@
-# Test Data & Users
+# Test Users & Data
 
-A comprehensive set of test data has been seeded into the database for two distinct tenants. This allows for testing multi-tenant isolation and different business use cases.
+## Primary Test Account (WORKING ✅)
 
-**Global Password for all users:** `password123`
+Use this account for all testing (Playwright, browser automation, manual testing):
 
-## Tenant 1: Sparkle Cleaners (Cleaning Business)
-**Slug:** `sparkle-cleaners`
+| Email | Password | Role | Tenant |
+|-------|----------|------|--------|
+| `dageve5732@crsay.com` | `password123` | Admin | Default |
+
+This account has been populated with:
+- 6 services
+- 5 contractors
+- 5 workers
+- 8 customers with job sites
+- 16 jobs
+- 8 quotes
+- 8 invoices
+
+---
+
+## Legacy Seeded Accounts (NOT WORKING ❌)
 **Focus:** Cleaning, Janitorial, Sanitization
 
 ### Users
 | Role | Name | Email | Permissions |
 | :--- | :--- | :--- | :--- |
-| **Owner (Admin)** | Sarah Sparkle | `owner@sparkle.com` | Full Access |
 | **Manager (Lead)** | Liam Lead | `lead1@sparkle.com` | Manage Jobs, Workers |
 | **Manager (Lead)** | Lisa Lead | `lead2@sparkle.com` | Manage Jobs, Workers |
 | **Worker** | Clean Worker 1 | `worker1@sparkle.com` | View Assignments, Complete Checklists |

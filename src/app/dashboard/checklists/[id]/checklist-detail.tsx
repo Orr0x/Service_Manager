@@ -3,7 +3,7 @@
 import { api } from '@/trpc/react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, CheckSquare, Pencil, Trash2, CheckCircle2, Circle } from 'lucide-react'
+import { ArrowLeft, CheckSquare, Pencil, Trash2, CheckCircle2, Circle, Download } from 'lucide-react'
 import { useState } from 'react'
 
 interface ChecklistItem {
@@ -134,19 +134,27 @@ export function ChecklistDetail({ id }: { id: string }) {
                     </div>
                     <div className="mt-4 flex md:ml-4 md:mt-0 gap-x-3">
                         <button
+                            type="button"
+                            onClick={() => window.print()}
+                            className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                        >
+                            <Download className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
+                            Download PDF
+                        </button>
+                        <button
                             onClick={handleDelete}
                             className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-red-600 shadow-sm ring-1 ring-inset ring-red-300 hover:bg-red-50"
                         >
                             <Trash2 className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
                             Delete
                         </button>
-                        <button
-                            type="button"
+                        <Link
+                            href={`/dashboard/checklists/${id}/edit`}
                             className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                         >
                             <Pencil className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
                             Edit
-                        </button>
+                        </Link>
                     </div>
                 </div>
 
@@ -175,7 +183,7 @@ export function ChecklistDetail({ id }: { id: string }) {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div id="printable-content" className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 {/* Main Content */}
                 <div className="lg:col-span-2 space-y-6">
                     {activeTab === 'tasks' && (

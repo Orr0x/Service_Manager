@@ -18,7 +18,8 @@ import {
     File,
     Clock,
     Award,
-    Activity
+    Activity,
+    Download
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -151,12 +152,20 @@ export function JobDetail({ id }: { id: string }) {
                             {createInvoice.isPending ? 'Creating...' : 'Invoice'}
                         </button>
                         <button
-                            onClick={() => setIsEditModalOpen(true)}
+                            type="button"
+                            onClick={() => window.print()}
+                            className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                        >
+                            <Download className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
+                            Download PDF
+                        </button>
+                        <Link
+                            href={`/dashboard/jobs/${id}/edit`}
                             className="inline-flex items-center rounded-md bg-[var(--primary-color)] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90"
                         >
                             <Edit className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
                             Edit
-                        </button>
+                        </Link>
                     </div>
                 </div>
 
@@ -189,7 +198,7 @@ export function JobDetail({ id }: { id: string }) {
             </div>
 
             {/* Tab Content */}
-            <div className="space-y-6">
+            <div id="printable-content" className="space-y-6">
                 {activeTab === 'overview' && (
                     <div className="space-y-6">
                         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

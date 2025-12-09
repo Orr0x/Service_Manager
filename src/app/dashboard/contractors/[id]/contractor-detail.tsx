@@ -3,7 +3,7 @@
 import { api } from '@/trpc/react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Briefcase, MapPin, Calendar, Mail, Phone, User, Pencil, Trash2, FileText, Clock, Award, Activity } from 'lucide-react'
+import { Briefcase, MapPin, Calendar, Mail, Phone, User, Pencil, Trash2, FileText, Clock, Award, Activity, Download } from 'lucide-react'
 import { EntityCalendar } from '@/components/entity-calendar'
 import { ContractorAvailability } from './contractor-availability'
 import { AttachmentsSection } from '@/components/attachments-section'
@@ -117,6 +117,14 @@ export function ContractorDetail({ id }: { id: string }) {
                         </div>
                     </div>
                     <div className="mt-4 flex flex-shrink-0 md:ml-4 md:mt-0 gap-x-3">
+                        <button
+                            type="button"
+                            onClick={() => window.print()}
+                            className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                        >
+                            <Download className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
+                            Download PDF
+                        </button>
                         <Link
                             href={`/dashboard/contractors/${id}/edit`}
                             className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
@@ -164,7 +172,7 @@ export function ContractorDetail({ id }: { id: string }) {
             </div>
 
             {/* Tab Content */}
-            <div className="space-y-6">
+            <div id="printable-content" className="space-y-6">
                 {activeTab === 'overview' && (
                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                         {/* Contact Info */}

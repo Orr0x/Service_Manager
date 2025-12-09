@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { JobDetail } from '@/app/dashboard/jobs/[id]/job-detail'
+import { JobDetail } from '@/app/(admin)/dashboard/jobs/[id]/job-detail'
 import { notFound } from 'next/navigation'
 
 export default async function JobDetailPage({

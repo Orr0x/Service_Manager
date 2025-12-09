@@ -44,7 +44,7 @@ export default function UsersPage() {
 
     // Invite Form State
     const [selectedEntityId, setSelectedEntityId] = useState('')
-    const [selectedEntityType, setSelectedEntityType] = useState<'worker' | 'contractor'>('worker')
+    const [selectedEntityType, setSelectedEntityType] = useState<'worker' | 'contractor' | 'customer'>('worker')
     const [inviteEmail, setInviteEmail] = useState('')
     const [inviteRole, setInviteRole] = useState('provider')
 
@@ -57,7 +57,7 @@ export default function UsersPage() {
     // Handlers
     const handleEntitySelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const [type, id] = e.target.value.split(':')
-        setSelectedEntityType(type as 'worker' | 'contractor')
+        setSelectedEntityType(type as 'worker' | 'contractor' | 'customer')
         setSelectedEntityId(id)
 
         // Pre-fill email/role
@@ -67,11 +67,17 @@ export default function UsersPage() {
                 setInviteEmail(worker.email || '')
                 setInviteRole(worker.role === 'Manager' || worker.role === 'Admin' ? 'admin' : 'provider') // Map roles roughly
             }
-        } else {
+        } else if (type === 'contractor') {
             const contractor = unlinkedEntities?.contractors.find(c => c.id === id)
             if (contractor) {
                 setInviteEmail(contractor.email || '')
                 setInviteRole('provider')
+            }
+        } else if (type === 'customer') {
+            const customer = unlinkedEntities?.customers?.find(c => c.id === id)
+            if (customer) {
+                setInviteEmail(customer.email || '')
+                setInviteRole('customer')
             }
         }
     }
@@ -84,7 +90,8 @@ export default function UsersPage() {
             email: inviteEmail,
             role: inviteRole,
             workerId: selectedEntityType === 'worker' ? selectedEntityId : undefined,
-            contractorId: selectedEntityType === 'contractor' ? selectedEntityId : undefined
+            contractorId: selectedEntityType === 'contractor' ? selectedEntityId : undefined,
+            customerId: selectedEntityType === 'customer' ? selectedEntityId : undefined
         })
     }
 
@@ -101,7 +108,7 @@ export default function UsersPage() {
                 <div className="sm:flex-auto">
                     <h1 className="text-xl font-semibold text-gray-900">User Management</h1>
                     <p className="mt-2 text-sm text-gray-700">
-                        Manage system access for your workers and contractors.
+                        Manage system access for your workers, contractors, and customers.
                     </p>
                 </div>
                 <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
@@ -255,6 +262,7 @@ export default function UsersPage() {
                                                                 setInviteModalOpen(true);
                                                                 if (item.type === 'worker') { setSelectedEntityType('worker'); setSelectedEntityId(item.id); }
                                                                 if (item.type === 'contractor') { setSelectedEntityType('contractor'); setSelectedEntityId(item.id); }
+                                                                if (item.type === 'customer') { setSelectedEntityType('customer'); setSelectedEntityId(item.id); }
                                                             }}
                                                         >
                                                             Invite
@@ -308,7 +316,7 @@ export default function UsersPage() {
                                             </Dialog.Title>
                                             <div className="mt-2">
                                                 <p className="text-sm text-gray-500">
-                                                    Grant access to an existing Worker or Contractor. This will create a user account for them.
+                                                    Grant access to an existing Worker, Contractor, or Customer. This will create a user account for them.
                                                 </p>
                                             </div>
                                         </div>
@@ -337,6 +345,13 @@ export default function UsersPage() {
                                                         {unlinkedEntities?.contractors.map(c => (
                                                             <option key={c.id} value={`contractor:${c.id}`}>
                                                                 {c.company_name} ({c.contact_name})
+                                                            </option>
+                                                        ))}
+                                                    </optgroup>
+                                                    <optgroup label="Customers">
+                                                        {unlinkedEntities?.customers?.map(c => (
+                                                            <option key={c.id} value={`customer:${c.id}`}>
+                                                                {c.business_name} ({c.contact_name})
                                                             </option>
                                                         ))}
                                                     </optgroup>
@@ -397,6 +412,6 @@ export default function UsersPage() {
                     </div>
                 </Dialog>
             </Transition.Root>
-        </div >
+        </div>
     )
 }

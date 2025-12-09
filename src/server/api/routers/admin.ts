@@ -10,13 +10,16 @@ export const adminRouter = createTRPCRouter({
             throw new TRPCError({ code: 'FORBIDDEN', message: 'Only admins can view users' })
         }
 
+        const supabaseAdmin = createAdminClient()
+
         // 1. Fetch Existing Users
-        const { data: users } = await ctx.db
+        const { data: users } = await supabaseAdmin
             .from('users')
             .select(`
                 *,
                 workers (id, first_name, last_name),
-                contractors (id, company_name, contact_name)
+                contractors (id, company_name, contact_name),
+                customers (id, business_name, contact_name)
             `)
             .eq('tenant_id', ctx.tenantId)
             .order('email')
@@ -38,7 +41,7 @@ export const adminRouter = createTRPCRouter({
         // 4. Fetch Customers (Potential Users)
         const { data: customers } = await ctx.db
             .from('customers')
-            .select('id, business_name, contact_name, email')
+            .select('id, business_name, contact_name, email, user_id')
             .eq('tenant_id', ctx.tenantId)
 
         // Combine into unified list
@@ -49,13 +52,15 @@ export const adminRouter = createTRPCRouter({
                 name: u.first_name ? `${u.first_name} ${u.last_name}` :
                     u.workers?.[0] ? `${u.workers[0].first_name} ${u.workers[0].last_name}` :
                         u.contractors?.[0] ? u.contractors[0].company_name :
-                            'Unknown User',
+                            u.customers?.[0] ? (u.customers[0].business_name || u.customers[0].contact_name) :
+                                'Unknown User',
                 email: u.email,
                 role: u.role,
                 status: u.is_active ? 'Active' : 'Blocked',
                 linkedEntity: u.workers?.[0] ? { type: 'worker', name: `${u.workers[0].first_name} ${u.workers[0].last_name}` } :
                     u.contractors?.[0] ? { type: 'contractor', name: u.contractors[0].company_name } :
-                        null
+                        u.customers?.[0] ? { type: 'customer', name: u.customers[0].business_name || u.customers[0].contact_name } :
+                            null
             })) || []),
 
             ...(workers?.map(w => ({
@@ -78,7 +83,7 @@ export const adminRouter = createTRPCRouter({
                 linkedEntity: null
             })) || []),
 
-            ...(customers?.map(c => ({
+            ...(customers?.filter(c => !c.user_id).map(c => ({
                 id: c.id,
                 type: 'customer' as const,
                 name: c.business_name || c.contact_name,
@@ -97,7 +102,8 @@ export const adminRouter = createTRPCRouter({
             email: z.string().email(),
             role: z.string(),
             workerId: z.string().optional(),
-            contractorId: z.string().optional()
+            contractorId: z.string().optional(),
+            customerId: z.string().optional()
         }))
         .mutation(async ({ ctx, input }) => {
             if (ctx.user.user_metadata.role !== 'admin') {
@@ -106,32 +112,158 @@ export const adminRouter = createTRPCRouter({
 
             const supabaseAdmin = createAdminClient()
 
-            // 1. Invite User via Supabase Auth
-            const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-                input.email,
-                {
-                    data: {
+            let userId = ''
+
+            // List of test domains that should bypass email invite and default to password creation
+            const TEST_DOMAINS = ['client.com', 'example.com', 'sparkle.com', 'zap.com', 'flow.com', 'wood.com', 'safegas.com', 'fixall.com', 'fixit.com']
+            const isTestEmail = TEST_DOMAINS.some(domain => input.email.toLowerCase().endsWith(`@${domain}`))
+
+            if (isTestEmail) {
+                // Force Create for Test Users
+                const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+                    email: input.email,
+                    password: 'password123',
+                    email_confirm: true,
+                    user_metadata: {
                         role: input.role,
                         tenant_id: ctx.tenantId
                     }
-                }
-            )
+                })
 
-            if (authError) {
-                // Determine if user already exists
-                if (authError.message.includes('already registered')) {
-                    throw new TRPCError({ code: 'CONFLICT', message: 'User already registered' })
+                if (!createError) {
+                    userId = createData.user.id
+                } else if (createError.message.toLowerCase().includes('registered')) {
+                    // If created fails because exists, we need to find the ID
+                    const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+                    const existingUser = usersData.users.find(u => u.email?.toLowerCase() === input.email.toLowerCase())
+                    if (existingUser) {
+                        userId = existingUser.id
+                    } else {
+                        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'User exists but could not be found' })
+                    }
+                } else {
+                    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Create failed: ${createError.message}` })
                 }
-                throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: authError.message })
+            } else {
+                // 1. Try Invite User via Supabase Auth (Standard Flow)
+                const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+                    input.email,
+                    {
+                        data: {
+                            role: input.role,
+                            tenant_id: ctx.tenantId
+                        }
+                    }
+                )
+
+                if (!inviteError) {
+                    userId = inviteData.user.id
+                } else {
+                    // Handle specific errors
+                    const isInvalidEmail = inviteError.message.toLowerCase().includes('invalid') || inviteError.status === 422
+                    const isAlreadyRegistered = inviteError.message.toLowerCase().includes('already registered')
+
+                    if (isInvalidEmail) {
+                        // Fallback to createUser for seed/test emails (e.g. example.com)
+                        // We set a default password for these users so they can log in since they can't confirm email
+                        const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+                            email: input.email,
+                            password: 'password123',
+                            email_confirm: true,
+                            user_metadata: {
+                                role: input.role,
+                                tenant_id: ctx.tenantId
+                            }
+                        })
+
+                        if (!createError) {
+                            userId = createData.user.id
+                        } else if (createError.message.toLowerCase().includes('registered')) {
+                            // If created fails because exists, we need to find the ID
+                            const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+                            const existingUser = usersData.users.find(u => u.email?.toLowerCase() === input.email.toLowerCase())
+                            if (existingUser) {
+                                userId = existingUser.id
+                            } else {
+                                throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'User exists but could not be found' })
+                            }
+                        } else {
+                            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Create failed: ${createError.message}` })
+                        }
+                    } else if (isAlreadyRegistered) {
+                        // Fetch existing user ID
+                        const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+                        const existingUser = usersData.users.find(u => u.email?.toLowerCase() === input.email.toLowerCase())
+                        if (existingUser) {
+                            userId = existingUser.id
+                        } else {
+                            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'User registered but not found in list' })
+                        }
+                    } else {
+                        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: inviteError.message })
+                    }
+                }
             }
 
-            const userId = authData.user.id
+            // 2. Fetch Entity Details for Name
+            let firstName = ''
+            let lastName = ''
 
-            // 2. Link to Worker or Contractor
             if (input.workerId) {
-                await ctx.db.from('workers').update({ user_id: userId }).eq('id', input.workerId)
+                const { data: w } = await ctx.db.from('workers').select('first_name, last_name').eq('id', input.workerId).single()
+                if (w) {
+                    firstName = w.first_name
+                    lastName = w.last_name
+                }
             } else if (input.contractorId) {
-                await ctx.db.from('contractors').update({ user_id: userId }).eq('id', input.contractorId)
+                const { data: c } = await ctx.db.from('contractors').select('contact_name').eq('id', input.contractorId).single()
+                if (c && c.contact_name) {
+                    const parts = c.contact_name.split(' ')
+                    firstName = parts[0]
+                    lastName = parts.slice(1).join(' ')
+                }
+            } else if (input.customerId) {
+                const { data: c } = await ctx.db.from('customers').select('contact_name').eq('id', input.customerId).single()
+                if (c && c.contact_name) {
+                    const parts = c.contact_name.split(' ')
+                    firstName = parts[0]
+                    lastName = parts.slice(1).join(' ')
+                }
+            }
+
+            // 3. Create/Update Public User Record (Upsert to handle existing)
+            // Use supabaseAdmin to bypass RLS
+            const { error: upsertError } = await supabaseAdmin.from('users').upsert({
+                id: userId,
+                tenant_id: ctx.tenantId,
+                email: input.email,
+                role: input.role,
+                first_name: firstName,
+                last_name: lastName,
+                is_active: true
+            })
+
+            if (upsertError) {
+                console.error('Failed to upsert public user:', upsertError)
+                throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Failed to create public user record: ${upsertError.message}` })
+            }
+
+            // 4. Link to Worker or Contractor or Customer
+            let linkError
+            if (input.workerId) {
+                const { error } = await supabaseAdmin.from('workers').update({ user_id: userId }).eq('id', input.workerId)
+                linkError = error
+            } else if (input.contractorId) {
+                const { error } = await supabaseAdmin.from('contractors').update({ user_id: userId }).eq('id', input.contractorId)
+                linkError = error
+            } else if (input.customerId) {
+                const { error } = await supabaseAdmin.from('customers').update({ user_id: userId }).eq('id', input.customerId)
+                linkError = error
+            }
+
+            if (linkError) {
+                console.error('Failed to link entity:', linkError)
+                throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Failed to link entity: ${linkError.message}` })
             }
 
             return { success: true, userId }
@@ -198,9 +330,16 @@ export const adminRouter = createTRPCRouter({
             .eq('tenant_id', ctx.tenantId)
             .is('user_id', null)
 
+        const { data: customers } = await ctx.db
+            .from('customers')
+            .select('id, business_name, contact_name, email')
+            .eq('tenant_id', ctx.tenantId)
+            .is('user_id', null)
+
         return {
             workers: workers || [],
-            contractors: contractors || []
+            contractors: contractors || [],
+            customers: customers || []
         }
     })
 })

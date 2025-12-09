@@ -39,26 +39,55 @@ export async function updateSession(request: NextRequest) {
         data: { user },
     } = await supabase.auth.getUser()
 
+    // 1. Unauthenticated Restrictions
     if (
         !user &&
         !request.nextUrl.pathname.startsWith('/auth') &&
         !request.nextUrl.pathname.startsWith('/login')
     ) {
-        // no user, potentially redirect to login
-        // For now, we allow public access unless explicitly protected
-        // But per requirements, we should probably redirect dashboard
-        if (request.nextUrl.pathname.startsWith('/dashboard')) {
+        if (request.nextUrl.pathname.startsWith('/dashboard') || request.nextUrl.pathname.startsWith('/worker')) {
             const url = request.nextUrl.clone()
             url.pathname = '/auth/sign-in'
             return NextResponse.redirect(url)
         }
     }
 
+    // 2. Role-Based Access Control (RBAC)
+    if (user) {
+        const role = user.user_metadata?.role || 'provider'; // Use user_metadata as that's where invite saves it
+
+        // Protect Admin Dashboard
+        if (request.nextUrl.pathname.startsWith('/dashboard')) {
+            if (role !== 'admin' && role !== 'manager') {
+                const url = request.nextUrl.clone()
+                if (role === 'customer') {
+                    url.pathname = '/customer'
+                } else {
+                    url.pathname = '/worker'
+                }
+                return NextResponse.redirect(url)
+            }
+        }
+
+        // Protect Worker App
+        // Customers shouldn't see worker app?
+        if (request.nextUrl.pathname.startsWith('/worker')) {
+            if (role === 'customer') {
+                const url = request.nextUrl.clone()
+                url.pathname = '/customer'
+                return NextResponse.redirect(url)
+            }
+        }
+
+        // Protect Customer App (Optional - maybe workers shouldn't see it?)
+        // For now open
+    }
+
     // Inject tenant context headers if user exists
-    if (user && user.app_metadata?.tenant_id) {
-        supabaseResponse.headers.set('x-tenant-id', user.app_metadata.tenant_id as string)
+    if (user && user.user_metadata?.tenant_id) {
+        supabaseResponse.headers.set('x-tenant-id', user.user_metadata.tenant_id as string)
         supabaseResponse.headers.set('x-user-id', user.id)
-        supabaseResponse.headers.set('x-user-role', user.app_metadata.role as string || 'provider')
+        supabaseResponse.headers.set('x-user-role', user.user_metadata.role as string || 'provider')
     }
 
     return supabaseResponse

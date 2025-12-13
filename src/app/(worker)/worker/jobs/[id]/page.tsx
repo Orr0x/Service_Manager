@@ -23,7 +23,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         property: true,
         access: false,
         customer: false,
-        customer: false,
+
         maintenance: false,
         checklists: false,
 

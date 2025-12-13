@@ -245,6 +245,7 @@ export const workerRouter = createTRPCRouter({
                             contact_name
                         ),
                         job_sites (
+                            id,
                             name,
                             address,
                             city,

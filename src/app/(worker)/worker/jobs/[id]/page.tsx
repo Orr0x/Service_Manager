@@ -256,8 +256,30 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                         <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${openSections.maintenance ? 'rotate-180' : ''}`} />
                     </summary>
                     {openSections.maintenance && (
-                        <div className="px-4 pb-4 border-t border-gray-100 pt-3 text-sm text-gray-500 text-center">
-                            No open issues reported by you.
+                        <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3">
+                            {job.worker_reports && job.worker_reports.length > 0 ? (
+                                job.worker_reports.map((report: any) => (
+                                    <div key={report.id} className="bg-orange-50 rounded-lg p-3 border border-orange-100">
+                                        <div className="flex justify-between items-start mb-1">
+                                            <h4 className="font-semibold text-gray-900 text-sm">{report.title}</h4>
+                                            <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded border
+                                                ${report.status === 'resolved' ? 'bg-green-100 text-green-700 border-green-200' :
+                                                    'bg-yellow-100 text-yellow-700 border-yellow-200'}`}>
+                                                {report.status}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-gray-600 line-clamp-2 mb-2">{report.description}</p>
+                                        <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                                            <Clock className="h-3 w-3" />
+                                            <span>{format(new Date(report.created_at), 'MMM d, h:mm a')}</span>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-sm text-gray-500 text-center py-2">
+                                    No open issues reported by you.
+                                </div>
+                            )}
                         </div>
                     )}
                 </details>

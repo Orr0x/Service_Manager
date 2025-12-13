@@ -85,7 +85,10 @@ export const reportsRouter = createTRPCRouter({
 
             if (error) {
                 console.error('Error creating report:', error);
-                throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create report' });
+                throw new TRPCError({
+                    code: 'INTERNAL_SERVER_ERROR',
+                    message: `Failed to create report: ${(error as any).message || JSON.stringify(error)}`
+                });
             }
 
             return data;

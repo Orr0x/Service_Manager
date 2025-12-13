@@ -86,7 +86,7 @@ export function WorkerCalendar() {
 
             return {
                 id: assignment.id,
-                title: `${hasConflict ? '⚠️ ' : ''}${assignment.customers?.business_name || assignment.customers?.contact_name || 'Customer'} - ${assignment.title}`,
+                title: `${hasConflict ? '⚠️ ' : ''}${Array.isArray(assignment.customers) ? (assignment.customers[0]?.business_name || assignment.customers[0]?.contact_name) : (assignment.customers?.business_name || assignment.customers?.contact_name) || 'Customer'} - ${assignment.title}`,
                 start,
                 end,
                 resource: assignment,

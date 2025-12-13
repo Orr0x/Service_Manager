@@ -48,8 +48,9 @@ export function AppConfigProvider({
     })
 
     const isVisible = (key: string, defaultVal = true) => {
-        if (configData && typeof configData[key] === 'boolean') {
-            return configData[key]
+        const safeConfig = configData as Record<string, any> | undefined;
+        if (safeConfig && typeof safeConfig[key] === 'boolean') {
+            return safeConfig[key]
         }
         return defaultVal
     }

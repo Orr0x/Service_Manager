@@ -4,7 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), override: true });
 
 const { Client } = pg;
 
@@ -32,7 +33,60 @@ async function applyMigration() {
         cleanConnectionString = 'postgres://' + cleanConnectionString;
     }
 
-    const client = new Client({ connectionString: cleanConnectionString, ssl: { rejectUnauthorized: false } }); // Adjust SSL as needed
+    // Manual parsing to avoid pg-connection-string issues and handle unencoded passwords
+    let config = { ssl: { rejectUnauthorized: false } };
+
+    // Fallback logic
+    let isHandled = false;
+
+    if (cleanConnectionString.startsWith('postgres://') || cleanConnectionString.startsWith('postgresql://')) {
+        try {
+            const str = cleanConnectionString.replace(/^postgres(ql)?:\/\//, '');
+            const lastAt = str.lastIndexOf('@');
+            if (lastAt !== -1) {
+                const creds = str.substring(0, lastAt);
+                const hostPart = str.substring(lastAt + 1);
+
+                const firstColon = creds.indexOf(':');
+                if (firstColon !== -1) {
+                    config.user = creds.substring(0, firstColon);
+                    config.password = creds.substring(firstColon + 1);
+                } else {
+                    config.user = creds;
+                }
+
+                // parse hostPart: host:port/db
+                const slash = hostPart.indexOf('/');
+                if (slash !== -1) {
+                    config.database = hostPart.substring(slash + 1);
+                    const hostPort = hostPart.substring(0, slash);
+                    const colon = hostPort.lastIndexOf(':');
+                    if (colon !== -1) {
+                        config.host = hostPort.substring(0, colon);
+                        config.port = parseInt(hostPort.substring(colon + 1), 10);
+                    } else {
+                        config.host = hostPort;
+                        config.port = 5432;
+                    }
+                } else {
+                    // no db specified?
+                    config.host = hostPart;
+                    config.port = 5432;
+                }
+                isHandled = true;
+                console.log(`Parsed connection manually: host=${config.host}, user=${config.user}`);
+            }
+        } catch (e) {
+            console.error('Manual parsing failed:', e);
+        }
+    }
+
+    if (!isHandled) {
+        // Fallback to library/default if our manual logic failed (e.g. no @)
+        config.connectionString = cleanConnectionString;
+    }
+
+    const client = new Client(config);
 
     try {
         await client.connect();

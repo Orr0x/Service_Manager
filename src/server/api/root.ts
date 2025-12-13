@@ -19,29 +19,37 @@ import { adminRouter } from './routers/admin'
 import { activityRouter } from "@/server/api/routers/activity";
 import { dashboardRouter } from "@/server/api/routers/dashboard";
 import { certificationRouter } from "@/server/api/routers/certification";
+import { workerRouter } from "./routers/worker";
+import { customerPortalRouter } from "./routers/customer-portal";
+import { configRouter } from "./routers/config";
+import { reportsRouter } from "./routers/reports";
 import { createCallerFactory, createTRPCRouter } from './trpc'
 
 export const appRouter = createTRPCRouter({
     auth: authRouter,
-    users: usersRouter,
-    services: servicesRouter,
+    dashboard: dashboardRouter,
     customers: customersRouter,
-    jobSites: jobSitesRouter,
-    contracts: contractsRouter,
+    jobs: jobsRouter,
     quotes: quotesRouter,
-    checklists: checklistsRouter,
+    invoices: invoicesRouter,
     workers: workersRouter,
     contractors: contractorsRouter,
-    invoices: invoicesRouter,
+    services: servicesRouter,
+    jobSites: jobSitesRouter,
+    checklists: checklistsRouter,
+    contracts: contractsRouter,
     settings: settingsRouter,
-    jobs: jobsRouter,
+    users: usersRouter,
+    admin: adminRouter,
+    worker: workerRouter,
+    customerPortal: customerPortalRouter,
     notes: notesRouter,
     attachments: attachmentsRouter,
-    admin: adminRouter,
     activity: activityRouter,
-    dashboard: dashboardRouter,
     certification: certificationRouter,
     location: locationRouter,
+    config: configRouter,
+    reports: reportsRouter,
 })
 
 export const createCaller = createCallerFactory(appRouter)

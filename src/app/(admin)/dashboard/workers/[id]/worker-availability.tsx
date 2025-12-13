@@ -126,10 +126,10 @@ export function WorkerAvailability({ workerId }: WorkerAvailabilityProps) {
                             <div className="flex min-w-0 gap-x-4">
                                 <div className="min-w-0 flex-auto">
                                     <p className="text-sm font-semibold leading-6 text-gray-900">
-                                        {format(new Date(item.start_date), 'MMM d, yyyy')} - {format(new Date(item.end_date), 'MMM d, yyyy')}
+                                        {format(new Date(item.unavailable_date), 'EEEE, MMM do, yyyy')}
                                     </p>
                                     {item.reason && (
-                                        <p className="mt-1 truncate text-xs leading-5 text-gray-500">{item.reason}</p>
+                                        <p className="mt-1 truncate text-xs leading-5 text-gray-500 capitalize">{item.reason.replace('_', ' ')}</p>
                                     )}
                                 </div>
                             </div>

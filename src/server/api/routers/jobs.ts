@@ -395,32 +395,33 @@ export const jobsRouter = createTRPCRouter({
                     .filter((id): id is string => !!id)
 
                 if (workerIds.length > 0) {
+                    // Check for conflicts
+                    // Job Time: input.startTime (ISO) to input.endTime (ISO)
+                    // Unavailability: unavailable_date (YYYY-MM-DD)
+                    // Conflict if unavailable_date is within the job range (inclusive of days)
+
+                    const jobStart = new Date(input.startTime).toISOString().split('T')[0];
+                    const jobEnd = new Date(input.endTime).toISOString().split('T')[0];
+
                     const { data: conflicts, error: conflictError } = await ctx.db
                         .from('worker_unavailability')
-                        .select('worker_id, start_date, end_date')
+                        .select('worker_id, unavailable_date, workers(first_name, last_name)')
                         .in('worker_id', workerIds)
                         .eq('tenant_id', ctx.tenantId)
-                        .or(`start_date.lte.${input.endTime},end_date.gte.${input.startTime}`)
+                        .gte('unavailable_date', jobStart)
+                        .lte('unavailable_date', jobEnd)
 
                     if (conflictError) {
                         throw new Error(`Failed to check worker availability: ${conflictError.message}`)
                     }
 
-                    const { data: unavailabilities } = await ctx.db
-                        .from('worker_unavailability')
-                        .select('worker_id, workers(first_name, last_name)')
-                        .in('worker_id', workerIds)
-                        .eq('tenant_id', ctx.tenantId)
-                        .lte('start_date', input.endTime)
-                        .gte('end_date', input.startTime)
-
-                    if (unavailabilities && unavailabilities.length > 0) {
-                        const conflictingWorker = unavailabilities[0]
+                    if (conflicts && conflicts.length > 0) {
+                        const conflictingWorker = conflicts[0]
                         // @ts-ignore
                         const name = conflictingWorker.workers ? `${conflictingWorker.workers.first_name} ${conflictingWorker.workers.last_name}` : 'Worker'
                         throw new TRPCError({
                             code: 'CONFLICT',
-                            message: `${name} is unavailable during this time.`
+                            message: `${name} is unavailable on ${conflictingWorker.unavailable_date}.`
                         })
                     }
                 }
@@ -525,6 +526,41 @@ export const jobsRouter = createTRPCRouter({
             endTime: z.string().optional(),
         }))
         .mutation(async ({ ctx, input }) => {
+            // If times are changing, validate existing assignments
+            if (input.startTime && input.endTime) {
+                // Fetch existing assignments for this job
+                const { data: assignments } = await ctx.db
+                    .from('job_assignments')
+                    .select('worker_id')
+                    .eq('job_id', input.id)
+                    .not('worker_id', 'is', null);
+
+                const workerIds = assignments?.map(a => a.worker_id).filter((id): id is string => !!id) || [];
+
+                if (workerIds.length > 0) {
+                    const jobStart = new Date(input.startTime).toISOString().split('T')[0];
+                    const jobEnd = new Date(input.endTime).toISOString().split('T')[0];
+
+                    const { data: conflicts } = await ctx.db
+                        .from('worker_unavailability')
+                        .select('worker_id, unavailable_date, workers(first_name, last_name)')
+                        .in('worker_id', workerIds)
+                        .eq('tenant_id', ctx.tenantId)
+                        .gte('unavailable_date', jobStart)
+                        .lte('unavailable_date', jobEnd);
+
+                    if (conflicts && conflicts.length > 0) {
+                        const conflictingWorker = conflicts[0];
+                        // @ts-ignore
+                        const name = conflictingWorker.workers ? `${conflictingWorker.workers.first_name} ${conflictingWorker.workers.last_name}` : 'Worker';
+                        throw new TRPCError({
+                            code: 'CONFLICT',
+                            message: `${name} is unavailable during the new time range (${conflictingWorker.unavailable_date}).`
+                        });
+                    }
+                }
+            }
+
             const { data, error } = await ctx.db
                 .from('jobs')
                 .update({
@@ -681,13 +717,16 @@ export const jobsRouter = createTRPCRouter({
                     .filter((id): id is string => !!id)
 
                 if (workerIds.length > 0) {
+                    const jobStart = new Date(job.start_time).toISOString().split('T')[0];
+                    const jobEnd = new Date(job.end_time).toISOString().split('T')[0];
+
                     const { data: unavailabilities } = await ctx.db
                         .from('worker_unavailability')
-                        .select('worker_id, workers(first_name, last_name)')
+                        .select('worker_id, unavailable_date, workers(first_name, last_name)')
                         .in('worker_id', workerIds)
                         .eq('tenant_id', ctx.tenantId)
-                        .lte('start_date', job.end_time)
-                        .gte('end_date', job.start_time)
+                        .gte('unavailable_date', jobStart)
+                        .lte('unavailable_date', jobEnd)
 
                     if (unavailabilities && unavailabilities.length > 0) {
                         const conflictingWorker = unavailabilities[0]
@@ -695,7 +734,7 @@ export const jobsRouter = createTRPCRouter({
                         const name = conflictingWorker.workers ? `${conflictingWorker.workers.first_name} ${conflictingWorker.workers.last_name}` : 'Worker'
                         throw new TRPCError({
                             code: 'CONFLICT',
-                            message: `${name} is unavailable during this time.`
+                            message: `${name} is unavailable during this time (${conflictingWorker.unavailable_date}).`
                         })
                     }
                 }

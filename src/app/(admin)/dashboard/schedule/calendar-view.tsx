@@ -44,6 +44,17 @@ export function CalendarView() {
     })
 
     const events = useMemo(() => {
+        const unavailabilityMap = new Map<string, Set<string>>();
+        if (unavailability) {
+            unavailability.forEach(u => {
+                if (!unavailabilityMap.has(u.worker_id)) {
+                    unavailabilityMap.set(u.worker_id, new Set());
+                }
+                // @ts-ignore
+                unavailabilityMap.get(u.worker_id)?.add(u.unavailable_date);
+            });
+        }
+
         const jobEvents = jobs
             ? jobs
                 .filter(job => job.start_time && job.end_time)
@@ -53,13 +64,33 @@ export function CalendarView() {
                         .filter(Boolean)
                         .join(', ')
 
+                    // Check conflicts
+                    let hasConflict = false;
+                    if (job.start_time && job.end_time && job.job_assignments) {
+                        const jobStart = new Date(job.start_time);
+                        const jobEnd = new Date(job.end_time);
+                        // Iterate days of the job
+                        for (let d = new Date(jobStart); d <= jobEnd; d.setDate(d.getDate() + 1)) {
+                            const dateStr = d.toISOString().split('T')[0];
+                            // Check each assigned worker
+                            for (const assignment of job.job_assignments as any[]) {
+                                if (assignment.worker_id && unavailabilityMap.get(assignment.worker_id)?.has(dateStr)) {
+                                    hasConflict = true;
+                                    break;
+                                }
+                            }
+                            if (hasConflict) break;
+                        }
+                    }
+
                     return {
                         id: job.id,
-                        title: `${job.start_time ? new Date(job.start_time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : ''} - ${workerNames ? `${workerNames} - ` : ''}${job.customers?.business_name || job.customers?.contact_name}`,
+                        title: `${job.start_time ? new Date(job.start_time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : ''} - ${hasConflict ? '⚠️ CONFLICT: ' : ''}${workerNames ? `${workerNames} - ` : ''}${job.customers?.business_name || job.customers?.contact_name}`,
                         start: new Date(job.start_time!),
                         end: new Date(job.end_time!),
                         resource: job,
                         type: 'job',
+                        className: hasConflict ? 'rbc-event-conflict' : undefined
                     }
                 })
             : []
@@ -69,8 +100,8 @@ export function CalendarView() {
                 .map(item => ({
                     id: item.id,
                     title: `BLOCKED (W): ${(item.workers as any)?.first_name} ${(item.workers as any)?.last_name}${item.reason ? ` - ${item.reason}` : ''}`,
-                    start: new Date(item.start_date),
-                    end: new Date(item.end_date),
+                    start: new Date(item.unavailable_date),
+                    end: new Date(item.unavailable_date),
                     resource: item,
                     type: 'blocked',
                     allDay: true
@@ -136,6 +167,15 @@ export function CalendarView() {
         .rbc-event.rbc-event-blocked {
             background-color: #6b7280; /* Gray 500 */
             border-color: #4b5563;
+        }
+        .rbc-event.rbc-event-conflict {
+            background-color: #ef4444 !important; /* Red 500 */
+            border-color: #b91c1c !important;
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .7; }
         }
         .rbc-today {
             background-color: #f3f4f6;

@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { api } from '@/trpc/react'
-import { Users, UserPlus, Search, Lock, Unlock, Key, MoreHorizontal, ArrowLeft } from 'lucide-react'
+import { Users, UserPlus, Search, Lock, Unlock, Key, MoreHorizontal, MoreVertical, ArrowLeft, Pencil, Eye, Edit, Ban } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useImpersonationStore } from '@/lib/store/impersonation'
 import Link from 'next/link'
 import { Dialog, Transition } from '@headlessui/react'
 import { Fragment } from 'react'
@@ -13,9 +15,27 @@ function classNames(...classes: string[]) {
 }
 
 export default function UsersPage() {
+    const router = useRouter()
+    const { startImpersonation } = useImpersonationStore()
     const utils = api.useUtils()
     const { data: users, isLoading } = api.admin.listUsers.useQuery()
     const { data: unlinkedEntities } = api.admin.getUnlinkedEntities.useQuery()
+
+    // State
+    const [searchTerm, setSearchTerm] = useState('')
+    const [inviteModalOpen, setInviteModalOpen] = useState(false)
+    const [addUserModalOpen, setAddUserModalOpen] = useState(false)
+    const [editUserModalOpen, setEditUserModalOpen] = useState(false)
+
+    // Forms
+    const [addUserForm, setAddUserForm] = useState({ email: '', fullName: '', role: 'worker' as 'worker' | 'customer' | 'admin', password: '' })
+    const [editUserForm, setEditUserForm] = useState({ userId: '', fullName: '', role: '' })
+
+    // Invite Form State
+    const [selectedEntityId, setSelectedEntityId] = useState('')
+    const [selectedEntityType, setSelectedEntityType] = useState<'worker' | 'contractor' | 'customer'>('worker')
+    const [inviteEmail, setInviteEmail] = useState('')
+    const [inviteRole, setInviteRole] = useState('provider')
 
     // Mutations
     const inviteUser = api.admin.inviteUser.useMutation({
@@ -38,15 +58,26 @@ export default function UsersPage() {
         onError: (err) => alert(`Error: ${err.message}`)
     })
 
-    // State
-    const [searchTerm, setSearchTerm] = useState('')
-    const [inviteModalOpen, setInviteModalOpen] = useState(false)
+    const createUser = api.admin.createUser.useMutation({
+        onSuccess: () => {
+            utils.admin.listUsers.invalidate()
+            setAddUserModalOpen(false)
+            setAddUserForm({ email: '', fullName: '', role: 'worker', password: '' })
+            alert('User created successfully!')
+        },
+        onError: (err) => alert(`Error: ${err.message}`)
+    })
 
-    // Invite Form State
-    const [selectedEntityId, setSelectedEntityId] = useState('')
-    const [selectedEntityType, setSelectedEntityType] = useState<'worker' | 'contractor' | 'customer'>('worker')
-    const [inviteEmail, setInviteEmail] = useState('')
-    const [inviteRole, setInviteRole] = useState('provider')
+    const updateUser = api.admin.updateUser.useMutation({
+        onSuccess: () => {
+            utils.admin.listUsers.invalidate()
+            setEditUserModalOpen(false)
+            alert('User updated successfully!')
+        },
+        onError: (err) => alert(`Error: ${err.message}`)
+    })
+
+
 
     // Filtered Users
     const filteredUsers = users?.filter(item =>
@@ -82,6 +113,11 @@ export default function UsersPage() {
         }
     }
 
+    const handleEditUser = (item: any) => {
+        setEditUserForm({ userId: item.id, fullName: item.name || '', role: item.role || '' })
+        setEditUserModalOpen(true)
+    }
+
     const handleInviteSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         if (!selectedEntityId) return
@@ -95,8 +131,22 @@ export default function UsersPage() {
         })
     }
 
+    const handleAddUserSubmit = (e: React.FormEvent) => {
+        e.preventDefault()
+        createUser.mutate(addUserForm)
+    }
+
+    const handleEditUserSubmit = (e: React.FormEvent) => {
+        e.preventDefault()
+        updateUser.mutate({
+            userId: editUserForm.userId,
+            fullName: editUserForm.fullName,
+            role: editUserForm.role
+        })
+    }
+
     return (
-        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8" >
             <div className="mb-6">
                 <Link href="/dashboard/settings" className="flex items-center text-sm text-gray-500 hover:text-gray-900 transition-colors">
                     <ArrowLeft className="mr-2 h-4 w-4" />
@@ -120,11 +170,19 @@ export default function UsersPage() {
                         <UserPlus className="h-4 w-4 inline-block mr-2" />
                         Grant Access
                     </button>
+                    <button
+                        type="button"
+                        onClick={() => setAddUserModalOpen(true)}
+                        className="ml-3 block rounded-md bg-green-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 mt-2 sm:mt-0 sm:inline-block"
+                    >
+                        <UserPlus className="h-4 w-4 inline-block mr-2" />
+                        Add User
+                    </button>
                 </div>
             </div>
 
             {/* Search */}
-            <div className="mt-6 flex max-w-md gap-x-4">
+            <div className="mt-6 flex max-w-md gap-x-4" >
                 <div className="relative flex-grow focus-within:z-10">
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                         <Search className="h-5 w-5 text-gray-400" aria-hidden="true" />
@@ -137,7 +195,7 @@ export default function UsersPage() {
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-            </div>
+            </div >
 
             {/* Table */}
             <div className="mt-8 flow-root">
@@ -197,47 +255,90 @@ export default function UsersPage() {
                                                         {item.status}
                                                     </span>
                                                 </td>
-                                                <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                                                    {item.type === 'user' ? (
-                                                        <Menu as="div" className="relative inline-block text-left">
-                                                            <Menu.Button className="-m-2 flex items-center rounded-full p-2 text-gray-400 hover:text-gray-600">
+                                                <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+                                                    <Menu as="div" className="relative inline-block text-left">
+                                                        <div>
+                                                            <Menu.Button className="flex items-center rounded-full bg-gray-100 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-100">
                                                                 <span className="sr-only">Open options</span>
-                                                                <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
+                                                                <MoreVertical className="h-5 w-5" aria-hidden="true" />
                                                             </Menu.Button>
-                                                            <Transition
-                                                                as={Fragment}
-                                                                enter="transition ease-out duration-100"
-                                                                enterFrom="transform opacity-0 scale-95"
-                                                                enterTo="transform opacity-100 scale-100"
-                                                                leave="transition ease-in duration-75"
-                                                                leaveFrom="transform opacity-100 scale-100"
-                                                                leaveTo="transform opacity-0 scale-95"
-                                                            >
-                                                                <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                                                                    <div className="py-1">
-                                                                        <Menu.Item>
-                                                                            {({ active }) => (
-                                                                                <button
-                                                                                    onClick={() => toggleStatus.mutate({ userId: item.id, isActive: item.status !== 'Active' })}
-                                                                                    className={classNames(
-                                                                                        active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
-                                                                                        'block w-full px-4 py-2 text-left text-sm'
-                                                                                    )}
-                                                                                >
-                                                                                    {item.status === 'Active' ? (
-                                                                                        <><Lock className="inline-block h-4 w-4 mr-2" /> Block Access</>
-                                                                                    ) : (
-                                                                                        <><Unlock className="inline-block h-4 w-4 mr-2" /> Unblock Access</>
-                                                                                    )}
-                                                                                </button>
-                                                                            )}
-                                                                        </Menu.Item>
+                                                        </div>
+
+                                                        <Transition
+                                                            as={Fragment}
+                                                            enter="transition ease-out duration-100"
+                                                            enterFrom="transform opacity-0 scale-95"
+                                                            enterTo="transform opacity-100 scale-100"
+                                                            leave="transition ease-in duration-75"
+                                                            leaveFrom="transform opacity-100 scale-100"
+                                                            leaveTo="transform opacity-0 scale-95"
+                                                        >
+                                                            <Menu.Items className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                                                                <div className="py-1">
+                                                                    {item.type === 'user' && (
+                                                                        <>
+                                                                            <Menu.Item>
+                                                                                {({ active }) => (
+                                                                                    <a
+                                                                                        href="#"
+                                                                                        onClick={(e) => { e.preventDefault(); handleEditUser(item); }}
+                                                                                        className={classNames(
+                                                                                            active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
+                                                                                            'block px-4 py-2 text-sm'
+                                                                                        )}
+                                                                                    >
+                                                                                        <Edit className="inline-block h-4 w-4 mr-2" /> Edit User
+                                                                                    </a>
+                                                                                )}
+                                                                            </Menu.Item>
+                                                                            <Menu.Item>
+                                                                                {({ active }) => (
+                                                                                    <button
+                                                                                        onClick={() => {
+                                                                                            if (confirm('Are you sure you want to block this user?')) {
+                                                                                                // blockUser.mutate({ userId: item.id }) // TODO
+                                                                                            }
+                                                                                        }}
+                                                                                        className={classNames(
+                                                                                            active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
+                                                                                            'block w-full px-4 py-2 text-left text-sm'
+                                                                                        )}
+                                                                                    >
+                                                                                        <Ban className="inline-block h-4 w-4 mr-2" /> Block Access
+                                                                                    </button>
+                                                                                )}
+                                                                            </Menu.Item>
+                                                                            <Menu.Item>
+                                                                                {({ active }) => (
+                                                                                    <button
+                                                                                        onClick={() => {
+                                                                                            if (confirm(`Send password reset link to ${item.email}?`)) {
+                                                                                                resetPassword.mutate({ email: item.email! })
+                                                                                            }
+                                                                                        }}
+                                                                                        className={classNames(
+                                                                                            active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
+                                                                                            'block w-full px-4 py-2 text-left text-sm'
+                                                                                        )}
+                                                                                    >
+                                                                                        <Key className="inline-block h-4 w-4 mr-2" /> Reset Password
+                                                                                    </button>
+                                                                                )}
+                                                                            </Menu.Item>
+                                                                        </>
+                                                                    )}
+
+                                                                    {(item.type === 'user' && (item.linkedEntity?.type === 'worker' || item.linkedEntity?.type === 'contractor' || item.linkedEntity?.type === 'customer')) && (
                                                                         <Menu.Item>
                                                                             {({ active }) => (
                                                                                 <button
                                                                                     onClick={() => {
-                                                                                        if (confirm(`Send password reset link to ${item.email}?`)) {
-                                                                                            resetPassword.mutate({ email: item.email! })
+                                                                                        const targetRole = item.linkedEntity?.type;
+                                                                                        const targetId = item.linkedEntity?.id;
+                                                                                        if (targetRole) {
+                                                                                            startImpersonation(item.id, targetRole as any, item.name || 'User', targetId);
+                                                                                            if (targetRole === 'worker' || targetRole === 'contractor') router.push('/worker');
+                                                                                            else if (targetRole === 'customer') router.push('/customer');
                                                                                         }
                                                                                     }}
                                                                                     className={classNames(
@@ -245,29 +346,56 @@ export default function UsersPage() {
                                                                                         'block w-full px-4 py-2 text-left text-sm'
                                                                                     )}
                                                                                 >
-                                                                                    <Key className="inline-block h-4 w-4 mr-2" /> Reset Password
+                                                                                    <Eye className="inline-block h-4 w-4 mr-2" /> View As
                                                                                 </button>
                                                                             )}
                                                                         </Menu.Item>
-                                                                    </div>
-                                                                </Menu.Items>
-                                                            </Transition>
-                                                        </Menu>
-                                                    ) : (
-                                                        <button
-                                                            type="button"
-                                                            className="text-indigo-600 hover:text-indigo-900 items-center hidden" // Hidden for now, or 'Invite' if we want to wire it up
-                                                            onClick={() => {
-                                                                // Future: Pre-fill invite modal
-                                                                setInviteModalOpen(true);
-                                                                if (item.type === 'worker') { setSelectedEntityType('worker'); setSelectedEntityId(item.id); }
-                                                                if (item.type === 'contractor') { setSelectedEntityType('contractor'); setSelectedEntityId(item.id); }
-                                                                if (item.type === 'customer') { setSelectedEntityType('customer'); setSelectedEntityId(item.id); }
-                                                            }}
-                                                        >
-                                                            Invite
-                                                        </button>
-                                                    )}
+                                                                    )}
+
+                                                                    {(item.type === 'worker' || item.type === 'contractor' || item.type === 'customer') && !item.linkedEntity && (
+                                                                        <Menu.Item>
+                                                                            {({ active }) => (
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        startImpersonation(null, item.type as any, item.name || 'User', item.id);
+                                                                                        if (item.type === 'worker' || item.type === 'contractor') router.push('/worker');
+                                                                                        else if (item.type === 'customer') router.push('/customer');
+                                                                                    }}
+                                                                                    className={classNames(
+                                                                                        active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
+                                                                                        'block w-full px-4 py-2 text-left text-sm'
+                                                                                    )}
+                                                                                >
+                                                                                    <Eye className="inline-block h-4 w-4 mr-2" /> View As (Unlinked)
+                                                                                </button>
+                                                                            )}
+                                                                        </Menu.Item>
+                                                                    )}
+
+                                                                    {(!item.linkedEntity && (item.type === 'worker' || item.type === 'customer' || item.type === 'contractor')) && (
+                                                                        <Menu.Item>
+                                                                            {({ active }) => (
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        setInviteModalOpen(true);
+                                                                                        if (item.type === 'worker') { setSelectedEntityType('worker'); setSelectedEntityId(item.id); }
+                                                                                        if (item.type === 'contractor') { setSelectedEntityType('contractor'); setSelectedEntityId(item.id); }
+                                                                                        if (item.type === 'customer') { setSelectedEntityType('customer'); setSelectedEntityId(item.id); }
+                                                                                    }}
+                                                                                    className={classNames(
+                                                                                        active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
+                                                                                        'block w-full px-4 py-2 text-left text-sm'
+                                                                                    )}
+                                                                                >
+                                                                                    <UserPlus className="inline-block h-4 w-4 mr-2" /> Grant Access
+                                                                                </button>
+                                                                            )}
+                                                                        </Menu.Item>
+                                                                    )}
+                                                                </div>
+                                                            </Menu.Items>
+                                                        </Transition>
+                                                    </Menu>
                                                 </td>
                                             </tr>
                                         ))
@@ -276,11 +404,11 @@ export default function UsersPage() {
                             </table>
                         </div>
                     </div>
-                </div>
-            </div>
+                </div >
+            </div >
 
-            {/* Invite Modal */}
-            <Transition.Root show={inviteModalOpen} as={Fragment}>
+            {/* Invite Modal (Grant Access) */}
+            < Transition.Root show={inviteModalOpen} as={Fragment}>
                 <Dialog as="div" className="relative z-50" onClose={setInviteModalOpen}>
                     <Transition.Child
                         as={Fragment}
@@ -306,6 +434,7 @@ export default function UsersPage() {
                                 leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                             >
                                 <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+                                    {/* Existing Invite Form Content ... */}
                                     <div>
                                         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100">
                                             <UserPlus className="h-6 w-6 text-indigo-600" aria-hidden="true" />
@@ -316,7 +445,7 @@ export default function UsersPage() {
                                             </Dialog.Title>
                                             <div className="mt-2">
                                                 <p className="text-sm text-gray-500">
-                                                    Grant access to an existing Worker, Contractor, or Customer. This will create a user account for them.
+                                                    Link an existing Worker or Customer to a login account.
                                                 </p>
                                             </div>
                                         </div>
@@ -411,7 +540,129 @@ export default function UsersPage() {
                         </div>
                     </div>
                 </Dialog>
-            </Transition.Root>
-        </div>
+            </Transition.Root >
+
+            {/* Add User Modal */}
+            < Transition.Root show={addUserModalOpen} as={Fragment}>
+                <Dialog as="div" className="relative z-50" onClose={setAddUserModalOpen}>
+                    <Transition.Child
+                        as={Fragment}
+                        enter="ease-out duration-300"
+                        enterFrom="opacity-0"
+                        enterTo="opacity-100"
+                        leave="ease-in duration-200"
+                        leaveFrom="opacity-100"
+                        leaveTo="opacity-0"
+                    >
+                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+                    </Transition.Child>
+
+                    <div className="fixed inset-0 z-10 overflow-y-auto">
+                        <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+                            <Transition.Child
+                                as={Fragment}
+                                enter="ease-out duration-300"
+                                enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                                enterTo="opacity-100 translate-y-0 sm:scale-100"
+                                leave="ease-in duration-200"
+                                leaveFrom="opacity-100 translate-y-0 sm:scale-100"
+                                leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                            >
+                                <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+                                    <div>
+                                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+                                            <UserPlus className="h-6 w-6 text-green-600" aria-hidden="true" />
+                                        </div>
+                                        <div className="mt-3 text-center sm:mt-5">
+                                            <Dialog.Title as="h3" className="text-base font-semibold leading-6 text-gray-900">
+                                                Create New User
+                                            </Dialog.Title>
+                                            <div className="mt-2">
+                                                <p className="text-sm text-gray-500">
+                                                    Create a brand new User and their profile (Worker or Customer).
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <form onSubmit={handleAddUserSubmit} className="mt-5 sm:mt-6">
+                                        <div className="grid grid-cols-1 gap-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium leading-6 text-gray-900">Full Name / Business Name</label>
+                                                <input type="text" required value={addUserForm.fullName} onChange={e => setAddUserForm({ ...addUserForm, fullName: e.target.value })} className="mt-2 w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 border p-2" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium leading-6 text-gray-900">Email Address</label>
+                                                <input type="email" required value={addUserForm.email} onChange={e => setAddUserForm({ ...addUserForm, email: e.target.value })} className="mt-2 w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 border p-2" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium leading-6 text-gray-900">Role</label>
+                                                <select value={addUserForm.role} onChange={e => setAddUserForm({ ...addUserForm, role: e.target.value as 'worker' | 'customer' | 'admin' })} className="mt-2 w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6">
+                                                    <option value="worker">Worker</option>
+                                                    <option value="customer">Customer</option>
+                                                    <option value="admin">Admin</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium leading-6 text-gray-900">Password</label>
+                                                <input type="text" value={addUserForm.password} onChange={e => setAddUserForm({ ...addUserForm, password: e.target.value })} placeholder="Optional (auto-generated if empty)" className="mt-2 w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 border p-2" />
+                                            </div>
+                                        </div>
+                                        <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
+                                            <button type="submit" disabled={createUser.isPending} className="inline-flex w-full justify-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 sm:col-start-2 disabled:opacity-50">
+                                                {createUser.isPending ? 'Creating...' : 'Create User'}
+                                            </button>
+                                            <button type="button" className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0" onClick={() => setAddUserModalOpen(false)}>
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </form>
+                                </Dialog.Panel>
+                            </Transition.Child>
+                        </div>
+                    </div>
+                </Dialog>
+            </Transition.Root >
+
+            {/* Edit User Modal */}
+            < Transition.Root show={editUserModalOpen} as={Fragment}>
+                <Dialog as="div" className="relative z-50" onClose={setEditUserModalOpen}>
+                    <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
+                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+                    </Transition.Child>
+                    <div className="fixed inset-0 z-10 overflow-y-auto">
+                        <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+                            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" enterTo="opacity-100 translate-y-0 sm:scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 translate-y-0 sm:scale-100" leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+                                <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+                                    <div>
+                                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+                                            <Pencil className="h-6 w-6 text-blue-600" aria-hidden="true" />
+                                        </div>
+                                        <div className="mt-3 text-center sm:mt-5">
+                                            <Dialog.Title as="h3" className="text-base font-semibold leading-6 text-gray-900">Edit User</Dialog.Title>
+                                        </div>
+                                    </div>
+                                    <form onSubmit={handleEditUserSubmit} className="mt-5 sm:mt-6">
+                                        <div className="grid grid-cols-1 gap-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium leading-6 text-gray-900">Full Name</label>
+                                                <input type="text" required value={editUserForm.fullName} onChange={e => setEditUserForm({ ...editUserForm, fullName: e.target.value })} className="mt-2 w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 border p-2" />
+                                            </div>
+                                        </div>
+                                        <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
+                                            <button type="submit" disabled={updateUser.isPending} className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:col-start-2 disabled:opacity-50">
+                                                {updateUser.isPending ? 'Saving...' : 'Save Changes'}
+                                            </button>
+                                            <button type="button" className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0" onClick={() => setEditUserModalOpen(false)}>
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </form>
+                                </Dialog.Panel>
+                            </Transition.Child>
+                        </div>
+                    </div>
+                </Dialog>
+            </Transition.Root >
+        </div >
     )
 }

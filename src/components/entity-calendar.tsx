@@ -75,8 +75,8 @@ export function EntityCalendar({ entityType, entityId }: EntityCalendarProps) {
                 .map(item => ({
                     id: item.id,
                     title: `BLOCKED: ${item.reason || 'Unavailable'}`,
-                    start: new Date(item.start_date),
-                    end: new Date(item.end_date),
+                    start: new Date(item.unavailable_date),
+                    end: new Date(item.unavailable_date),
                     resource: item,
                     type: 'blocked',
                     allDay: true

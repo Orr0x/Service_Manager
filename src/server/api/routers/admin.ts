@@ -57,9 +57,9 @@ export const adminRouter = createTRPCRouter({
                 email: u.email,
                 role: u.role,
                 status: u.is_active ? 'Active' : 'Blocked',
-                linkedEntity: u.workers?.[0] ? { type: 'worker', name: `${u.workers[0].first_name} ${u.workers[0].last_name}` } :
-                    u.contractors?.[0] ? { type: 'contractor', name: u.contractors[0].company_name } :
-                        u.customers?.[0] ? { type: 'customer', name: u.customers[0].business_name || u.customers[0].contact_name } :
+                linkedEntity: u.workers?.[0] ? { id: u.workers[0].id, type: 'worker', name: `${u.workers[0].first_name} ${u.workers[0].last_name}` } :
+                    u.contractors?.[0] ? { id: u.contractors[0].id, type: 'contractor', name: u.contractors[0].company_name } :
+                        u.customers?.[0] ? { id: u.customers[0].id, type: 'customer', name: u.customers[0].business_name || u.customers[0].contact_name } :
                             null
             })) || []),
 
@@ -341,5 +341,118 @@ export const adminRouter = createTRPCRouter({
             contractors: contractors || [],
             customers: customers || []
         }
-    })
+    }),
+
+    createUser: protectedProcedure
+        .input(z.object({
+            email: z.string().email(),
+            fullName: z.string().min(1),
+            role: z.enum(['worker', 'customer', 'admin']),
+            password: z.string().min(6).optional()
+        }))
+        .mutation(async ({ ctx, input }) => {
+            if (ctx.user.user_metadata.role !== 'admin') {
+                throw new TRPCError({ code: 'FORBIDDEN', message: 'Only admins can create users' })
+            }
+
+            const supabaseAdmin = createAdminClient()
+
+            // 1. Create Supabase Auth User
+            const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+                email: input.email,
+                password: input.password || 'TemporaryPass123!', // Default if not provided, really should be required or invite flow
+                email_confirm: true,
+                user_metadata: {
+                    role: input.role,
+                    tenant_id: ctx.tenantId
+                }
+            })
+
+            if (authError) {
+                if (authError.message.includes('already registered')) {
+                    throw new TRPCError({ code: 'CONFLICT', message: 'User already exists' })
+                }
+                throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Auth creation failed: ${authError.message}` })
+            }
+
+            const userId = authData.user.id
+            const [firstName, ...lastNameParts] = input.fullName.split(' ')
+            const lastName = lastNameParts.join(' ') || ''
+
+            // 2. Ensure Public User Record Exists (Upsert)
+            const { error: upsertError } = await supabaseAdmin.from('users').upsert({
+                id: userId,
+                tenant_id: ctx.tenantId,
+                email: input.email,
+                role: input.role,
+                first_name: firstName,
+                last_name: lastName,
+                is_active: true
+            })
+
+            if (upsertError) {
+                // Cleanup auth user if possible? Or just fail.
+                console.error('Failed to upsert public user:', upsertError)
+                throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to create public profile' })
+            }
+
+            // 3. Create Entity (Worker/Customer) and Link
+            if (input.role === 'worker') {
+                const { error: workerError } = await supabaseAdmin.from('workers').insert({
+                    tenant_id: ctx.tenantId,
+                    user_id: userId,
+                    first_name: firstName,
+                    last_name: lastName,
+                    email: input.email,
+                    role: 'Technician' // Default role
+                })
+                if (workerError) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Failed to create worker profile: ${workerError.message}` })
+            }
+
+            return { success: true, userId }
+        }),
+
+    updateUser: protectedProcedure
+        .input(z.object({
+            userId: z.string(),
+            fullName: z.string().min(1),
+            role: z.string() // Verify if allowed to change role? Assuming just name update primarily.
+        }))
+        .mutation(async ({ ctx, input }) => {
+            if (ctx.user.user_metadata.role !== 'admin') {
+                throw new TRPCError({ code: 'FORBIDDEN' })
+            }
+
+            const supabaseAdmin = createAdminClient()
+            const [firstName, ...lastNameParts] = input.fullName.split(' ')
+            const lastName = lastNameParts.join(' ') || ''
+
+            // 1. Update Public User
+            const { error: userError } = await supabaseAdmin
+                .from('users')
+                .update({ first_name: firstName, last_name: lastName })
+                .eq('id', input.userId)
+
+            if (userError) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update user' })
+
+            // 2. Update Linked Entity (Best Effort)
+            // Determine type by checking which table has the ID
+
+            // Try Worker
+            await supabaseAdmin.from('workers')
+                .update({ first_name: firstName, last_name: lastName })
+                .eq('user_id', input.userId);
+
+            // Try Customer
+            await supabaseAdmin.from('customers')
+                .update({ contact_name: input.fullName }) // Keep business name? maybe only contact name.
+                .eq('user_id', input.userId);
+
+            // Try Contractor
+            await supabaseAdmin.from('contractors')
+                .update({ contact_name: input.fullName })
+                .eq('user_id', input.userId);
+
+            return { success: true }
+        })
 })

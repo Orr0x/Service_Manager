@@ -7,6 +7,7 @@ import { useState } from 'react'
 import superjson from 'superjson'
 
 import { createQueryClient } from './query-client'
+import { useImpersonationStore } from '@/lib/store/impersonation'
 
 import { type AppRouter } from '@/server/api/root'
 
@@ -42,6 +43,21 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
                     headers: () => {
                         const headers = new Headers()
                         headers.set('x-trpc-source', 'nextjs-react')
+
+                        // Check for impersonation
+                        // Dynamic import or direct access to store if consistent
+                        // We use getState() to access the current value outside of React render cycle
+                        const { impersonatedUserId, impersonatedEntityId, impersonatedRole } = useImpersonationStore.getState()
+
+                        if (impersonatedUserId) {
+                            headers.set('x-impersonate-id', impersonatedUserId)
+                        }
+
+                        if (impersonatedEntityId && impersonatedRole) {
+                            headers.set('x-impersonate-entity-id', impersonatedEntityId)
+                            headers.set('x-impersonate-entity-type', impersonatedRole)
+                        }
+
                         return headers
                     },
                 }),

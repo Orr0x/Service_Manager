@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import { CalendarView } from './calendar-view'
+import { ListView } from './list-view'
 import { KanbanBoard } from './kanban-board'
-import { Plus, LayoutGrid, Calendar as CalendarIcon, Briefcase, CheckCircle, PlayCircle, Download } from 'lucide-react'
+import { Plus, LayoutGrid, Calendar as CalendarIcon, Briefcase, CheckCircle, PlayCircle, Download, List } from 'lucide-react'
 import Link from 'next/link'
 import { api } from '@/trpc/react'
 
 export default function SchedulePage() {
-    const [viewMode, setViewMode] = useState<'calendar' | 'kanban'>('calendar')
+    const [viewMode, setViewMode] = useState<'calendar' | 'kanban' | 'list'>('calendar')
     const { data: stats } = api.jobs.getDashboardStats.useQuery()
 
     return (
@@ -38,6 +39,16 @@ export default function SchedulePage() {
                             >
                                 <LayoutGrid className="w-4 h-4 mr-2" />
                                 Kanban
+                            </button>
+                            <button
+                                onClick={() => setViewMode('list')}
+                                className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'list'
+                                    ? 'bg-white text-gray-900 shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                            >
+                                <List className="w-4 h-4 mr-2" />
+                                List
                             </button>
                         </div>
                     </div>
@@ -144,8 +155,10 @@ export default function SchedulePage() {
             <div className="flex-1 bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-4 overflow-hidden">
                 {viewMode === 'calendar' ? (
                     <CalendarView />
-                ) : (
+                ) : viewMode === 'kanban' ? (
                     <KanbanBoard />
+                ) : (
+                    <ListView />
                 )}
             </div>
         </div>

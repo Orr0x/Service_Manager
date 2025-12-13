@@ -2,6 +2,9 @@
 // Run this script with: npx ts-node scripts/seed-users.ts
 // Requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables
 
+import { config } from 'dotenv';
+config({ path: '.env.local' });
+
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;

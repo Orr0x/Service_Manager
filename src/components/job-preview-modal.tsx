@@ -11,9 +11,10 @@ interface JobPreviewModalProps {
     isOpen: boolean
     onClose: () => void
     jobId: string | null
+    role?: 'admin' | 'worker' // Default to 'admin'
 }
 
-export function JobPreviewModal({ isOpen, onClose, jobId }: JobPreviewModalProps) {
+export function JobPreviewModal({ isOpen, onClose, jobId, role = 'admin' }: JobPreviewModalProps) {
     const [selectedWorkers, setSelectedWorkers] = useState<string[]>([])
     const [startTime, setStartTime] = useState<string>('')
     const [endTime, setEndTime] = useState<string>('')
@@ -24,8 +25,12 @@ export function JobPreviewModal({ isOpen, onClose, jobId }: JobPreviewModalProps
         enabled: !!jobId
     })
 
-    const { data: workers } = api.workers.getAll.useQuery()
-    const { data: contractors } = api.contractors.getAll.useQuery()
+    const { data: workers } = api.workers.getAll.useQuery(undefined, {
+        enabled: role === 'admin' // Only fetch all workers if admin
+    })
+    const { data: contractors } = api.contractors.getAll.useQuery(undefined, {
+        enabled: role === 'admin' // Only fetch all contractors if admin
+    })
 
     const updateAssignments = api.jobs.updateAssignments.useMutation()
     const updateJob = api.jobs.update.useMutation()
@@ -50,7 +55,7 @@ export function JobPreviewModal({ isOpen, onClose, jobId }: JobPreviewModalProps
     }, [isOpen])
 
     const handleSave = async () => {
-        if (!jobId) return
+        if (!jobId || role !== 'admin') return // Security check
         setError(null)
 
         const assignments = selectedWorkers.map(id => {
@@ -76,6 +81,8 @@ export function JobPreviewModal({ isOpen, onClose, jobId }: JobPreviewModalProps
 
             utils.jobs.getAll.invalidate()
             utils.jobs.getById.invalidate(jobId)
+            // Invalidating worker queries too if needed, though they usually re-fetch on mount/focus
+            utils.worker.getAssignedJobs.invalidate()
             onClose()
         } catch (error: any) {
             // Only log unexpected errors to console (suppress expected CONFLICT errors)
@@ -96,6 +103,7 @@ export function JobPreviewModal({ isOpen, onClose, jobId }: JobPreviewModalProps
     }
 
     const toggleWorker = (id: string) => {
+        if (role !== 'admin') return
         setSelectedWorkers(prev =>
             prev.includes(id) ? prev.filter(w => w !== id) : [...prev, id]
         )
@@ -178,21 +186,33 @@ export function JobPreviewModal({ isOpen, onClose, jobId }: JobPreviewModalProps
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
                                                     <label className="block text-xs font-medium text-gray-500 mb-1">Start Time</label>
-                                                    <input
-                                                        type="datetime-local"
-                                                        value={startTime}
-                                                        onChange={(e) => setStartTime(e.target.value)}
-                                                        className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-[var(--primary-color)] sm:text-sm sm:leading-6"
-                                                    />
+                                                    {role === 'admin' ? (
+                                                        <input
+                                                            type="datetime-local"
+                                                            value={startTime}
+                                                            onChange={(e) => setStartTime(e.target.value)}
+                                                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-[var(--primary-color)] sm:text-sm sm:leading-6"
+                                                        />
+                                                    ) : (
+                                                        <p className="text-sm text-gray-900 font-medium">
+                                                            {startTime ? format(new Date(startTime), 'PP p') : 'TBD'}
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <label className="block text-xs font-medium text-gray-500 mb-1">End Time</label>
-                                                    <input
-                                                        type="datetime-local"
-                                                        value={endTime}
-                                                        onChange={(e) => setEndTime(e.target.value)}
-                                                        className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-[var(--primary-color)] sm:text-sm sm:leading-6"
-                                                    />
+                                                    {role === 'admin' ? (
+                                                        <input
+                                                            type="datetime-local"
+                                                            value={endTime}
+                                                            onChange={(e) => setEndTime(e.target.value)}
+                                                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-[var(--primary-color)] sm:text-sm sm:leading-6"
+                                                        />
+                                                    ) : (
+                                                        <p className="text-sm text-gray-900 font-medium">
+                                                            {endTime ? format(new Date(endTime), 'PP p') : 'TBD'}
+                                                        </p>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -200,47 +220,74 @@ export function JobPreviewModal({ isOpen, onClose, jobId }: JobPreviewModalProps
                                         <div className="border-t pt-4">
                                             <h4 className="text-sm font-medium text-gray-900 mb-3">Assignments</h4>
                                             <div className="max-h-48 overflow-y-auto space-y-2 border rounded-md p-2 bg-gray-50">
-                                                {workers?.map(worker => (
-                                                    <div key={worker.id} className="flex items-center">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={selectedWorkers.includes(worker.id)}
-                                                            onChange={() => toggleWorker(worker.id)}
-                                                            className="h-4 w-4 rounded border-gray-300 text-[var(--primary-color)] focus:ring-[var(--primary-color)]"
-                                                        />
-                                                        <label className="ml-3 text-sm text-gray-700">
-                                                            {worker.first_name} {worker.last_name} <span className="text-xs text-gray-400">(Worker)</span>
-                                                        </label>
-                                                    </div>
-                                                ))}
-                                                {contractors?.map(contractor => (
-                                                    <div key={contractor.id} className="flex items-center">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={selectedWorkers.includes(contractor.id)}
-                                                            onChange={() => toggleWorker(contractor.id)}
-                                                            className="h-4 w-4 rounded border-gray-300 text-[var(--primary-color)] focus:ring-[var(--primary-color)]"
-                                                        />
-                                                        <label className="ml-3 text-sm text-gray-700">
-                                                            {contractor.company_name} <span className="text-xs text-gray-400">(Contractor)</span>
-                                                        </label>
-                                                    </div>
-                                                ))}
+                                                {role === 'admin' ? (
+                                                    <>
+                                                        {workers?.map(worker => (
+                                                            <div key={worker.id} className="flex items-center">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={selectedWorkers.includes(worker.id)}
+                                                                    onChange={() => toggleWorker(worker.id)}
+                                                                    className="h-4 w-4 rounded border-gray-300 text-[var(--primary-color)] focus:ring-[var(--primary-color)]"
+                                                                />
+                                                                <label className="ml-3 text-sm text-gray-700">
+                                                                    {worker.first_name} {worker.last_name} <span className="text-xs text-gray-400">(Worker)</span>
+                                                                </label>
+                                                            </div>
+                                                        ))}
+                                                        {contractors?.map(contractor => (
+                                                            <div key={contractor.id} className="flex items-center">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={selectedWorkers.includes(contractor.id)}
+                                                                    onChange={() => toggleWorker(contractor.id)}
+                                                                    className="h-4 w-4 rounded border-gray-300 text-[var(--primary-color)] focus:ring-[var(--primary-color)]"
+                                                                />
+                                                                <label className="ml-3 text-sm text-gray-700">
+                                                                    {contractor.company_name} <span className="text-xs text-gray-400">(Contractor)</span>
+                                                                </label>
+                                                            </div>
+                                                        ))}
+                                                    </>
+                                                ) : (
+                                                    // Read-only assignments for worker - only show assigned names
+                                                    job.job_assignments?.map((a: any) => {
+                                                        const name = a.workers
+                                                            ? `${a.workers.first_name} ${a.workers.last_name}`
+                                                            : a.contractors?.company_name || 'Unknown';
+                                                        const type = a.workers ? 'Worker' : 'Contractor';
+                                                        return (
+                                                            <div key={a.id} className="flex items-center py-1">
+                                                                <User className="h-3 w-3 text-gray-400 mr-2" />
+                                                                <span className="text-sm text-gray-700">
+                                                                    {name} <span className="text-xs text-gray-400">({type})</span>
+                                                                </span>
+                                                            </div>
+                                                        )
+                                                    })
+                                                )}
+                                                {role === 'worker' && (!job.job_assignments || job.job_assignments.length === 0) && (
+                                                    <p className="text-sm text-gray-500 italic">No assignments.</p>
+                                                )}
                                             </div>
                                         </div>
 
                                         <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
-                                            <button
-                                                type="button"
-                                                className="inline-flex w-full justify-center rounded-md bg-[var(--primary-color)] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
-                                                onClick={handleSave}
-                                                disabled={updateAssignments.isPending || updateJob.isPending}
-                                            >
-                                                {updateAssignments.isPending || updateJob.isPending ? 'Saving...' : 'Save Changes'}
-                                            </button>
+                                            {role === 'admin' && (
+                                                <button
+                                                    type="button"
+                                                    className="inline-flex w-full justify-center rounded-md bg-[var(--primary-color)] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
+                                                    onClick={handleSave}
+                                                    disabled={updateAssignments.isPending || updateJob.isPending}
+                                                >
+                                                    {updateAssignments.isPending || updateJob.isPending ? 'Saving...' : 'Save Changes'}
+                                                </button>
+                                            )}
                                             <Link
-                                                href={`/dashboard/jobs/${job.id}`}
-                                                className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0"
+                                                href={role === 'admin' ? `/dashboard/jobs/${job.id}` : `/worker/jobs/${job.id}`}
+                                                className={role === 'admin'
+                                                    ? "mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0"
+                                                    : "inline-flex w-full justify-center rounded-md bg-[var(--primary-color)] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90 sm:col-span-2"}
                                             >
                                                 <ExternalLink className="h-4 w-4 mr-2" />
                                                 View Full Details

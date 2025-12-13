@@ -209,7 +209,7 @@ export const workersRouter = createTRPCRouter({
                 .select('*')
                 .eq('worker_id', input.workerId)
                 .eq('tenant_id', ctx.tenantId)
-                .order('start_date', { ascending: true })
+                .order('unavailable_date', { ascending: true })
 
             if (error) {
                 throw new Error(`Failed to fetch unavailability: ${error.message}`)
@@ -230,7 +230,7 @@ export const workersRouter = createTRPCRouter({
                     )
                 `)
                 .eq('tenant_id', ctx.tenantId)
-                .order('start_date', { ascending: true })
+                .order('unavailable_date', { ascending: true })
 
             if (error) {
                 throw new Error(`Failed to fetch all unavailability: ${error.message}`)
@@ -249,17 +249,37 @@ export const workersRouter = createTRPCRouter({
             })
         )
         .mutation(async ({ ctx, input }) => {
+            const start = new Date(input.startDate);
+            const end = new Date(input.endDate);
+            const dates: string[] = [];
+
+            // Loop from start to end day
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                dates.push(d.toISOString().split('T')[0]);
+            }
+
+            // Reason validation to match enum
+            const validReasons = ['non_working', 'holiday', 'sickness', 'transport', 'other'];
+            let reason = input.reason || 'other';
+            // Normalize reason if needed, or fallback to 'other' if not in enum.
+            // The DB check constraint is strict, so we must be careful.
+            if (!validReasons.includes(reason)) reason = 'other';
+
+
+            // Bulk insert or loop upsert
             const { data, error } = await ctx.db
                 .from('worker_unavailability')
-                .insert({
-                    tenant_id: ctx.tenantId,
-                    worker_id: input.workerId,
-                    start_date: new Date(input.startDate).toISOString(),
-                    end_date: new Date(input.endDate).toISOString(),
-                    reason: input.reason,
-                })
+                .upsert(
+                    dates.map(date => ({
+                        tenant_id: ctx.tenantId,
+                        worker_id: input.workerId,
+                        unavailable_date: date,
+                        reason: reason,
+                        notes: 'Admin added range'
+                    })),
+                    { onConflict: 'worker_id, unavailable_date' }
+                )
                 .select()
-                .single()
 
             if (error) {
                 throw new Error(`Failed to add unavailability: ${error.message}`)

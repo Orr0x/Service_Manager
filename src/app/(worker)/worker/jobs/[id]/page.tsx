@@ -44,6 +44,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     const duration = startTime && endTime ?
         ((endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)).toFixed(1) + 'h' : 'TBD';
 
+    // Extract coordinates if available, otherwise defaulting to null (UI will handle)
+    const coordinates = job.job_sites?.latitude && job.job_sites?.longitude
+        ? { lat: job.job_sites.latitude, lng: job.job_sites.longitude }
+        : null;
+
     return (
         <div className="bg-gray-50 min-h-screen pb-24">
             {/* Page Header */}
@@ -109,15 +114,30 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                                 {job.job_sites?.address}, {job.job_sites?.city} {job.job_sites?.zip_code}
                             </div>
 
-                            <a
-                                href={`https://maps.google.com/?q=${encodeURIComponent(`${job.job_sites?.address}, ${job.job_sites?.city}`)}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm shadow-sm transition-colors"
-                            >
-                                <Navigation className="h-4 w-4" />
-                                Navigate Here
-                            </a>
+                            <div className="flex flex-col gap-2">
+                                <Link
+                                    href={`/worker/navigation?destination=${coordinates ? `${coordinates.lat},${coordinates.lng}` : ''}`}
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm shadow-sm transition-colors"
+                                    onClick={(e) => {
+                                        if (!coordinates) {
+                                            e.preventDefault();
+                                            alert('Location coordinates not available for this job.');
+                                        }
+                                    }}
+                                >
+                                    <Navigation className="h-4 w-4" />
+                                    Start Navigation
+                                </Link>
+                                <a
+                                    href={`https://maps.google.com/?q=${encodeURIComponent(`${job.job_sites?.address}, ${job.job_sites?.city}`)}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-2 rounded-lg flex items-center justify-center gap-2 text-xs shadow-sm transition-colors"
+                                >
+                                    <MapPin className="h-3 w-3" />
+                                    Open in Google Maps
+                                </a>
+                            </div>
 
                             <div className="grid grid-cols-3 gap-2 text-center">
                                 <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">

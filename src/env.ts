@@ -5,7 +5,8 @@ const envSchema = z.object({
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
     NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
     SUPABASE_SERVICE_ROLE_KEY: z.string().optional(), // Optional on client, required on server for admin actions
-    WHAT3WORDS_API_KEY: z.string().optional(),
+    what3words_api_key: z.string().optional(),
+    NEXT_PUBLIC_MAPBOX_TOKEN: z.string().optional(),
 })
 
 export const env = envSchema.parse({
@@ -14,4 +15,5 @@ export const env = envSchema.parse({
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     WHAT3WORDS_API_KEY: process.env.WHAT3WORDS_API_KEY,
+    NEXT_PUBLIC_MAPBOX_TOKEN: process.env.NEXT_PUBLIC_MAPBOX_TOKEN,
 })

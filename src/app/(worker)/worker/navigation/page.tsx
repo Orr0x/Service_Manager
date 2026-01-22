@@ -26,9 +26,20 @@ export default function WorkerNavigationPage() {
     const [steps, setSteps] = useState<any[]>([]);
     const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
+    // Parse destination from search params
+    useEffect(() => {
+        if (destinationParam) {
+            const [lat, lng] = destinationParam.split(',').map(Number);
+            if (!isNaN(lat) && !isNaN(lng)) {
+                setDestination({ lat, lng });
+                setViewState(prev => ({ ...prev, latitude: lat, longitude: lng }));
+            }
+        }
+    }, [destinationParam]);
+
     // Fetch Route when destination & user location are set
     useEffect(() => {
-        if (userLocation && destination) {
+        if (userLocation && destination && !isNaN(destination.lat) && !isNaN(destination.lng)) {
             fetchRoute(userLocation, destination);
         }
     }, [userLocation, destination]);
@@ -127,7 +138,7 @@ export default function WorkerNavigationPage() {
                 )}
 
                 {/* Destination Marker */}
-                {destination && (
+                {destination && !isNaN(destination.lat) && !isNaN(destination.lng) && (
                     <Marker longitude={destination.lng} latitude={destination.lat} color="#ef4444" />
                 )}
 

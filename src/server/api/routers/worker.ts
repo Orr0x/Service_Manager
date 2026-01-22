@@ -250,7 +250,9 @@ export const workerRouter = createTRPCRouter({
                             address,
                             city,
                             state,
-                            postal_code
+                            postal_code,
+                            latitude,
+                            longitude
                         )
                     )
                 `)

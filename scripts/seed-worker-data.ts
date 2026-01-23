@@ -114,8 +114,26 @@ async function seedWorkerData() {
 
     // 3. Create Job Sites
     const sites = [
-        { name: 'Acme HQ', address: '123 Tech Blvd', city: 'Innovation City', state: 'CA', postal_code: '90210', customer_id: customerIds[0] },
-        { name: 'Beta Warehouse', address: '456 Industrial Way', city: 'Manufacturing Town', state: 'TX', postal_code: '75001', customer_id: customerIds[1] }
+        {
+            name: 'Acme HQ',
+            address: '123 Tech Blvd',
+            city: 'Innovation City',
+            state: 'CA',
+            postal_code: '90210',
+            customer_id: customerIds[0],
+            latitude: 34.0522,
+            longitude: -118.2437
+        },
+        {
+            name: 'Beta Warehouse',
+            address: '456 Industrial Way',
+            city: 'Manufacturing Town',
+            state: 'TX',
+            postal_code: '75001',
+            customer_id: customerIds[1],
+            latitude: 32.7767,
+            longitude: -96.7970
+        }
     ];
 
     const siteIds = [];

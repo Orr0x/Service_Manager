@@ -54,9 +54,4 @@ This account has been populated with:
 | ... | ... | ... |
 | **Worker** | Tech Num 5 | `tech5@fixit.com` |
 
-## How to Apply Test Data
-To reset your local database and apply this seed data, run:
-```bash
-npx supabase db reset
-```
-*Note: This will wipe all existing data.*
+

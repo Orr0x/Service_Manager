@@ -257,88 +257,39 @@ export default function UsersPage() {
                                                 </td>
                                                 <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
                                                     <Menu as="div" className="relative inline-block text-left">
-                                                        <div>
-                                                            <Menu.Button className="flex items-center rounded-full bg-gray-100 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-100">
-                                                                <span className="sr-only">Open options</span>
-                                                                <MoreVertical className="h-5 w-5" aria-hidden="true" />
-                                                            </Menu.Button>
-                                                        </div>
+                                                        <Menu.Button className="flex items-center rounded-full bg-gray-100 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-100">
+                                                            <span className="sr-only">Open options</span>
+                                                            <MoreVertical className="h-5 w-5" aria-hidden="true" />
+                                                        </Menu.Button>
 
-                                                        <Transition
-                                                            as={Fragment}
-                                                            enter="transition ease-out duration-100"
-                                                            enterFrom="transform opacity-0 scale-95"
-                                                            enterTo="transform opacity-100 scale-100"
-                                                            leave="transition ease-in duration-75"
-                                                            leaveFrom="transform opacity-100 scale-100"
-                                                            leaveTo="transform opacity-0 scale-95"
+                                                        <Menu.Items
+                                                            transition
+                                                            anchor="bottom end"
+                                                            className="z-50 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none data-[closed]:scale-95 data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
                                                         >
-                                                            <Menu.Items className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                                                                <div className="py-1">
-                                                                    {item.type === 'user' && (
-                                                                        <>
-                                                                            <Menu.Item>
-                                                                                {({ active }) => (
-                                                                                    <a
-                                                                                        href="#"
-                                                                                        onClick={(e) => { e.preventDefault(); handleEditUser(item); }}
-                                                                                        className={classNames(
-                                                                                            active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
-                                                                                            'block px-4 py-2 text-sm'
-                                                                                        )}
-                                                                                    >
-                                                                                        <Edit className="inline-block h-4 w-4 mr-2" /> Edit User
-                                                                                    </a>
-                                                                                )}
-                                                                            </Menu.Item>
-                                                                            <Menu.Item>
-                                                                                {({ active }) => (
-                                                                                    <button
-                                                                                        onClick={() => {
-                                                                                            if (confirm('Are you sure you want to block this user?')) {
-                                                                                                // blockUser.mutate({ userId: item.id }) // TODO
-                                                                                            }
-                                                                                        }}
-                                                                                        className={classNames(
-                                                                                            active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
-                                                                                            'block w-full px-4 py-2 text-left text-sm'
-                                                                                        )}
-                                                                                    >
-                                                                                        <Ban className="inline-block h-4 w-4 mr-2" /> Block Access
-                                                                                    </button>
-                                                                                )}
-                                                                            </Menu.Item>
-                                                                            <Menu.Item>
-                                                                                {({ active }) => (
-                                                                                    <button
-                                                                                        onClick={() => {
-                                                                                            if (confirm(`Send password reset link to ${item.email}?`)) {
-                                                                                                resetPassword.mutate({ email: item.email! })
-                                                                                            }
-                                                                                        }}
-                                                                                        className={classNames(
-                                                                                            active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
-                                                                                            'block w-full px-4 py-2 text-left text-sm'
-                                                                                        )}
-                                                                                    >
-                                                                                        <Key className="inline-block h-4 w-4 mr-2" /> Reset Password
-                                                                                    </button>
-                                                                                )}
-                                                                            </Menu.Item>
-                                                                        </>
-                                                                    )}
-
-                                                                    {(item.type === 'user' && (item.linkedEntity?.type === 'worker' || item.linkedEntity?.type === 'contractor' || item.linkedEntity?.type === 'customer')) && (
+                                                            <div className="py-1">
+                                                                {item.type === 'user' && (
+                                                                    <>
+                                                                        <Menu.Item>
+                                                                            {({ active }) => (
+                                                                                <a
+                                                                                    href="#"
+                                                                                    onClick={(e) => { e.preventDefault(); handleEditUser(item); }}
+                                                                                    className={classNames(
+                                                                                        active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
+                                                                                        'block px-4 py-2 text-sm'
+                                                                                    )}
+                                                                                >
+                                                                                    <Edit className="inline-block h-4 w-4 mr-2" /> Edit User
+                                                                                </a>
+                                                                            )}
+                                                                        </Menu.Item>
                                                                         <Menu.Item>
                                                                             {({ active }) => (
                                                                                 <button
                                                                                     onClick={() => {
-                                                                                        const targetRole = item.linkedEntity?.type;
-                                                                                        const targetId = item.linkedEntity?.id;
-                                                                                        if (targetRole) {
-                                                                                            startImpersonation(item.id, targetRole as any, item.name || 'User', targetId);
-                                                                                            if (targetRole === 'worker' || targetRole === 'contractor') router.push('/worker');
-                                                                                            else if (targetRole === 'customer') router.push('/customer');
+                                                                                        if (confirm('Are you sure you want to block this user?')) {
+                                                                                            // blockUser.mutate({ userId: item.id }) // TODO
                                                                                         }
                                                                                     }}
                                                                                     className={classNames(
@@ -346,55 +297,96 @@ export default function UsersPage() {
                                                                                         'block w-full px-4 py-2 text-left text-sm'
                                                                                     )}
                                                                                 >
-                                                                                    <Eye className="inline-block h-4 w-4 mr-2" /> View As
+                                                                                    <Ban className="inline-block h-4 w-4 mr-2" /> Block Access
                                                                                 </button>
                                                                             )}
                                                                         </Menu.Item>
-                                                                    )}
-
-                                                                    {(item.type === 'worker' || item.type === 'contractor' || item.type === 'customer') && !item.linkedEntity && (
                                                                         <Menu.Item>
                                                                             {({ active }) => (
                                                                                 <button
                                                                                     onClick={() => {
-                                                                                        startImpersonation(null, item.type as any, item.name || 'User', item.id);
-                                                                                        if (item.type === 'worker' || item.type === 'contractor') router.push('/worker');
-                                                                                        else if (item.type === 'customer') router.push('/customer');
+                                                                                        if (confirm(`Send password reset link to ${item.email}?`)) {
+                                                                                            resetPassword.mutate({ email: item.email! })
+                                                                                        }
                                                                                     }}
                                                                                     className={classNames(
                                                                                         active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
                                                                                         'block w-full px-4 py-2 text-left text-sm'
                                                                                     )}
                                                                                 >
-                                                                                    <Eye className="inline-block h-4 w-4 mr-2" /> View As (Unlinked)
+                                                                                    <Key className="inline-block h-4 w-4 mr-2" /> Reset Password
                                                                                 </button>
                                                                             )}
                                                                         </Menu.Item>
-                                                                    )}
+                                                                    </>
+                                                                )}
 
-                                                                    {(!item.linkedEntity && (item.type === 'worker' || item.type === 'customer' || item.type === 'contractor')) && (
-                                                                        <Menu.Item>
-                                                                            {({ active }) => (
-                                                                                <button
-                                                                                    onClick={() => {
-                                                                                        setInviteModalOpen(true);
-                                                                                        if (item.type === 'worker') { setSelectedEntityType('worker'); setSelectedEntityId(item.id); }
-                                                                                        if (item.type === 'contractor') { setSelectedEntityType('contractor'); setSelectedEntityId(item.id); }
-                                                                                        if (item.type === 'customer') { setSelectedEntityType('customer'); setSelectedEntityId(item.id); }
-                                                                                    }}
-                                                                                    className={classNames(
-                                                                                        active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
-                                                                                        'block w-full px-4 py-2 text-left text-sm'
-                                                                                    )}
-                                                                                >
-                                                                                    <UserPlus className="inline-block h-4 w-4 mr-2" /> Grant Access
-                                                                                </button>
-                                                                            )}
-                                                                        </Menu.Item>
-                                                                    )}
-                                                                </div>
-                                                            </Menu.Items>
-                                                        </Transition>
+                                                                {(item.type === 'user' && (item.linkedEntity?.type === 'worker' || item.linkedEntity?.type === 'contractor' || item.linkedEntity?.type === 'customer')) && (
+                                                                    <Menu.Item>
+                                                                        {({ active }) => (
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    const targetRole = item.linkedEntity?.type;
+                                                                                    const targetId = item.linkedEntity?.id;
+                                                                                    if (targetRole) {
+                                                                                        startImpersonation(item.id, targetRole as any, item.name || 'User', targetId);
+                                                                                        if (targetRole === 'worker' || targetRole === 'contractor') router.push('/worker');
+                                                                                        else if (targetRole === 'customer') router.push('/customer');
+                                                                                    }
+                                                                                }}
+                                                                                className={classNames(
+                                                                                    active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
+                                                                                    'block w-full px-4 py-2 text-left text-sm'
+                                                                                )}
+                                                                            >
+                                                                                <Eye className="inline-block h-4 w-4 mr-2" /> View As
+                                                                            </button>
+                                                                        )}
+                                                                    </Menu.Item>
+                                                                )}
+
+                                                                {(item.type === 'worker' || item.type === 'contractor' || item.type === 'customer') && !item.linkedEntity && (
+                                                                    <Menu.Item>
+                                                                        {({ active }) => (
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    startImpersonation(null, item.type as any, item.name || 'User', item.id);
+                                                                                    if (item.type === 'worker' || item.type === 'contractor') router.push('/worker');
+                                                                                    else if (item.type === 'customer') router.push('/customer');
+                                                                                }}
+                                                                                className={classNames(
+                                                                                    active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
+                                                                                    'block w-full px-4 py-2 text-left text-sm'
+                                                                                )}
+                                                                            >
+                                                                                <Eye className="inline-block h-4 w-4 mr-2" /> View As (Unlinked)
+                                                                            </button>
+                                                                        )}
+                                                                    </Menu.Item>
+                                                                )}
+
+                                                                {(!item.linkedEntity && (item.type === 'worker' || item.type === 'customer' || item.type === 'contractor')) && (
+                                                                    <Menu.Item>
+                                                                        {({ active }) => (
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setInviteModalOpen(true);
+                                                                                    if (item.type === 'worker') { setSelectedEntityType('worker'); setSelectedEntityId(item.id); }
+                                                                                    if (item.type === 'contractor') { setSelectedEntityType('contractor'); setSelectedEntityId(item.id); }
+                                                                                    if (item.type === 'customer') { setSelectedEntityType('customer'); setSelectedEntityId(item.id); }
+                                                                                }}
+                                                                                className={classNames(
+                                                                                    active ? 'bg-gray-100 text-gray-900' : 'text-gray-700',
+                                                                                    'block w-full px-4 py-2 text-left text-sm'
+                                                                                )}
+                                                                            >
+                                                                                <UserPlus className="inline-block h-4 w-4 mr-2" /> Grant Access
+                                                                            </button>
+                                                                        )}
+                                                                    </Menu.Item>
+                                                                )}
+                                                            </div>
+                                                        </Menu.Items>
                                                     </Menu>
                                                 </td>
                                             </tr>

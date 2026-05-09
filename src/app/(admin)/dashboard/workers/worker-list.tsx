@@ -2,7 +2,7 @@
 
 import { api } from '@/trpc/react'
 import Link from 'next/link'
-import { User, Mail, Phone, Briefcase } from 'lucide-react'
+import { User, Mail, Phone, Briefcase, PoundSterling } from 'lucide-react'
 import { useState } from 'react'
 import { ViewToggle } from '@/components/common/view-toggle'
 import { cn } from '@/lib/utils'
@@ -63,6 +63,13 @@ export function WorkerList() {
                                         <div className="mt-1 flex items-center gap-x-2 text-xs leading-5 text-gray-500">
                                             <Briefcase className="h-4 w-4 text-gray-400" />
                                             <p className="truncate">{worker.role}</p>
+                                            {typeof worker.hourly_rate === 'number' && (
+                                                <>
+                                                    <span className="text-gray-300">|</span>
+                                                    <PoundSterling className="h-4 w-4 text-gray-400" />
+                                                    <span className="truncate">{worker.hourly_rate.toFixed(2)}/hr</span>
+                                                </>
+                                            )}
                                             {worker.email && (
                                                 <>
                                                     <span className="text-gray-300">|</span>
@@ -146,6 +153,15 @@ export function WorkerList() {
                                                 <dd className="text-sm text-gray-500 flex items-center gap-2">
                                                     <Phone className="h-4 w-4 text-gray-400 shrink-0" />
                                                     <span className="truncate">{worker.phone}</span>
+                                                </dd>
+                                            </>
+                                        )}
+                                        {typeof worker.hourly_rate === 'number' && (
+                                            <>
+                                                <dt className="sr-only">Hourly Rate</dt>
+                                                <dd className="text-sm text-gray-500 flex items-center gap-2">
+                                                    <PoundSterling className="h-4 w-4 text-gray-400 shrink-0" />
+                                                    <span className="truncate">{worker.hourly_rate.toFixed(2)}/hr</span>
                                                 </dd>
                                             </>
                                         )}

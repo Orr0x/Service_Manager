@@ -24,6 +24,7 @@ import { customerPortalRouter } from "./routers/customer-portal";
 import { configRouter } from "./routers/config";
 import { reportsRouter } from "./routers/reports";
 import { jobPhotosRouter } from './routers/job-photos'
+import { payrollRouter } from './routers/payroll'
 import { createCallerFactory, createTRPCRouter } from './trpc'
 
 export const appRouter = createTRPCRouter({
@@ -52,6 +53,7 @@ export const appRouter = createTRPCRouter({
     config: configRouter,
     reports: reportsRouter,
     jobPhotos: jobPhotosRouter,
+    payroll: payrollRouter,
 })
 
 export const createCaller = createCallerFactory(appRouter)

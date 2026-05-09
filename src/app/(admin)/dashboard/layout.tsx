@@ -85,6 +85,7 @@ export default async function DashboardLayout({
         { key: 'jobs', name: 'Jobs', href: '/dashboard/jobs', icon: PlayCircle },
         { key: 'schedule', name: 'Scheduling', href: '/dashboard/schedule', icon: CalendarDays },
         { key: 'services', name: 'Services', href: '/dashboard/services', icon: Wrench },
+        { key: 'payroll', name: 'Payroll', href: '/dashboard/payroll', icon: Scale },
         { key: 'certification', name: 'Certification', href: '/dashboard/certification', icon: Award },
 
     ]

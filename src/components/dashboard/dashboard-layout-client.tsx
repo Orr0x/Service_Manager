@@ -20,7 +20,8 @@ import {
     ClipboardCheck,
     PlayCircle,
     Wrench,
-    Award
+    Award,
+    Scale
 } from 'lucide-react'
 
 // Map keys to icon components
@@ -37,7 +38,8 @@ const iconMap: Record<string, any> = {
     jobs: PlayCircle,
     schedule: CalendarDays,
     services: Wrench,
-    certification: Award
+    certification: Award,
+    payroll: Scale,
 }
 
 interface DashboardLayoutClientProps {

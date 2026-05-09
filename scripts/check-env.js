@@ -9,6 +9,7 @@ const required = [
 const optionalButRecommended = [
   'SUPABASE_SERVICE_ROLE_KEY',
   'DATABASE_URL',
+  'GOOGLE_DRIVE_FOLDER_ID',
 ]
 
 const missingRequired = required.filter((name) => !process.env[name])

@@ -8,6 +8,10 @@ const envSchema = z.object({
     SUPABASE_SERVICE_ROLE_KEY: z.string().optional(), // Optional on client, required on server for admin actions
     WHAT3WORDS_API_KEY: z.string().optional(),
     NEXT_PUBLIC_MAPBOX_TOKEN: z.string().optional(),
+    GOOGLE_DRIVE_CLIENT_ID: z.string().optional(),
+    GOOGLE_DRIVE_CLIENT_SECRET: z.string().optional(),
+    GOOGLE_DRIVE_REFRESH_TOKEN: z.string().optional(),
+    GOOGLE_DRIVE_FOLDER_ID: z.string().optional(),
 }).refine(
     (env) => Boolean(env.NEXT_PUBLIC_SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY),
     {
@@ -24,6 +28,10 @@ const parsedEnv = envSchema.parse({
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     WHAT3WORDS_API_KEY: process.env.WHAT3WORDS_API_KEY,
     NEXT_PUBLIC_MAPBOX_TOKEN: process.env.NEXT_PUBLIC_MAPBOX_TOKEN,
+    GOOGLE_DRIVE_CLIENT_ID: process.env.GOOGLE_DRIVE_CLIENT_ID,
+    GOOGLE_DRIVE_CLIENT_SECRET: process.env.GOOGLE_DRIVE_CLIENT_SECRET,
+    GOOGLE_DRIVE_REFRESH_TOKEN: process.env.GOOGLE_DRIVE_REFRESH_TOKEN,
+    GOOGLE_DRIVE_FOLDER_ID: process.env.GOOGLE_DRIVE_FOLDER_ID,
 })
 
 export const env = {

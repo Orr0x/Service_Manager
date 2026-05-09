@@ -122,3 +122,16 @@ npm run lint
 npm run type-check
 npm run build
 ```
+
+### 6) Optional Google Drive photo sync
+
+Worker job photos can use Supabase Storage as temporary staging and Google Drive as final storage. For a personal Google account test, configure:
+
+```bash
+GOOGLE_DRIVE_CLIENT_ID=
+GOOGLE_DRIVE_CLIENT_SECRET=
+GOOGLE_DRIVE_REFRESH_TOKEN=
+GOOGLE_DRIVE_FOLDER_ID=
+```
+
+If these are not configured, uploaded job photos remain staged in Supabase with a retryable sync status.

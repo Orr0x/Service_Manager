@@ -20,7 +20,9 @@ import {
     Award,
     Activity,
     Download,
-    ShieldCheck
+    ShieldCheck,
+    Image as ImageIcon,
+    ExternalLink
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -94,6 +96,7 @@ export function JobDetail({ id }: { id: string }) {
         { id: 'schedule', name: 'Schedule', icon: Clock },
         { id: 'workers', name: `Workers (${assignedStaff.length})`, icon: User },
         { id: 'checklists', name: `Checklists (${job.job_checklists?.length || 0})`, icon: CheckSquare },
+        { id: 'photos', name: `Photos (${job.job_photos?.length || 0})`, icon: ImageIcon },
         { id: 'attachments', name: 'Attachments', icon: Paperclip },
         { id: 'notes', name: 'Notes', icon: StickyNote },
         { id: 'financials', name: `Financials (${(job.invoices?.length || 0) + (job.customers?.contracts?.length || 0) + (job.customers?.quotes?.length || 0)})`, icon: Receipt },
@@ -389,6 +392,10 @@ export function JobDetail({ id }: { id: string }) {
                     <AttachmentsSection entityType="job" entityId={job.id} />
                 )}
 
+                {activeTab === 'photos' && (
+                    <JobPhotosGallery photos={(job.job_photos || []) as AdminJobPhoto[]} />
+                )}
+
                 {activeTab === 'notes' && (
                     <NotesSection entityType="job" entityId={job.id} />
                 )}
@@ -544,6 +551,73 @@ type PayrollJob = {
     late_finish_authorized?: boolean | null
     location_override_authorized?: boolean | null
     payroll_adjustment_notes?: string | null
+}
+
+type AdminJobPhoto = {
+    id: string
+    photo_type: 'before' | 'during' | 'after'
+    description?: string | null
+    file_name: string
+    status: string
+    google_drive_web_view_link?: string | null
+    last_error?: string | null
+    created_at: string
+}
+
+function JobPhotosGallery({ photos }: { photos: AdminJobPhoto[] }) {
+    const groupedPhotos = photos.reduce<Record<AdminJobPhoto['photo_type'], AdminJobPhoto[]>>((groups, photo) => {
+        groups[photo.photo_type].push(photo)
+        return groups
+    }, { before: [], during: [], after: [] })
+
+    return (
+        <div className="space-y-6">
+            {(['before', 'during', 'after'] as const).map((photoType) => (
+                <div key={photoType} className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
+                    <h3 className="text-base font-semibold leading-7 text-gray-900 capitalize flex items-center">
+                        <ImageIcon className="mr-2 h-5 w-5 text-blue-500" />
+                        {photoType} Photos
+                    </h3>
+                    <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {groupedPhotos[photoType].map((photo) => (
+                            <div key={photo.id} className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <p className="truncate text-sm font-semibold text-gray-900">{photo.file_name}</p>
+                                        <p className="text-xs text-gray-500">{format(new Date(photo.created_at), 'MMM d, yyyy h:mm a')}</p>
+                                    </div>
+                                    <span className={`shrink-0 rounded-md px-2 py-1 text-xs font-semibold ${photo.status === 'stored_in_google_drive'
+                                        ? 'bg-green-100 text-green-700'
+                                        : photo.status === 'google_drive_failed'
+                                            ? 'bg-red-100 text-red-700'
+                                            : 'bg-yellow-100 text-yellow-700'
+                                        }`}>
+                                        {photo.status.replaceAll('_', ' ')}
+                                    </span>
+                                </div>
+                                {photo.description && <p className="mt-3 text-sm text-gray-700">{photo.description}</p>}
+                                {photo.last_error && <p className="mt-3 text-sm text-red-600">{photo.last_error}</p>}
+                                {photo.google_drive_web_view_link && (
+                                    <a
+                                        href={photo.google_drive_web_view_link}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-500"
+                                    >
+                                        Open in Google Drive
+                                        <ExternalLink className="h-4 w-4" />
+                                    </a>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                    {groupedPhotos[photoType].length === 0 && (
+                        <p className="mt-4 text-sm text-gray-500">No {photoType} photos uploaded yet.</p>
+                    )}
+                </div>
+            ))}
+        </div>
+    )
 }
 
 function PayrollReview({ job, onUpdated }: { job: PayrollJob; onUpdated: () => void }) {

@@ -414,7 +414,8 @@ export const workerRouter = createTRPCRouter({
                             items
                         )
                     ),
-                    worker_reports (*)
+                    worker_reports (*),
+                    job_photos (*)
                 `)
                 .eq('id', input.jobId)
                 .single();

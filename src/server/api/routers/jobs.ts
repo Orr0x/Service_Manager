@@ -127,6 +127,7 @@ export const jobsRouter = createTRPCRouter({
             items,
             checklists(name)
           ),
+          job_photos(*),
           invoices(id, invoice_number, status, total_amount, due_date)
         `)
                 .eq('id', input)

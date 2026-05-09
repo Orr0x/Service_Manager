@@ -1,11 +1,12 @@
 'use client';
 
-import { ArrowLeft, Clock, MapPin, Home, Key, User, Wrench, FileText, ChevronDown, Navigation, Play, ClipboardList, CheckSquare, Square } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, Home, Key, User, Wrench, FileText, ChevronDown, Navigation, Play, ClipboardList, CheckSquare, Square, Camera, ExternalLink, RefreshCw, Send } from "lucide-react";
 import Link from 'next/link';
 import { api } from "@/trpc/react";
 import { use, useState } from "react";
 import { format } from 'date-fns';
 import { ReportIssueModal } from "@/components/report-issue-modal";
+import { createClient } from "@/utils/supabase/client";
 
 type ChecklistItem = {
     text?: string;
@@ -26,6 +27,17 @@ type WorkerReport = {
     title?: string | null;
     description?: string | null;
     status?: string | null;
+    created_at: string;
+}
+
+type JobPhoto = {
+    id: string;
+    photo_type: 'before' | 'during' | 'after';
+    description?: string | null;
+    file_name: string;
+    status: string;
+    google_drive_web_view_link?: string | null;
+    last_error?: string | null;
     created_at: string;
 }
 
@@ -72,6 +84,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [actionError, setActionError] = useState<string | null>(null);
+    const [noteContent, setNoteContent] = useState('');
 
     const toggleSection = (section: string) => {
         setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -128,6 +141,24 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     };
 
     const isActionPending = startJob.isPending || completeJob.isPending;
+    const canAddEvidence = job.status === 'in_progress' || job.status === 'completed';
+
+    const notesQuery = api.notes.getByEntity.useQuery(
+        { entityType: 'job', entityId: id },
+        { enabled: openSections.notes }
+    );
+    const createNote = api.notes.create.useMutation({
+        onSuccess: () => {
+            setNoteContent('');
+            utils.notes.getByEntity.invalidate({ entityType: 'job', entityId: id });
+        }
+    });
+
+    const handleNoteSubmit = (event: React.FormEvent) => {
+        event.preventDefault();
+        if (!noteContent.trim()) return;
+        createNote.mutate({ entityType: 'job', entityId: id, content: noteContent });
+    };
 
     return (
         <div className="bg-gray-50 min-h-screen pb-[calc(11rem+var(--impersonation-banner-offset,0px))]">
@@ -343,6 +374,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 )}
 
                 {/* Maintenance Issues */}
+                {canAddEvidence && (
+                    <JobPhotosSection jobId={id} photos={(job.job_photos || []) as JobPhoto[]} />
+                )}
+
                 <details className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
                     open={openSections.maintenance}
                     onClick={(e) => { e.preventDefault(); toggleSection('maintenance'); }}
@@ -397,8 +432,47 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                         <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${openSections.notes ? 'rotate-180' : ''}`} />
                     </summary>
                     {openSections.notes && (
-                        <div className="px-4 pb-4 border-t border-gray-100 pt-3 text-sm text-gray-600">
-                            <p className="whitespace-pre-wrap">{job.description || 'No description provided.'}</p>
+                        <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-4">
+                            <div className="text-sm text-gray-600">
+                                <p className="font-semibold text-gray-900">Job description</p>
+                                <p className="mt-1 whitespace-pre-wrap">{job.description || 'No description provided.'}</p>
+                            </div>
+
+                            <div className="space-y-3">
+                                <p className="font-semibold text-gray-900 text-sm">Worker notes</p>
+                                {notesQuery.isLoading ? (
+                                    <p className="text-sm text-gray-500">Loading notes...</p>
+                                ) : notesQuery.data && notesQuery.data.length > 0 ? (
+                                    <div className="space-y-2">
+                                        {notesQuery.data.map((note) => (
+                                            <div key={note.id} className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                                <p className="text-sm text-gray-800 whitespace-pre-wrap">{note.content}</p>
+                                                <p className="mt-1 text-[11px] text-gray-500">{format(new Date(note.created_at), 'MMM d, h:mm a')}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-gray-500">No notes yet.</p>
+                                )}
+                            </div>
+
+                            <form onSubmit={handleNoteSubmit} className="space-y-2">
+                                <textarea
+                                    rows={3}
+                                    value={noteContent}
+                                    onChange={(event) => setNoteContent(event.target.value)}
+                                    placeholder="Add a job note..."
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={createNote.isPending || !noteContent.trim()}
+                                    className="w-full bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm"
+                                >
+                                    <Send className="h-4 w-4" />
+                                    {createNote.isPending ? 'Saving...' : 'Add Note'}
+                                </button>
+                            </form>
                         </div>
                     )}
                 </details>
@@ -440,5 +514,179 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 jobId={job.id}
             />
         </div >
+    );
+}
+
+function JobPhotosSection({ jobId, photos }: { jobId: string; photos: JobPhoto[] }) {
+    const utils = api.useUtils();
+    const supabase = createClient();
+    const [description, setDescription] = useState<Record<JobPhoto['photo_type'], string>>({
+        before: '',
+        during: '',
+        after: '',
+    });
+    const [uploadingType, setUploadingType] = useState<JobPhoto['photo_type'] | null>(null);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+
+    const createPhoto = api.jobPhotos.createFromStagedUpload.useMutation({
+        onSuccess: () => {
+            utils.worker.getJobDetails.invalidate({ jobId });
+            utils.jobPhotos.getByJob.invalidate({ jobId });
+            setUploadingType(null);
+            setUploadError(null);
+        },
+        onError: (error) => {
+            setUploadingType(null);
+            setUploadError(error.message);
+        }
+    });
+
+    const retrySync = api.jobPhotos.retryGoogleDriveSync.useMutation({
+        onSuccess: () => {
+            utils.worker.getJobDetails.invalidate({ jobId });
+        }
+    });
+
+    const groupedPhotos = photos.reduce<Record<JobPhoto['photo_type'], JobPhoto[]>>((groups, photo) => {
+        groups[photo.photo_type].push(photo);
+        return groups;
+    }, { before: [], during: [], after: [] });
+
+    const handleUpload = async (photoType: JobPhoto['photo_type'], file?: File | null) => {
+        if (!file) return;
+
+        setUploadingType(photoType);
+        setUploadError(null);
+
+        try {
+            const fileExt = file.name.split('.').pop() || 'jpg';
+            const fileName = `${crypto.randomUUID()}.${fileExt}`;
+            const storagePath = `jobs/${jobId}/${photoType}/${fileName}`;
+
+            const { error } = await supabase.storage
+                .from('job-photos')
+                .upload(storagePath, file, {
+                    contentType: file.type || 'image/jpeg',
+                });
+
+            if (error) throw error;
+
+            await createPhoto.mutateAsync({
+                jobId,
+                photoType,
+                description: description[photoType] || undefined,
+                fileName: file.name,
+                fileType: file.type || 'image/jpeg',
+                fileSize: file.size,
+                storagePath,
+                capturedAt: new Date().toISOString(),
+            });
+
+            setDescription((current) => ({ ...current, [photoType]: '' }));
+        } catch (error) {
+            setUploadingType(null);
+            setUploadError(error instanceof Error ? error.message : 'Failed to upload photo');
+        }
+    };
+
+    return (
+        <section className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="p-4 border-b border-gray-100">
+                <div className="flex items-center gap-3 font-semibold text-gray-900">
+                    <Camera className="h-5 w-5 text-gray-500" />
+                    Job Evidence Photos
+                </div>
+            </div>
+            <div className="p-4 space-y-4">
+                {(['before', 'during', 'after'] as const).map((photoType) => (
+                    <div key={photoType} className="rounded-lg border border-gray-200 p-3 space-y-3">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-bold capitalize text-gray-900">{photoType} photos</h3>
+                            <span className="text-xs text-gray-500">{groupedPhotos[photoType].length}</span>
+                        </div>
+
+                        <textarea
+                            rows={2}
+                            value={description[photoType]}
+                            onChange={(event) => setDescription((current) => ({ ...current, [photoType]: event.target.value }))}
+                            placeholder={`Optional ${photoType} photo note`}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+
+                        <label className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm cursor-pointer">
+                            <Camera className="h-4 w-4" />
+                            {uploadingType === photoType ? 'Uploading...' : `Add ${photoType} photo`}
+                            <input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                className="hidden"
+                                disabled={uploadingType !== null}
+                                onChange={(event) => handleUpload(photoType, event.target.files?.[0])}
+                            />
+                        </label>
+
+                        {groupedPhotos[photoType].length > 0 && (
+                            <div className="space-y-2">
+                                {groupedPhotos[photoType].map((photo) => (
+                                    <div key={photo.id} className="rounded-lg bg-gray-50 border border-gray-100 p-3">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-semibold text-gray-900">{photo.file_name}</p>
+                                                <p className="text-xs text-gray-500">{format(new Date(photo.created_at), 'MMM d, h:mm a')}</p>
+                                                {photo.description && <p className="mt-1 text-xs text-gray-700">{photo.description}</p>}
+                                                {photo.last_error && <p className="mt-1 text-xs text-red-600">{photo.last_error}</p>}
+                                            </div>
+                                            <PhotoStatus photo={photo} retrySync={() => retrySync.mutate({ photoId: photo.id })} />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                ))}
+
+                {uploadError && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                        {uploadError}
+                    </div>
+                )}
+            </div>
+        </section>
+    );
+}
+
+function PhotoStatus({ photo, retrySync }: { photo: JobPhoto; retrySync: () => void }) {
+    if (photo.status === 'stored_in_google_drive' && photo.google_drive_web_view_link) {
+        return (
+            <a
+                href={photo.google_drive_web_view_link}
+                target="_blank"
+                rel="noreferrer"
+                className="flex shrink-0 items-center gap-1 rounded-md bg-green-100 px-2 py-1 text-xs font-semibold text-green-700"
+            >
+                Drive
+                <ExternalLink className="h-3 w-3" />
+            </a>
+        );
+    }
+
+    if (photo.status === 'google_drive_failed') {
+        return (
+            <button
+                type="button"
+                onClick={retrySync}
+                className="flex shrink-0 items-center gap-1 rounded-md bg-red-100 px-2 py-1 text-xs font-semibold text-red-700"
+            >
+                Retry
+                <RefreshCw className="h-3 w-3" />
+            </button>
+        );
+    }
+
+    return (
+        <span className="shrink-0 rounded-md bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-700">
+            {photo.status.replaceAll('_', ' ')}
+        </span>
     );
 }

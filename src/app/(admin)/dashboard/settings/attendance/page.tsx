@@ -10,6 +10,8 @@ type AttendanceSettingsView = {
     start_distance_meters?: number
     start_window_before_minutes?: number
     start_window_after_minutes?: number
+    end_window_before_minutes?: number
+    end_window_after_minutes?: number
     require_location_to_start?: boolean
     require_location_to_complete?: boolean
     max_location_accuracy_meters?: number
@@ -44,8 +46,10 @@ function AttendanceSettingsForm({ attendance }: { attendance: AttendanceSettings
     })
 
     const [startDistanceMeters, setStartDistanceMeters] = useState(attendance.start_distance_meters ?? 250)
-    const [startWindowBeforeMinutes, setStartWindowBeforeMinutes] = useState(attendance.start_window_before_minutes ?? 0)
-    const [startWindowAfterMinutes, setStartWindowAfterMinutes] = useState(attendance.start_window_after_minutes ?? 30)
+    const [startWindowBeforeMinutes, setStartWindowBeforeMinutes] = useState(attendance.start_window_before_minutes ?? 10)
+    const [startWindowAfterMinutes, setStartWindowAfterMinutes] = useState(attendance.start_window_after_minutes ?? 10)
+    const [endWindowBeforeMinutes, setEndWindowBeforeMinutes] = useState(attendance.end_window_before_minutes ?? 10)
+    const [endWindowAfterMinutes, setEndWindowAfterMinutes] = useState(attendance.end_window_after_minutes ?? 10)
     const [requireLocationToStart, setRequireLocationToStart] = useState(attendance.require_location_to_start ?? true)
     const [requireLocationToComplete, setRequireLocationToComplete] = useState(attendance.require_location_to_complete ?? false)
     const [maxLocationAccuracyMeters, setMaxLocationAccuracyMeters] = useState(attendance.max_location_accuracy_meters ?? 100)
@@ -56,6 +60,8 @@ function AttendanceSettingsForm({ attendance }: { attendance: AttendanceSettings
             startDistanceMeters,
             startWindowBeforeMinutes,
             startWindowAfterMinutes,
+            endWindowBeforeMinutes,
+            endWindowAfterMinutes,
             requireLocationToStart,
             requireLocationToComplete,
             maxLocationAccuracyMeters,
@@ -121,8 +127,32 @@ function AttendanceSettingsForm({ attendance }: { attendance: AttendanceSettings
 
                 <div className="p-6 space-y-6">
                     <div>
+                        <h3 className="text-base font-semibold leading-7 text-gray-900">Complete Gate</h3>
+                        <p className="mt-1 text-sm text-gray-500">These controls decide whether a worker can complete a scheduled job.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">
+                        <NumberField
+                            label="Minutes before end"
+                            value={endWindowBeforeMinutes}
+                            min={0}
+                            max={240}
+                            onChange={setEndWindowBeforeMinutes}
+                        />
+                        <NumberField
+                            label="Minutes after end"
+                            value={endWindowAfterMinutes}
+                            min={0}
+                            max={240}
+                            onChange={setEndWindowAfterMinutes}
+                        />
+                    </div>
+                </div>
+
+                <div className="p-6 space-y-6">
+                    <div>
                         <h3 className="text-base font-semibold leading-7 text-gray-900">Location Evidence</h3>
-                        <p className="mt-1 text-sm text-gray-500">Browser GPS accuracy and job-site coordinates are used for the gate.</p>
+                        <p className="mt-1 text-sm text-gray-500">Browser GPS accuracy and job-site coordinates are used for attendance gates.</p>
                     </div>
 
                     <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">

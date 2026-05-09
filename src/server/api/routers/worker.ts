@@ -5,6 +5,7 @@ import type { Context } from "@/server/api/context";
 import {
     calculateDistanceMeters,
     calculatePayableTime,
+    getCompleteGateFailure,
     getStartGateFailure,
     mergeAttendanceSettings,
 } from "@/lib/payroll/attendance";
@@ -625,6 +626,16 @@ export const workerRouter = createTRPCRouter({
                 ? calculateDistanceMeters(workerLocation, siteLocation)
                 : null;
 
+            const completionFailure = getCompleteGateFailure({
+                now: new Date(),
+                scheduledEnd: job.end_time,
+                settings,
+            });
+
+            if (completionFailure) {
+                throw new TRPCError({ code: 'FORBIDDEN', message: completionFailure });
+            }
+
             if (settings.require_location_to_complete && !job.location_override_authorized) {
                 if (!siteLocation) {
                     throw new TRPCError({ code: 'FORBIDDEN', message: 'This job site has no saved coordinates. Ask an admin to update the site location.' });
@@ -634,6 +645,9 @@ export const workerRouter = createTRPCRouter({
                 }
                 if (typeof input.location?.accuracy === 'number' && input.location.accuracy > settings.max_location_accuracy_meters) {
                     throw new TRPCError({ code: 'FORBIDDEN', message: `Location accuracy is ${Math.round(input.location.accuracy)}m. It must be within ${settings.max_location_accuracy_meters}m to complete this job.` });
+                }
+                if (typeof distanceMeters === 'number' && distanceMeters > settings.start_distance_meters) {
+                    throw new TRPCError({ code: 'FORBIDDEN', message: `You are ${Math.round(distanceMeters)}m from the job site. You must be within ${settings.start_distance_meters}m to complete this job.` });
                 }
             }
 

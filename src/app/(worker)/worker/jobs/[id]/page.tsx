@@ -100,6 +100,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     const toggleSection = (section: string) => {
         setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
     };
+    const handleSectionToggle = (section: string) => (event: React.MouseEvent<HTMLElement>) => {
+        event.preventDefault();
+        toggleSection(section);
+    };
 
     if (isLoading) return <div className="p-8 text-center text-gray-500">Loading job details...</div>;
     if (error || !job) return <div className="p-8 text-center text-red-500">Job not found or access denied.</div>;
@@ -187,9 +191,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 {/* Schedule Accordion */}
                 <details className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
                     open={openSections.schedule}
-                    onClick={(e) => { e.preventDefault(); toggleSection('schedule'); }}
                 >
-                    <summary className="flex items-center justify-between p-4 cursor-pointer list-none">
+                    <summary
+                        className="flex items-center justify-between p-4 cursor-pointer list-none"
+                        onClick={handleSectionToggle('schedule')}
+                    >
                         <div className="flex items-center gap-3 font-semibold text-gray-900">
                             <Clock className="h-5 w-5 text-gray-500" />
                             Schedule
@@ -209,9 +215,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 {/* Property Info Accordion */}
                 <details className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
                     open={openSections.property}
-                    onClick={(e) => { e.preventDefault(); toggleSection('property'); }}
                 >
-                    <summary className="flex items-center justify-between p-4 cursor-pointer list-none">
+                    <summary
+                        className="flex items-center justify-between p-4 cursor-pointer list-none"
+                        onClick={handleSectionToggle('property')}
+                    >
                         <div className="flex items-center gap-3 font-semibold text-gray-900">
                             <Home className="h-5 w-5 text-gray-500" />
                             Property Information
@@ -271,9 +279,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 {/* Access Info */}
                 <details className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
                     open={openSections.access}
-                    onClick={(e) => { e.preventDefault(); toggleSection('access'); }}
                 >
-                    <summary className="flex items-center justify-between p-4 cursor-pointer list-none">
+                    <summary
+                        className="flex items-center justify-between p-4 cursor-pointer list-none"
+                        onClick={handleSectionToggle('access')}
+                    >
                         <div className="flex items-center gap-3 font-semibold text-gray-900">
                             <Key className="h-5 w-5 text-gray-500" />
                             Access Information
@@ -290,9 +300,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 {/* Customer Info */}
                 <details className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
                     open={openSections.customer}
-                    onClick={(e) => { e.preventDefault(); toggleSection('customer'); }}
                 >
-                    <summary className="flex items-center justify-between p-4 cursor-pointer list-none">
+                    <summary
+                        className="flex items-center justify-between p-4 cursor-pointer list-none"
+                        onClick={handleSectionToggle('customer')}
+                    >
                         <div className="flex items-center gap-3 font-semibold text-gray-900">
                             <User className="h-5 w-5 text-gray-500" />
                             Customer Information
@@ -312,9 +324,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 {job.job_checklists && job.job_checklists.length > 0 && (
                     <details className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
                         open={openSections.checklists}
-                        onClick={(e) => { e.preventDefault(); toggleSection('checklists'); }}
                     >
-                        <summary className="flex items-center justify-between p-4 cursor-pointer list-none">
+                        <summary
+                            className="flex items-center justify-between p-4 cursor-pointer list-none"
+                            onClick={handleSectionToggle('checklists')}
+                        >
                             <div className="flex items-center gap-3 font-semibold text-gray-900">
                                 <ClipboardList className="h-5 w-5 text-gray-500" />
                                 Checklists
@@ -380,9 +394,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
                 <details className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
                     open={openSections.maintenance}
-                    onClick={(e) => { e.preventDefault(); toggleSection('maintenance'); }}
                 >
-                    <summary className="flex items-center justify-between p-4 cursor-pointer list-none">
+                    <summary
+                        className="flex items-center justify-between p-4 cursor-pointer list-none"
+                        onClick={handleSectionToggle('maintenance')}
+                    >
                         <div className="flex items-center gap-3 font-semibold text-gray-900">
                             <Wrench className="h-5 w-5 text-gray-500" />
                             Maintenance Issues
@@ -422,9 +438,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                 {/* Job Notes */}
                 <details className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
                     open={openSections.notes}
-                    onClick={(e) => { e.preventDefault(); toggleSection('notes'); }}
                 >
-                    <summary className="flex items-center justify-between p-4 cursor-pointer list-none">
+                    <summary
+                        className="flex items-center justify-between p-4 cursor-pointer list-none"
+                        onClick={handleSectionToggle('notes')}
+                    >
                         <div className="flex items-center gap-3 font-semibold text-gray-900">
                             <FileText className="h-5 w-5 text-gray-500" />
                             Job Notes

@@ -2,6 +2,8 @@ export type AttendanceSettings = {
     start_distance_meters: number
     start_window_before_minutes: number
     start_window_after_minutes: number
+    end_window_before_minutes: number
+    end_window_after_minutes: number
     require_location_to_start: boolean
     require_location_to_complete: boolean
     max_location_accuracy_meters: number
@@ -10,8 +12,10 @@ export type AttendanceSettings = {
 
 export const defaultAttendanceSettings: AttendanceSettings = {
     start_distance_meters: 250,
-    start_window_before_minutes: 0,
-    start_window_after_minutes: 30,
+    start_window_before_minutes: 10,
+    start_window_after_minutes: 10,
+    end_window_before_minutes: 10,
+    end_window_after_minutes: 10,
     require_location_to_start: true,
     require_location_to_complete: false,
     max_location_accuracy_meters: 100,
@@ -27,6 +31,8 @@ export function mergeAttendanceSettings(settings: unknown): AttendanceSettings {
         start_distance_meters: toPositiveNumber(raw.start_distance_meters, defaultAttendanceSettings.start_distance_meters),
         start_window_before_minutes: toNonNegativeNumber(raw.start_window_before_minutes, defaultAttendanceSettings.start_window_before_minutes),
         start_window_after_minutes: toNonNegativeNumber(raw.start_window_after_minutes, defaultAttendanceSettings.start_window_after_minutes),
+        end_window_before_minutes: toNonNegativeNumber(raw.end_window_before_minutes, defaultAttendanceSettings.end_window_before_minutes),
+        end_window_after_minutes: toNonNegativeNumber(raw.end_window_after_minutes, defaultAttendanceSettings.end_window_after_minutes),
         max_location_accuracy_meters: toPositiveNumber(raw.max_location_accuracy_meters, defaultAttendanceSettings.max_location_accuracy_meters),
         require_location_to_start: raw.require_location_to_start ?? defaultAttendanceSettings.require_location_to_start,
         require_location_to_complete: raw.require_location_to_complete ?? defaultAttendanceSettings.require_location_to_complete,
@@ -150,6 +156,30 @@ export function getStartGateFailure(input: {
         if (typeof input.distanceMeters === 'number' && input.distanceMeters > input.settings.start_distance_meters) {
             return `You are ${Math.round(input.distanceMeters)}m from the job site. You must be within ${input.settings.start_distance_meters}m to start this job.`
         }
+    }
+
+    return null
+}
+
+export function getCompleteGateFailure(input: {
+    now: Date
+    scheduledEnd?: string | Date | null
+    settings: AttendanceSettings
+}) {
+    const scheduledEnd = toDate(input.scheduledEnd)
+
+    // Some legacy jobs may not have an explicit end time.
+    if (!scheduledEnd) return null
+
+    const earliestComplete = new Date(scheduledEnd.getTime() - input.settings.end_window_before_minutes * 60000)
+    const latestComplete = new Date(scheduledEnd.getTime() + input.settings.end_window_after_minutes * 60000)
+
+    if (input.now.getTime() < earliestComplete.getTime()) {
+        return `This job can be completed from ${formatGateTime(earliestComplete)}.`
+    }
+
+    if (input.now.getTime() > latestComplete.getTime()) {
+        return `This job completion window closed at ${formatGateTime(latestComplete)}. Ask an admin to review or adjust the job.`
     }
 
     return null

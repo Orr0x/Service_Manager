@@ -61,3 +61,64 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - **API**: tRPC
 - **Styling**: Tailwind CSS
 - **Icons**: Lucide React
+
+
+## Local Development on Ubuntu Linux
+
+### 1) Install prerequisites
+
+```bash
+sudo apt update
+sudo apt install -y build-essential ca-certificates curl git
+```
+
+Install Node.js 20 LTS (recommended):
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+node -v
+npm -v
+```
+
+### 2) Create your local environment file
+
+This repository includes `.env.example` with placeholders only. Create `.env.local` manually:
+
+```bash
+cp .env.example .env.local
+```
+
+Then open `.env.local` and replace placeholder values with your own values from:
+
+- **Vercel Project Settings → Environment Variables** (for app/runtime values)
+- **Supabase Project Settings → API / Database** (for Supabase URL, anon key, service role key, and DB connection string)
+
+> Important: never commit `.env.local` and never paste secret values into source-controlled files.
+
+### 3) Validate your environment safely
+
+Run:
+
+```bash
+npm run check-env
+```
+
+This command only checks whether required variables are present; it does **not** print secret values.
+
+### 4) Install dependencies and run locally
+
+```bash
+npm install
+npm run dev
+```
+
+Open http://localhost:3000
+
+### 5) Optional quality checks before opening a PR
+
+```bash
+npm run lint
+npm run type-check
+npm run build
+```

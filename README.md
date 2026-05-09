@@ -92,7 +92,7 @@ cp .env.example .env.local
 Then open `.env.local` and replace placeholder values with your own values from:
 
 - **Vercel Project Settings → Environment Variables** (for app/runtime values)
-- **Supabase Project Settings → API / Database** (for Supabase URL, anon key, service role key, and DB connection string)
+- **Supabase Project Settings → API / Database** (for Supabase URL, publishable/anon key, service role key, and DB connection string)
 
 > Important: never commit `.env.local` and never paste secret values into source-controlled files.
 

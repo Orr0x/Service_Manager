@@ -1,11 +1,33 @@
 'use client';
 
-import { ArrowLeft, Clock, MapPin, Home, Key, User, Wrench, FileText, ChevronDown, Navigation, AlertTriangle, Play, ClipboardList, CheckSquare, Square } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, Home, Key, User, Wrench, FileText, ChevronDown, Navigation, Play, ClipboardList, CheckSquare, Square } from "lucide-react";
 import Link from 'next/link';
 import { api } from "@/trpc/react";
 import { use, useState } from "react";
 import { format } from 'date-fns';
 import { ReportIssueModal } from "@/components/report-issue-modal";
+
+type ChecklistItem = {
+    text?: string;
+    isCompleted?: boolean;
+}
+
+type JobChecklist = {
+    id: string;
+    items?: ChecklistItem[] | null;
+    checklists?: {
+        name?: string | null;
+        items?: ChecklistItem[] | null;
+    } | null;
+}
+
+type WorkerReport = {
+    id: string;
+    title?: string | null;
+    description?: string | null;
+    status?: string | null;
+    created_at: string;
+}
 
 export default function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
@@ -15,6 +37,24 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         onSuccess: () => {
             utils.worker.getJobDetails.invalidate({ jobId: id });
         }
+    });
+    const startJob = api.worker.startJob.useMutation({
+        onSuccess: () => {
+            setActionError(null);
+            utils.worker.getJobDetails.invalidate({ jobId: id });
+        },
+        onError: (mutationError) => {
+            setActionError(mutationError.message);
+        },
+    });
+    const completeJob = api.worker.completeJob.useMutation({
+        onSuccess: () => {
+            setActionError(null);
+            utils.worker.getJobDetails.invalidate({ jobId: id });
+        },
+        onError: (mutationError) => {
+            setActionError(mutationError.message);
+        },
     });
 
     // Accordion states
@@ -31,6 +71,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     });
 
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+    const [actionError, setActionError] = useState<string | null>(null);
 
     const toggleSection = (section: string) => {
         setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -49,8 +90,47 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         ? { lat: job.job_sites.latitude, lng: job.job_sites.longitude }
         : null;
 
+    const getCurrentLocation = async () => {
+        if (!navigator.geolocation) return undefined;
+
+        try {
+            const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 30000,
+                });
+            });
+
+            return {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+            };
+        } catch {
+            return undefined;
+        }
+    };
+
+    const handlePrimaryAction = async () => {
+        setActionError(null);
+        const location = await getCurrentLocation();
+
+        try {
+            if (job.status === 'in_progress') {
+                await completeJob.mutateAsync({ jobId: id, location });
+            } else {
+                await startJob.mutateAsync({ jobId: id, location });
+            }
+        } catch {
+            // The mutation onError handlers surface the server reason in the UI.
+        }
+    };
+
+    const isActionPending = startJob.isPending || completeJob.isPending;
+
     return (
-        <div className="bg-gray-50 min-h-screen pb-24">
+        <div className="bg-gray-50 min-h-screen pb-[calc(11rem+var(--impersonation-banner-offset,0px))]">
             {/* Page Header */}
             <div className="bg-white px-4 py-3 border-b border-gray-200 flex items-center justify-between sticky top-0 z-10">
                 <div className="flex items-center gap-3">
@@ -212,7 +292,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                         </summary>
                         {openSections.checklists && (
                             <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-4">
-                                {job.job_checklists.map((checklist: any) => {
+                                {(job.job_checklists as JobChecklist[]).map((checklist) => {
                                     const displayItems = (checklist.items && checklist.items.length > 0)
                                         ? checklist.items
                                         : checklist.checklists?.items || [];
@@ -223,7 +303,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                                                 {checklist.checklists?.name || 'Checklist'}
                                             </h4>
                                             <div className="space-y-2 pl-1">
-                                                {displayItems.map((item: any, idx: number) => (
+                                                {displayItems.map((item, idx) => (
                                                     <div key={idx} className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
                                                         onClick={async (e) => {
                                                             e.stopPropagation();
@@ -278,7 +358,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     {openSections.maintenance && (
                         <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3">
                             {job.worker_reports && job.worker_reports.length > 0 ? (
-                                job.worker_reports.map((report: any) => (
+                                (job.worker_reports as WorkerReport[]).map((report) => (
                                     <div key={report.id} className="bg-orange-50 rounded-lg p-3 border border-orange-100">
                                         <div className="flex justify-between items-start mb-1">
                                             <h4 className="font-semibold text-gray-900 text-sm">{report.title}</h4>
@@ -325,7 +405,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             </div>
 
             {/* Fixed Bottom Action Bar */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 pb-6 flex flex-col gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
+            <div
+                className="fixed left-0 right-0 bg-white border-t border-gray-200 p-4 pb-6 flex flex-col gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20"
+                style={{ bottom: 'var(--impersonation-banner-offset, 0px)' }}
+            >
                 <button
                     onClick={() => setIsReportModalOpen(true)}
                     className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-sm transition-colors"
@@ -333,10 +416,19 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     <Wrench className="h-5 w-5" />
                     Report Maintenance Issue
                 </button>
+                {actionError && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                        {actionError}
+                    </div>
+                )}
                 {job.status !== 'completed' && (
-                    <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-sm transition-colors">
+                    <button
+                        onClick={handlePrimaryAction}
+                        disabled={isActionPending}
+                        className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:hover:bg-blue-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-sm transition-colors"
+                    >
                         <Play className="h-5 w-5 fill-current" />
-                        {job.status === 'in_progress' ? 'Complete Job' : 'Start Job'}
+                        {isActionPending ? 'Checking...' : job.status === 'in_progress' ? 'Complete Job' : 'Start Job'}
                     </button>
                 )}
             </div>

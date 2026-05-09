@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Palette, Layout, Type, Settings, Users, Wrench } from 'lucide-react'
+import { Palette, Layout, Type, Users, Wrench, Timer } from 'lucide-react'
 
 const settingsSections = [
     {
@@ -31,6 +31,12 @@ const settingsSections = [
         description: 'Configure service categories and defaults.',
         href: '/dashboard/settings/services',
         icon: Wrench,
+    },
+    {
+        title: 'Attendance & Payroll',
+        description: 'Manage start gates, location tolerance, and payroll rules.',
+        href: '/dashboard/settings/attendance',
+        icon: Timer,
     },
 ]
 

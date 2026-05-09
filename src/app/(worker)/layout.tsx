@@ -1,7 +1,5 @@
 import { Inter } from "next/font/google";
-import Link from "next/link";
 import { WorkerHeader } from "@/components/worker-header";
-import { ImpersonationBanner } from "@/components/impersonation-banner";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { AppConfigProvider } from "@/components/providers/app-config-provider";
@@ -47,8 +45,6 @@ export default async function WorkerLayout({
                 <main className="flex-1">
                     {children}
                 </main>
-
-                <ImpersonationBanner />
             </div>
         </AppConfigProvider>
     );

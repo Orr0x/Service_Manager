@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '../trpc'
 import { TRPCError } from '@trpc/server'
 import { logActivity } from './utils/activity'
+import { calculatePayableTime } from '@/lib/payroll/attendance'
 
 export const jobsRouter = createTRPCRouter({
     getAll: protectedProcedure
@@ -439,7 +440,7 @@ export const jobsRouter = createTRPCRouter({
                     priority: input.priority || 'normal',
                     start_time: input.startTime,
                     end_time: input.endTime,
-                    status: input.startTime ? 'Scheduled' : 'draft',
+                    status: input.startTime ? 'scheduled' : 'draft',
                 })
                 .select()
                 .single()
@@ -589,6 +590,116 @@ export const jobsRouter = createTRPCRouter({
                 details: {
                     status: input.status,
                     title: input.title
+                },
+                db: ctx.db
+            })
+
+            return data
+        }),
+
+    updatePayrollAdjustment: protectedProcedure
+        .input(z.object({
+            id: z.string().uuid(),
+            earlyStartAuthorized: z.boolean(),
+            lateStartAuthorized: z.boolean(),
+            lateFinishAuthorized: z.boolean(),
+            locationOverrideAuthorized: z.boolean(),
+            notes: z.string().optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const { data: job, error: jobError } = await ctx.db
+                .from('jobs')
+                .select(`
+                    id,
+                    tenant_id,
+                    start_time,
+                    end_time,
+                    actual_start_time,
+                    actual_end_time,
+                    payable_start_time,
+                    payable_end_time,
+                    payable_minutes,
+                    early_start_authorized,
+                    late_start_authorized,
+                    late_finish_authorized,
+                    location_override_authorized,
+                    payroll_adjustment_notes
+                `)
+                .eq('id', input.id)
+                .eq('tenant_id', ctx.tenantId)
+                .single()
+
+            if (jobError || !job) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: 'Job not found' })
+            }
+
+            const payable = calculatePayableTime({
+                scheduledStart: job.start_time,
+                scheduledEnd: job.end_time,
+                actualStart: job.actual_start_time,
+                actualEnd: job.actual_end_time,
+                earlyStartAuthorized: input.earlyStartAuthorized,
+                lateStartAuthorized: input.lateStartAuthorized,
+                lateFinishAuthorized: input.lateFinishAuthorized,
+            })
+
+            const newValues = {
+                early_start_authorized: input.earlyStartAuthorized,
+                late_start_authorized: input.lateStartAuthorized,
+                late_finish_authorized: input.lateFinishAuthorized,
+                location_override_authorized: input.locationOverrideAuthorized,
+                payroll_adjustment_notes: input.notes || null,
+                payable_start_time: payable.payableStart?.toISOString() || null,
+                payable_end_time: payable.payableEnd?.toISOString() || null,
+                payable_minutes: payable.payableMinutes,
+            }
+
+            const { data, error } = await ctx.db
+                .from('jobs')
+                .update({
+                    ...newValues,
+                    payroll_adjusted_by: ctx.user.id,
+                    payroll_adjusted_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', input.id)
+                .eq('tenant_id', ctx.tenantId)
+                .select()
+                .single()
+
+            if (error) {
+                throw new Error(`Failed to update payroll adjustment: ${error.message}`)
+            }
+
+            await ctx.db
+                .from('job_payroll_adjustments')
+                .insert({
+                    tenant_id: ctx.tenantId,
+                    job_id: input.id,
+                    adjusted_by: ctx.user.id,
+                    previous_values: {
+                        early_start_authorized: job.early_start_authorized,
+                        late_start_authorized: job.late_start_authorized,
+                        late_finish_authorized: job.late_finish_authorized,
+                        location_override_authorized: job.location_override_authorized,
+                        payroll_adjustment_notes: job.payroll_adjustment_notes,
+                        payable_start_time: job.payable_start_time,
+                        payable_end_time: job.payable_end_time,
+                        payable_minutes: job.payable_minutes,
+                    },
+                    new_values: newValues,
+                    notes: input.notes || null,
+                })
+
+            await logActivity({
+                tenantId: ctx.tenantId,
+                actorId: ctx.user.id,
+                actionType: 'updated',
+                entityType: 'job',
+                entityId: input.id,
+                details: {
+                    update_type: 'payroll_adjustment',
+                    ...newValues,
                 },
                 db: ctx.db
             })

@@ -3,18 +3,43 @@
 import { useImpersonationStore } from '@/lib/store/impersonation'
 import { LogOut } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef } from 'react'
 
 export function ImpersonationBanner() {
     const { impersonatedUserId, impersonatedEntityId, impersonatedName, impersonatedRole, stopImpersonation, isDesignMode, toggleDesignMode } = useImpersonationStore()
     const router = useRouter()
-    const [mounted, setMounted] = useState(false)
+    const bannerRef = useRef<HTMLDivElement>(null)
+
+    const isImpersonating = !!impersonatedUserId || !!impersonatedEntityId
 
     useEffect(() => {
-        setMounted(true)
-    }, [])
+        if (!isImpersonating) {
+            document.documentElement.classList.remove('has-impersonation-banner')
+            document.documentElement.style.removeProperty('--impersonation-banner-offset')
+            return
+        }
 
-    if (!mounted || (!impersonatedUserId && !impersonatedEntityId)) return null
+        const updateBannerOffset = () => {
+            const height = bannerRef.current?.offsetHeight ?? 0
+            document.documentElement.classList.add('has-impersonation-banner')
+            document.documentElement.style.setProperty('--impersonation-banner-offset', `${height}px`)
+        }
+
+        updateBannerOffset()
+
+        const resizeObserver = new ResizeObserver(updateBannerOffset)
+        if (bannerRef.current) resizeObserver.observe(bannerRef.current)
+        window.addEventListener('resize', updateBannerOffset)
+
+        return () => {
+            resizeObserver.disconnect()
+            window.removeEventListener('resize', updateBannerOffset)
+            document.documentElement.classList.remove('has-impersonation-banner')
+            document.documentElement.style.removeProperty('--impersonation-banner-offset')
+        }
+    }, [isImpersonating, impersonatedName, impersonatedRole])
+
+    if (!isImpersonating) return null
 
     const handleExit = () => {
         stopImpersonation()
@@ -23,7 +48,7 @@ export function ImpersonationBanner() {
     }
 
     return (
-        <div className="fixed bottom-0 left-0 z-50 w-full bg-red-600 px-4 py-3 text-white shadow-lg sm:px-6 lg:px-8">
+        <div ref={bannerRef} className="fixed bottom-0 left-0 z-50 w-full bg-red-600 px-4 py-3 text-white shadow-lg sm:px-6 lg:px-8">
             <div className="flex flex-col items-center justify-between gap-2 sm:flex-row">
                 <div className="flex items-center gap-2 text-sm font-medium">
                     <span className="rounded-full bg-red-800 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-red-100">

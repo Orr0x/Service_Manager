@@ -19,7 +19,8 @@ import {
     Clock,
     Award,
     Activity,
-    Download
+    Download,
+    ShieldCheck
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -96,6 +97,7 @@ export function JobDetail({ id }: { id: string }) {
         { id: 'attachments', name: 'Attachments', icon: Paperclip },
         { id: 'notes', name: 'Notes', icon: StickyNote },
         { id: 'financials', name: `Financials (${(job.invoices?.length || 0) + (job.customers?.contracts?.length || 0) + (job.customers?.quotes?.length || 0)})`, icon: Receipt },
+        { id: 'payroll', name: 'Payroll', icon: ShieldCheck },
         { id: 'certification', name: 'Certification', icon: Award },
         { id: 'activity', name: 'Activity', icon: Activity },
     ]
@@ -502,6 +504,14 @@ export function JobDetail({ id }: { id: string }) {
                     </div>
                 )}
 
+                {activeTab === 'payroll' && (
+                    <PayrollReview
+                        key={`${job.id}-${job.payroll_adjusted_at || job.updated_at || ''}`}
+                        job={job}
+                        onUpdated={() => utils.jobs.getById.invalidate(id)}
+                    />
+                )}
+
                 {activeTab === 'certification' && (
                     <div className="space-y-6">
                         <CertificationManager entityType="job" entityId={job.id} />
@@ -516,5 +526,166 @@ export function JobDetail({ id }: { id: string }) {
                 )}
             </div>
         </div>
+    )
+}
+
+type PayrollJob = {
+    id: string
+    start_time?: string | null
+    end_time?: string | null
+    actual_start_time?: string | null
+    actual_end_time?: string | null
+    payable_start_time?: string | null
+    payable_end_time?: string | null
+    payable_minutes?: number | null
+    start_distance_meters?: number | null
+    early_start_authorized?: boolean | null
+    late_start_authorized?: boolean | null
+    late_finish_authorized?: boolean | null
+    location_override_authorized?: boolean | null
+    payroll_adjustment_notes?: string | null
+}
+
+function PayrollReview({ job, onUpdated }: { job: PayrollJob; onUpdated: () => void }) {
+    const [earlyStartAuthorized, setEarlyStartAuthorized] = useState(job.early_start_authorized ?? false)
+    const [lateStartAuthorized, setLateStartAuthorized] = useState(job.late_start_authorized ?? false)
+    const [lateFinishAuthorized, setLateFinishAuthorized] = useState(job.late_finish_authorized ?? false)
+    const [locationOverrideAuthorized, setLocationOverrideAuthorized] = useState(job.location_override_authorized ?? false)
+    const [payrollNotes, setPayrollNotes] = useState(job.payroll_adjustment_notes || '')
+
+    const updatePayrollAdjustment = api.jobs.updatePayrollAdjustment.useMutation({
+        onSuccess: () => {
+            onUpdated()
+            alert('Payroll adjustment saved.')
+        }
+    })
+
+    const handlePayrollSave = () => {
+        updatePayrollAdjustment.mutate({
+            id: job.id,
+            earlyStartAuthorized,
+            lateStartAuthorized,
+            lateFinishAuthorized,
+            locationOverrideAuthorized,
+            notes: payrollNotes,
+        })
+    }
+
+    return (
+        <div className="space-y-6">
+            <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
+                <div className="flex items-start justify-between gap-4">
+                    <div>
+                        <h3 className="text-base font-semibold leading-7 text-gray-900 flex items-center">
+                            <ShieldCheck className="mr-2 h-5 w-5 text-blue-500" />
+                            Attendance & Payroll Review
+                        </h3>
+                        <p className="mt-1 text-sm text-gray-500">Actual times are kept as evidence. Payable times are recalculated from the authorisations below.</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={handlePayrollSave}
+                        disabled={updatePayrollAdjustment.isPending}
+                        className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50"
+                    >
+                        {updatePayrollAdjustment.isPending ? 'Saving...' : 'Save Review'}
+                    </button>
+                </div>
+
+                <dl className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <PayrollMetric label="Scheduled Start" value={formatPayrollDateTime(job.start_time)} />
+                    <PayrollMetric label="Actual Start" value={formatPayrollDateTime(job.actual_start_time)} />
+                    <PayrollMetric label="Scheduled End" value={formatPayrollDateTime(job.end_time)} />
+                    <PayrollMetric label="Actual End" value={formatPayrollDateTime(job.actual_end_time)} />
+                    <PayrollMetric label="Payable Start" value={formatPayrollDateTime(job.payable_start_time)} />
+                    <PayrollMetric label="Payable End" value={formatPayrollDateTime(job.payable_end_time)} />
+                    <PayrollMetric label="Payable Duration" value={formatPayrollMinutes(job.payable_minutes)} />
+                    <PayrollMetric label="Start Distance" value={typeof job.start_distance_meters === 'number' ? `${Math.round(job.start_distance_meters)}m` : '-'} />
+                </dl>
+            </div>
+
+            <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6 space-y-5">
+                <div>
+                    <h3 className="text-base font-semibold leading-7 text-gray-900">Authorisations</h3>
+                    <p className="mt-1 text-sm text-gray-500">These choices control payable time, not the recorded actual attendance.</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <PayrollToggle
+                        label="Pay early start from actual start"
+                        checked={earlyStartAuthorized}
+                        onChange={setEarlyStartAuthorized}
+                    />
+                    <PayrollToggle
+                        label="Pay late start from scheduled start"
+                        checked={lateStartAuthorized}
+                        onChange={setLateStartAuthorized}
+                    />
+                    <PayrollToggle
+                        label="Pay late finish through actual finish"
+                        checked={lateFinishAuthorized}
+                        onChange={setLateFinishAuthorized}
+                    />
+                    <PayrollToggle
+                        label="Authorise location override"
+                        checked={locationOverrideAuthorized}
+                        onChange={setLocationOverrideAuthorized}
+                    />
+                </div>
+
+                <label className="block">
+                    <span className="block text-sm font-medium text-gray-900">Payroll notes</span>
+                    <textarea
+                        value={payrollNotes}
+                        onChange={(event) => setPayrollNotes(event.target.value)}
+                        rows={4}
+                        className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                        placeholder="Reason for authorisation or adjustment"
+                    />
+                </label>
+            </div>
+        </div>
+    )
+}
+
+function formatPayrollDateTime(value?: string | null) {
+    return value ? format(new Date(value), 'MMM d, yyyy h:mm a') : '-'
+}
+
+function formatPayrollMinutes(value?: number | null) {
+    if (!value) return '-'
+    const hours = Math.floor(value / 60)
+    const minutes = value % 60
+    return `${hours}h ${minutes}m`
+}
+
+function PayrollMetric({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <dt className="text-xs font-medium uppercase text-gray-500">{label}</dt>
+            <dd className="mt-1 text-sm font-semibold text-gray-900">{value}</dd>
+        </div>
+    )
+}
+
+function PayrollToggle({
+    label,
+    checked,
+    onChange,
+}: {
+    label: string
+    checked: boolean
+    onChange: (checked: boolean) => void
+}) {
+    return (
+        <label className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 px-4 py-3">
+            <span className="text-sm font-medium text-gray-900">{label}</span>
+            <input
+                type="checkbox"
+                checked={checked}
+                onChange={(event) => onChange(event.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600"
+            />
+        </label>
     )
 }

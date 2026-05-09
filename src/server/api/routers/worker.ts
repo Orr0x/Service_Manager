@@ -1,6 +1,38 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { TRPCError } from "@trpc/server";
+import type { Context } from "@/server/api/context";
+import {
+    calculateDistanceMeters,
+    calculatePayableTime,
+    getStartGateFailure,
+    mergeAttendanceSettings,
+} from "@/lib/payroll/attendance";
+
+const locationInput = z.object({
+    latitude: z.number().min(-90).max(90).optional(),
+    longitude: z.number().min(-180).max(180).optional(),
+    accuracy: z.number().min(0).optional(),
+});
+
+type WorkerContext = Context & {
+    user: NonNullable<Context['user']>
+    tenantId: string
+}
+
+async function getWorkerId(ctx: WorkerContext) {
+    if (ctx.impersonatedEntity?.type === 'worker' || ctx.impersonatedEntity?.type === 'contractor') {
+        return ctx.impersonatedEntity.id as string;
+    }
+
+    const { data: worker } = await ctx.db
+        .from('workers')
+        .select('id')
+        .eq('user_id', ctx.user.id)
+        .single();
+
+    return worker?.id as string | undefined;
+}
 
 export const workerRouter = createTRPCRouter({
     // Helper: Get Worker Profile ID from Auth ID
@@ -388,6 +420,262 @@ export const workerRouter = createTRPCRouter({
                 .single();
 
             return job;
+        }),
+
+    startJob: protectedProcedure
+        .input(z.object({
+            jobId: z.string().uuid(),
+            location: locationInput.optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const workerId = await getWorkerId(ctx);
+            if (!workerId) throw new TRPCError({ code: 'UNAUTHORIZED' });
+
+            const { data: assignment } = await ctx.db
+                .from('job_assignments')
+                .select('id')
+                .eq('worker_id', workerId)
+                .eq('job_id', input.jobId)
+                .single();
+
+            if (!assignment) {
+                throw new TRPCError({ code: 'FORBIDDEN', message: 'Not assigned to this job' });
+            }
+
+            const { data: job, error: jobError } = await ctx.db
+                .from('jobs')
+                .select(`
+                    id,
+                    tenant_id,
+                    status,
+                    start_time,
+                    end_time,
+                    actual_start_time,
+                    actual_end_time,
+                    early_start_authorized,
+                    late_start_authorized,
+                    late_finish_authorized,
+                    location_override_authorized,
+                    job_sites (
+                        latitude,
+                        longitude
+                    )
+                `)
+                .eq('id', input.jobId)
+                .eq('tenant_id', ctx.tenantId)
+                .single();
+
+            if (jobError || !job) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: 'Job not found' });
+            }
+
+            if (job.status === 'completed') {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: 'This job is already completed.' });
+            }
+
+            if (job.status === 'in_progress' || job.actual_start_time) {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: 'This job has already been started.' });
+            }
+
+            const { data: settingsRow } = await ctx.db
+                .from('tenant_settings')
+                .select('attendance_settings')
+                .eq('tenant_id', ctx.tenantId)
+                .single();
+
+            const settings = mergeAttendanceSettings(settingsRow?.attendance_settings);
+            const site = Array.isArray(job.job_sites) ? job.job_sites[0] : job.job_sites;
+            const workerLocation = input.location?.latitude !== undefined && input.location.longitude !== undefined
+                ? { latitude: input.location.latitude, longitude: input.location.longitude }
+                : null;
+            const siteLocation = typeof site?.latitude === 'number' && typeof site?.longitude === 'number'
+                ? { latitude: site.latitude, longitude: site.longitude }
+                : null;
+            const distanceMeters = workerLocation && siteLocation
+                ? calculateDistanceMeters(workerLocation, siteLocation)
+                : null;
+
+            const failure = getStartGateFailure({
+                now: new Date(),
+                scheduledStart: job.start_time,
+                settings,
+                distanceMeters,
+                accuracyMeters: input.location?.accuracy,
+                hasWorkerLocation: !!workerLocation,
+                hasSiteLocation: !!siteLocation,
+                locationOverrideAuthorized: job.location_override_authorized,
+            });
+
+            if (failure) {
+                throw new TRPCError({ code: 'FORBIDDEN', message: failure });
+            }
+
+            const actualStart = new Date();
+            const payable = calculatePayableTime({
+                scheduledStart: job.start_time,
+                scheduledEnd: job.end_time,
+                actualStart,
+                actualEnd: job.actual_end_time,
+                earlyStartAuthorized: job.early_start_authorized,
+                lateStartAuthorized: job.late_start_authorized,
+                lateFinishAuthorized: job.late_finish_authorized,
+            });
+
+            const { data: updatedJob, error: updateError } = await ctx.db
+                .from('jobs')
+                .update({
+                    status: 'in_progress',
+                    actual_start_time: actualStart.toISOString(),
+                    payable_start_time: payable.payableStart?.toISOString() || null,
+                    payable_end_time: payable.payableEnd?.toISOString() || null,
+                    payable_minutes: payable.payableMinutes,
+                    start_latitude: input.location?.latitude ?? null,
+                    start_longitude: input.location?.longitude ?? null,
+                    start_location_accuracy_meters: input.location?.accuracy ?? null,
+                    start_distance_meters: distanceMeters,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', input.jobId)
+                .eq('tenant_id', ctx.tenantId)
+                .select()
+                .single();
+
+            if (updateError) {
+                throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: updateError.message });
+            }
+
+            await ctx.db
+                .from('job_assignments')
+                .update({ status: 'in_progress' })
+                .eq('id', assignment.id);
+
+            return updatedJob;
+        }),
+
+    completeJob: protectedProcedure
+        .input(z.object({
+            jobId: z.string().uuid(),
+            location: locationInput.optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const workerId = await getWorkerId(ctx);
+            if (!workerId) throw new TRPCError({ code: 'UNAUTHORIZED' });
+
+            const { data: assignment } = await ctx.db
+                .from('job_assignments')
+                .select('id')
+                .eq('worker_id', workerId)
+                .eq('job_id', input.jobId)
+                .single();
+
+            if (!assignment) {
+                throw new TRPCError({ code: 'FORBIDDEN', message: 'Not assigned to this job' });
+            }
+
+            const { data: job, error: jobError } = await ctx.db
+                .from('jobs')
+                .select(`
+                    id,
+                    tenant_id,
+                    status,
+                    start_time,
+                    end_time,
+                    actual_start_time,
+                    early_start_authorized,
+                    late_start_authorized,
+                    late_finish_authorized,
+                    location_override_authorized,
+                    job_sites (
+                        latitude,
+                        longitude
+                    )
+                `)
+                .eq('id', input.jobId)
+                .eq('tenant_id', ctx.tenantId)
+                .single();
+
+            if (jobError || !job) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: 'Job not found' });
+            }
+
+            if (job.status === 'completed') {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: 'This job is already completed.' });
+            }
+
+            if (!job.actual_start_time) {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: 'This job must be started before it can be completed.' });
+            }
+
+            const { data: settingsRow } = await ctx.db
+                .from('tenant_settings')
+                .select('attendance_settings')
+                .eq('tenant_id', ctx.tenantId)
+                .single();
+
+            const settings = mergeAttendanceSettings(settingsRow?.attendance_settings);
+            const site = Array.isArray(job.job_sites) ? job.job_sites[0] : job.job_sites;
+            const workerLocation = input.location?.latitude !== undefined && input.location.longitude !== undefined
+                ? { latitude: input.location.latitude, longitude: input.location.longitude }
+                : null;
+            const siteLocation = typeof site?.latitude === 'number' && typeof site?.longitude === 'number'
+                ? { latitude: site.latitude, longitude: site.longitude }
+                : null;
+            const distanceMeters = workerLocation && siteLocation
+                ? calculateDistanceMeters(workerLocation, siteLocation)
+                : null;
+
+            if (settings.require_location_to_complete && !job.location_override_authorized) {
+                if (!siteLocation) {
+                    throw new TRPCError({ code: 'FORBIDDEN', message: 'This job site has no saved coordinates. Ask an admin to update the site location.' });
+                }
+                if (!workerLocation) {
+                    throw new TRPCError({ code: 'FORBIDDEN', message: 'Location permission is required before this job can be completed.' });
+                }
+                if (typeof input.location?.accuracy === 'number' && input.location.accuracy > settings.max_location_accuracy_meters) {
+                    throw new TRPCError({ code: 'FORBIDDEN', message: `Location accuracy is ${Math.round(input.location.accuracy)}m. It must be within ${settings.max_location_accuracy_meters}m to complete this job.` });
+                }
+            }
+
+            const actualEnd = new Date();
+            const payable = calculatePayableTime({
+                scheduledStart: job.start_time,
+                scheduledEnd: job.end_time,
+                actualStart: job.actual_start_time,
+                actualEnd,
+                earlyStartAuthorized: job.early_start_authorized,
+                lateStartAuthorized: job.late_start_authorized,
+                lateFinishAuthorized: job.late_finish_authorized,
+            });
+
+            const { data: updatedJob, error: updateError } = await ctx.db
+                .from('jobs')
+                .update({
+                    status: 'completed',
+                    actual_end_time: actualEnd.toISOString(),
+                    payable_start_time: payable.payableStart?.toISOString() || null,
+                    payable_end_time: payable.payableEnd?.toISOString() || null,
+                    payable_minutes: payable.payableMinutes,
+                    end_latitude: input.location?.latitude ?? null,
+                    end_longitude: input.location?.longitude ?? null,
+                    end_location_accuracy_meters: input.location?.accuracy ?? null,
+                    end_distance_meters: distanceMeters,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', input.jobId)
+                .eq('tenant_id', ctx.tenantId)
+                .select()
+                .single();
+
+            if (updateError) {
+                throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: updateError.message });
+            }
+
+            await ctx.db
+                .from('job_assignments')
+                .update({ status: 'completed' })
+                .eq('id', assignment.id);
+
+            return updatedJob;
         }),
 
     getChecklists: protectedProcedure

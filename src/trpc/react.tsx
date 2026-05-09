@@ -13,6 +13,18 @@ import { type AppRouter } from '@/server/api/root'
 
 export const api = createTRPCReact<AppRouter>()
 
+function getTRPCErrorCode(result: unknown) {
+    if (!(result instanceof Error)) return null
+
+    const errorWithData = result as Error & {
+        data?: {
+            code?: string
+        }
+    }
+
+    return errorWithData.data?.code || null
+}
+
 export function TRPCReactProvider(props: { children: React.ReactNode }) {
     const [queryClient] = useState(() => createQueryClient())
 
@@ -21,14 +33,18 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
             links: [
                 loggerLink({
                     enabled: (opts) => {
-                        // Suppress logging for expected conflict errors
-                        if (
-                            opts.direction === 'down' &&
-                            opts.result instanceof Error &&
-                            // @ts-ignore - TRPCClientError has data property
-                            (opts.result.data?.code === 'CONFLICT' || opts.result.message?.includes('unavailable'))
-                        ) {
-                            return false;
+                        // Suppress logging for expected user-facing guardrail errors.
+                        if (opts.direction === 'down') {
+                            const errorCode = getTRPCErrorCode(opts.result)
+
+                            if (
+                                errorCode === 'CONFLICT' ||
+                                errorCode === 'FORBIDDEN' ||
+                                errorCode === 'BAD_REQUEST' ||
+                                (opts.result instanceof Error && opts.result.message?.includes('unavailable'))
+                            ) {
+                                return false;
+                            }
                         }
 
                         return (

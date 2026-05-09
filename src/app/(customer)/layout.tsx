@@ -1,6 +1,5 @@
 import { Inter } from "next/font/google";
-import Link from "next/link";
-import { User, FileText, Home } from "lucide-react";
+import { User } from "lucide-react";
 
 const inter = Inter({
     subsets: ["latin"],
@@ -14,7 +13,6 @@ export const metadata = {
 };
 
 import LogoutButton from "@/components/item-logout-button";
-import { ImpersonationBanner } from "@/components/impersonation-banner";
 
 import { AppConfigProvider } from "@/components/providers/app-config-provider";
 import { createClient } from "@/lib/supabase/server";
@@ -80,7 +78,6 @@ export default async function CustomerLayout({
                         </div>
                     </div>
                 </footer>
-                <ImpersonationBanner />
             </div>
         </AppConfigProvider>
     );

@@ -63,7 +63,7 @@ export const dashboardRouter = createTRPCRouter({
 
                 // Scheduled (Status = Scheduled) - In Range (using start_time)
                 applyRange(
-                    ctx.db.from('jobs').select('id', { count: 'exact' }).eq('tenant_id', tenantId).eq('status', 'Scheduled'),
+                    ctx.db.from('jobs').select('id', { count: 'exact' }).eq('tenant_id', tenantId).eq('status', 'scheduled'),
                     'start_date' // Changed from start_time to start_date based on original code's field usage
                 ),
 

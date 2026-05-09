@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '../trpc'
+import { defaultAttendanceSettings, mergeAttendanceSettings } from '@/lib/payroll/attendance'
 
 export const settingsRouter = createTRPCRouter({
     getSettings: protectedProcedure.query(async ({ ctx }) => {
@@ -37,10 +38,14 @@ export const settingsRouter = createTRPCRouter({
                     default_duration: 60,
                     enabled_categories: ['general'],
                 },
+                attendance_settings: defaultAttendanceSettings,
             }
         }
 
-        return data
+        return {
+            ...data,
+            attendance_settings: mergeAttendanceSettings(data.attendance_settings),
+        }
     }),
 
 
@@ -78,6 +83,51 @@ export const settingsRouter = createTRPCRouter({
 
             if (error) {
                 throw new Error(`Failed to update service settings: ${error.message}`)
+            }
+
+            return data
+        }),
+
+    updateAttendanceSettings: protectedProcedure
+        .input(z.object({
+            startDistanceMeters: z.number().min(1).max(5000),
+            startWindowBeforeMinutes: z.number().min(0).max(240),
+            startWindowAfterMinutes: z.number().min(0).max(240),
+            requireLocationToStart: z.boolean(),
+            requireLocationToComplete: z.boolean(),
+            maxLocationAccuracyMeters: z.number().min(1).max(1000),
+            allowAdminLocationOverride: z.boolean(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const { data: existing } = await ctx.db
+                .from('tenant_settings')
+                .select('attendance_settings')
+                .eq('tenant_id', ctx.tenantId)
+                .single()
+
+            const currentSettings = mergeAttendanceSettings(existing?.attendance_settings)
+            const newSettings = {
+                ...currentSettings,
+                start_distance_meters: input.startDistanceMeters,
+                start_window_before_minutes: input.startWindowBeforeMinutes,
+                start_window_after_minutes: input.startWindowAfterMinutes,
+                require_location_to_start: input.requireLocationToStart,
+                require_location_to_complete: input.requireLocationToComplete,
+                max_location_accuracy_meters: input.maxLocationAccuracyMeters,
+                allow_admin_location_override: input.allowAdminLocationOverride,
+            }
+
+            const { data, error } = await ctx.db
+                .from('tenant_settings')
+                .upsert({
+                    tenant_id: ctx.tenantId,
+                    attendance_settings: newSettings,
+                })
+                .select()
+                .single()
+
+            if (error) {
+                throw new Error(`Failed to update attendance settings: ${error.message}`)
             }
 
             return data

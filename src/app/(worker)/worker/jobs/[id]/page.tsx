@@ -86,6 +86,17 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     const [actionError, setActionError] = useState<string | null>(null);
     const [noteContent, setNoteContent] = useState('');
 
+    const notesQuery = api.notes.getByEntity.useQuery(
+        { entityType: 'job', entityId: id },
+        { enabled: openSections.notes }
+    );
+    const createNote = api.notes.create.useMutation({
+        onSuccess: () => {
+            setNoteContent('');
+            utils.notes.getByEntity.invalidate({ entityType: 'job', entityId: id });
+        }
+    });
+
     const toggleSection = (section: string) => {
         setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
     };
@@ -142,17 +153,6 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
     const isActionPending = startJob.isPending || completeJob.isPending;
     const canAddEvidence = job.status === 'in_progress' || job.status === 'completed';
-
-    const notesQuery = api.notes.getByEntity.useQuery(
-        { entityType: 'job', entityId: id },
-        { enabled: openSections.notes }
-    );
-    const createNote = api.notes.create.useMutation({
-        onSuccess: () => {
-            setNoteContent('');
-            utils.notes.getByEntity.invalidate({ entityType: 'job', entityId: id });
-        }
-    });
 
     const handleNoteSubmit = (event: React.FormEvent) => {
         event.preventDefault();

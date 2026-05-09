@@ -12,6 +12,10 @@ type AttendanceSettingsView = {
     start_window_after_minutes?: number
     end_window_before_minutes?: number
     end_window_after_minutes?: number
+    enforce_start_time_gate?: boolean
+    enforce_end_time_gate?: boolean
+    enforce_location_distance_gate?: boolean
+    enforce_location_accuracy_gate?: boolean
     require_location_to_start?: boolean
     require_location_to_complete?: boolean
     max_location_accuracy_meters?: number
@@ -50,6 +54,10 @@ function AttendanceSettingsForm({ attendance }: { attendance: AttendanceSettings
     const [startWindowAfterMinutes, setStartWindowAfterMinutes] = useState(attendance.start_window_after_minutes ?? 10)
     const [endWindowBeforeMinutes, setEndWindowBeforeMinutes] = useState(attendance.end_window_before_minutes ?? 10)
     const [endWindowAfterMinutes, setEndWindowAfterMinutes] = useState(attendance.end_window_after_minutes ?? 10)
+    const [enforceStartTimeGate, setEnforceStartTimeGate] = useState(attendance.enforce_start_time_gate ?? true)
+    const [enforceEndTimeGate, setEnforceEndTimeGate] = useState(attendance.enforce_end_time_gate ?? true)
+    const [enforceLocationDistanceGate, setEnforceLocationDistanceGate] = useState(attendance.enforce_location_distance_gate ?? true)
+    const [enforceLocationAccuracyGate, setEnforceLocationAccuracyGate] = useState(attendance.enforce_location_accuracy_gate ?? true)
     const [requireLocationToStart, setRequireLocationToStart] = useState(attendance.require_location_to_start ?? true)
     const [requireLocationToComplete, setRequireLocationToComplete] = useState(attendance.require_location_to_complete ?? false)
     const [maxLocationAccuracyMeters, setMaxLocationAccuracyMeters] = useState(attendance.max_location_accuracy_meters ?? 100)
@@ -62,6 +70,10 @@ function AttendanceSettingsForm({ attendance }: { attendance: AttendanceSettings
             startWindowAfterMinutes,
             endWindowBeforeMinutes,
             endWindowAfterMinutes,
+            enforceStartTimeGate,
+            enforceEndTimeGate,
+            enforceLocationDistanceGate,
+            enforceLocationAccuracyGate,
             requireLocationToStart,
             requireLocationToComplete,
             maxLocationAccuracyMeters,
@@ -100,6 +112,14 @@ function AttendanceSettingsForm({ attendance }: { attendance: AttendanceSettings
                         <p className="mt-1 text-sm text-gray-500">These controls decide whether a worker can start a scheduled job.</p>
                     </div>
 
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">
+                        <ToggleField
+                            label="Enforce start-time window"
+                            checked={enforceStartTimeGate}
+                            onChange={setEnforceStartTimeGate}
+                        />
+                    </div>
+
                     <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-3">
                         <NumberField
                             label="Distance from site (metres)"
@@ -129,6 +149,14 @@ function AttendanceSettingsForm({ attendance }: { attendance: AttendanceSettings
                     <div>
                         <h3 className="text-base font-semibold leading-7 text-gray-900">Complete Gate</h3>
                         <p className="mt-1 text-sm text-gray-500">These controls decide whether a worker can complete a scheduled job.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">
+                        <ToggleField
+                            label="Enforce end-time window"
+                            checked={enforceEndTimeGate}
+                            onChange={setEnforceEndTimeGate}
+                        />
                     </div>
 
                     <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">
@@ -164,6 +192,16 @@ function AttendanceSettingsForm({ attendance }: { attendance: AttendanceSettings
                             onChange={setMaxLocationAccuracyMeters}
                         />
                         <div className="space-y-4">
+                            <ToggleField
+                                label="Enforce distance gate"
+                                checked={enforceLocationDistanceGate}
+                                onChange={setEnforceLocationDistanceGate}
+                            />
+                            <ToggleField
+                                label="Enforce accuracy gate"
+                                checked={enforceLocationAccuracyGate}
+                                onChange={setEnforceLocationAccuracyGate}
+                            />
                             <ToggleField
                                 label="Require location to start jobs"
                                 checked={requireLocationToStart}

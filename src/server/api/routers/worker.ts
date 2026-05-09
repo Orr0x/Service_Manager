@@ -643,10 +643,18 @@ export const workerRouter = createTRPCRouter({
                 if (!workerLocation) {
                     throw new TRPCError({ code: 'FORBIDDEN', message: 'Location permission is required before this job can be completed.' });
                 }
-                if (typeof input.location?.accuracy === 'number' && input.location.accuracy > settings.max_location_accuracy_meters) {
+                if (
+                    settings.enforce_location_accuracy_gate
+                    && typeof input.location?.accuracy === 'number'
+                    && input.location.accuracy > settings.max_location_accuracy_meters
+                ) {
                     throw new TRPCError({ code: 'FORBIDDEN', message: `Location accuracy is ${Math.round(input.location.accuracy)}m. It must be within ${settings.max_location_accuracy_meters}m to complete this job.` });
                 }
-                if (typeof distanceMeters === 'number' && distanceMeters > settings.start_distance_meters) {
+                if (
+                    settings.enforce_location_distance_gate
+                    && typeof distanceMeters === 'number'
+                    && distanceMeters > settings.start_distance_meters
+                ) {
                     throw new TRPCError({ code: 'FORBIDDEN', message: `You are ${Math.round(distanceMeters)}m from the job site. You must be within ${settings.start_distance_meters}m to complete this job.` });
                 }
             }

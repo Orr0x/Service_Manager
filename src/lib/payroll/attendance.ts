@@ -4,6 +4,10 @@ export type AttendanceSettings = {
     start_window_after_minutes: number
     end_window_before_minutes: number
     end_window_after_minutes: number
+    enforce_start_time_gate: boolean
+    enforce_end_time_gate: boolean
+    enforce_location_distance_gate: boolean
+    enforce_location_accuracy_gate: boolean
     require_location_to_start: boolean
     require_location_to_complete: boolean
     max_location_accuracy_meters: number
@@ -16,6 +20,10 @@ export const defaultAttendanceSettings: AttendanceSettings = {
     start_window_after_minutes: 10,
     end_window_before_minutes: 10,
     end_window_after_minutes: 10,
+    enforce_start_time_gate: true,
+    enforce_end_time_gate: true,
+    enforce_location_distance_gate: true,
+    enforce_location_accuracy_gate: true,
     require_location_to_start: true,
     require_location_to_complete: false,
     max_location_accuracy_meters: 100,
@@ -33,6 +41,10 @@ export function mergeAttendanceSettings(settings: unknown): AttendanceSettings {
         start_window_after_minutes: toNonNegativeNumber(raw.start_window_after_minutes, defaultAttendanceSettings.start_window_after_minutes),
         end_window_before_minutes: toNonNegativeNumber(raw.end_window_before_minutes, defaultAttendanceSettings.end_window_before_minutes),
         end_window_after_minutes: toNonNegativeNumber(raw.end_window_after_minutes, defaultAttendanceSettings.end_window_after_minutes),
+        enforce_start_time_gate: raw.enforce_start_time_gate ?? defaultAttendanceSettings.enforce_start_time_gate,
+        enforce_end_time_gate: raw.enforce_end_time_gate ?? defaultAttendanceSettings.enforce_end_time_gate,
+        enforce_location_distance_gate: raw.enforce_location_distance_gate ?? defaultAttendanceSettings.enforce_location_distance_gate,
+        enforce_location_accuracy_gate: raw.enforce_location_accuracy_gate ?? defaultAttendanceSettings.enforce_location_accuracy_gate,
         max_location_accuracy_meters: toPositiveNumber(raw.max_location_accuracy_meters, defaultAttendanceSettings.max_location_accuracy_meters),
         require_location_to_start: raw.require_location_to_start ?? defaultAttendanceSettings.require_location_to_start,
         require_location_to_complete: raw.require_location_to_complete ?? defaultAttendanceSettings.require_location_to_complete,
@@ -129,15 +141,17 @@ export function getStartGateFailure(input: {
         return 'This job needs a scheduled start time before it can be started.'
     }
 
-    const earliestStart = new Date(scheduledStart.getTime() - input.settings.start_window_before_minutes * 60000)
-    const latestStart = new Date(scheduledStart.getTime() + input.settings.start_window_after_minutes * 60000)
+    if (input.settings.enforce_start_time_gate) {
+        const earliestStart = new Date(scheduledStart.getTime() - input.settings.start_window_before_minutes * 60000)
+        const latestStart = new Date(scheduledStart.getTime() + input.settings.start_window_after_minutes * 60000)
 
-    if (input.now.getTime() < earliestStart.getTime()) {
-        return `This job can be started from ${formatGateTime(earliestStart)}.`
-    }
+        if (input.now.getTime() < earliestStart.getTime()) {
+            return `This job can be started from ${formatGateTime(earliestStart)}.`
+        }
 
-    if (input.now.getTime() > latestStart.getTime()) {
-        return `This job start window closed at ${formatGateTime(latestStart)}. Ask an admin to reschedule or adjust the job.`
+        if (input.now.getTime() > latestStart.getTime()) {
+            return `This job start window closed at ${formatGateTime(latestStart)}. Ask an admin to reschedule or adjust the job.`
+        }
     }
 
     if (input.settings.require_location_to_start && !locationOverride) {
@@ -149,11 +163,19 @@ export function getStartGateFailure(input: {
             return 'Location permission is required before this job can be started.'
         }
 
-        if (typeof input.accuracyMeters === 'number' && input.accuracyMeters > input.settings.max_location_accuracy_meters) {
+        if (
+            input.settings.enforce_location_accuracy_gate
+            && typeof input.accuracyMeters === 'number'
+            && input.accuracyMeters > input.settings.max_location_accuracy_meters
+        ) {
             return `Location accuracy is ${Math.round(input.accuracyMeters)}m. It must be within ${input.settings.max_location_accuracy_meters}m to start this job.`
         }
 
-        if (typeof input.distanceMeters === 'number' && input.distanceMeters > input.settings.start_distance_meters) {
+        if (
+            input.settings.enforce_location_distance_gate
+            && typeof input.distanceMeters === 'number'
+            && input.distanceMeters > input.settings.start_distance_meters
+        ) {
             return `You are ${Math.round(input.distanceMeters)}m from the job site. You must be within ${input.settings.start_distance_meters}m to start this job.`
         }
     }
@@ -170,6 +192,8 @@ export function getCompleteGateFailure(input: {
 
     // Some legacy jobs may not have an explicit end time.
     if (!scheduledEnd) return null
+
+    if (!input.settings.enforce_end_time_gate) return null
 
     const earliestComplete = new Date(scheduledEnd.getTime() - input.settings.end_window_before_minutes * 60000)
     const latestComplete = new Date(scheduledEnd.getTime() + input.settings.end_window_after_minutes * 60000)

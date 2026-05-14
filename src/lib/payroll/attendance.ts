@@ -14,14 +14,16 @@ export type AttendanceSettings = {
     allow_admin_location_override: boolean
 }
 
+const minimumStartEarlyAllowanceMinutes = 30
+
 export const defaultAttendanceSettings: AttendanceSettings = {
     start_distance_meters: 250,
-    start_window_before_minutes: 10,
-    start_window_after_minutes: 10,
-    end_window_before_minutes: 10,
-    end_window_after_minutes: 10,
+    start_window_before_minutes: minimumStartEarlyAllowanceMinutes,
+    start_window_after_minutes: 0,
+    end_window_before_minutes: 0,
+    end_window_after_minutes: 0,
     enforce_start_time_gate: true,
-    enforce_end_time_gate: true,
+    enforce_end_time_gate: false,
     enforce_location_distance_gate: true,
     enforce_location_accuracy_gate: true,
     require_location_to_start: true,
@@ -141,17 +143,10 @@ export function getStartGateFailure(input: {
         return 'This job needs a scheduled start time before it can be started.'
     }
 
-    if (input.settings.enforce_start_time_gate) {
-        const earliestStart = new Date(scheduledStart.getTime() - input.settings.start_window_before_minutes * 60000)
-        const latestStart = new Date(scheduledStart.getTime() + input.settings.start_window_after_minutes * 60000)
+    const earliestStart = new Date(scheduledStart.getTime() - minimumStartEarlyAllowanceMinutes * 60000)
 
-        if (input.now.getTime() < earliestStart.getTime()) {
-            return `This job can be started from ${formatGateTime(earliestStart)}.`
-        }
-
-        if (input.now.getTime() > latestStart.getTime()) {
-            return `This job start window closed at ${formatGateTime(latestStart)}. Ask an admin to reschedule or adjust the job.`
-        }
+    if (input.now.getTime() < earliestStart.getTime()) {
+        return `This job can be started from ${formatGateTime(earliestStart)}.`
     }
 
     if (input.settings.require_location_to_start && !locationOverride) {
@@ -178,32 +173,6 @@ export function getStartGateFailure(input: {
         ) {
             return `You are ${Math.round(input.distanceMeters)}m from the job site. You must be within ${input.settings.start_distance_meters}m to start this job.`
         }
-    }
-
-    return null
-}
-
-export function getCompleteGateFailure(input: {
-    now: Date
-    scheduledEnd?: string | Date | null
-    settings: AttendanceSettings
-}) {
-    const scheduledEnd = toDate(input.scheduledEnd)
-
-    // Some legacy jobs may not have an explicit end time.
-    if (!scheduledEnd) return null
-
-    if (!input.settings.enforce_end_time_gate) return null
-
-    const earliestComplete = new Date(scheduledEnd.getTime() - input.settings.end_window_before_minutes * 60000)
-    const latestComplete = new Date(scheduledEnd.getTime() + input.settings.end_window_after_minutes * 60000)
-
-    if (input.now.getTime() < earliestComplete.getTime()) {
-        return `This job can be completed from ${formatGateTime(earliestComplete)}.`
-    }
-
-    if (input.now.getTime() > latestComplete.getTime()) {
-        return `This job completion window closed at ${formatGateTime(latestComplete)}. Ask an admin to review or adjust the job.`
     }
 
     return null

@@ -5,7 +5,6 @@ import type { Context } from "@/server/api/context";
 import {
     calculateDistanceMeters,
     calculatePayableTime,
-    getCompleteGateFailure,
     getStartGateFailure,
     mergeAttendanceSettings,
 } from "@/lib/payroll/attendance";
@@ -625,16 +624,6 @@ export const workerRouter = createTRPCRouter({
             const distanceMeters = workerLocation && siteLocation
                 ? calculateDistanceMeters(workerLocation, siteLocation)
                 : null;
-
-            const completionFailure = getCompleteGateFailure({
-                now: new Date(),
-                scheduledEnd: job.end_time,
-                settings,
-            });
-
-            if (completionFailure) {
-                throw new TRPCError({ code: 'FORBIDDEN', message: completionFailure });
-            }
 
             if (settings.require_location_to_complete && !job.location_override_authorized) {
                 if (!siteLocation) {

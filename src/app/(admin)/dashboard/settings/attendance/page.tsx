@@ -50,12 +50,6 @@ function AttendanceSettingsForm({ attendance }: { attendance: AttendanceSettings
     })
 
     const [startDistanceMeters, setStartDistanceMeters] = useState(attendance.start_distance_meters ?? 250)
-    const [startWindowBeforeMinutes, setStartWindowBeforeMinutes] = useState(attendance.start_window_before_minutes ?? 10)
-    const [startWindowAfterMinutes, setStartWindowAfterMinutes] = useState(attendance.start_window_after_minutes ?? 10)
-    const [endWindowBeforeMinutes, setEndWindowBeforeMinutes] = useState(attendance.end_window_before_minutes ?? 10)
-    const [endWindowAfterMinutes, setEndWindowAfterMinutes] = useState(attendance.end_window_after_minutes ?? 10)
-    const [enforceStartTimeGate, setEnforceStartTimeGate] = useState(attendance.enforce_start_time_gate ?? true)
-    const [enforceEndTimeGate, setEnforceEndTimeGate] = useState(attendance.enforce_end_time_gate ?? true)
     const [enforceLocationDistanceGate, setEnforceLocationDistanceGate] = useState(attendance.enforce_location_distance_gate ?? true)
     const [enforceLocationAccuracyGate, setEnforceLocationAccuracyGate] = useState(attendance.enforce_location_accuracy_gate ?? true)
     const [requireLocationToStart, setRequireLocationToStart] = useState(attendance.require_location_to_start ?? true)
@@ -66,12 +60,12 @@ function AttendanceSettingsForm({ attendance }: { attendance: AttendanceSettings
     const handleSubmit = () => {
         updateAttendanceSettings.mutate({
             startDistanceMeters,
-            startWindowBeforeMinutes,
-            startWindowAfterMinutes,
-            endWindowBeforeMinutes,
-            endWindowAfterMinutes,
-            enforceStartTimeGate,
-            enforceEndTimeGate,
+            startWindowBeforeMinutes: 30,
+            startWindowAfterMinutes: 0,
+            endWindowBeforeMinutes: 0,
+            endWindowAfterMinutes: 0,
+            enforceStartTimeGate: true,
+            enforceEndTimeGate: false,
             enforceLocationDistanceGate,
             enforceLocationAccuracyGate,
             requireLocationToStart,
@@ -109,18 +103,12 @@ function AttendanceSettingsForm({ attendance }: { attendance: AttendanceSettings
                 <div className="p-6 space-y-6">
                     <div>
                         <h3 className="text-base font-semibold leading-7 text-gray-900">Start Gate</h3>
-                        <p className="mt-1 text-sm text-gray-500">These controls decide whether a worker can start a scheduled job.</p>
+                        <p className="mt-1 text-sm text-gray-500">
+                            Workers can start from 30 minutes before the scheduled start time and any time after that.
+                        </p>
                     </div>
 
                     <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">
-                        <ToggleField
-                            label="Enforce start-time window"
-                            checked={enforceStartTimeGate}
-                            onChange={setEnforceStartTimeGate}
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-3">
                         <NumberField
                             label="Distance from site (metres)"
                             value={startDistanceMeters}
@@ -128,52 +116,19 @@ function AttendanceSettingsForm({ attendance }: { attendance: AttendanceSettings
                             max={5000}
                             onChange={setStartDistanceMeters}
                         />
-                        <NumberField
-                            label="Minutes before start"
-                            value={startWindowBeforeMinutes}
-                            min={0}
-                            max={240}
-                            onChange={setStartWindowBeforeMinutes}
-                        />
-                        <NumberField
-                            label="Minutes after start"
-                            value={startWindowAfterMinutes}
-                            min={0}
-                            max={240}
-                            onChange={setStartWindowAfterMinutes}
-                        />
+                        <div className="rounded-md border border-gray-200 bg-gray-50 px-4 py-3">
+                            <span className="block text-sm font-medium leading-6 text-gray-900">Early start allowance</span>
+                            <span className="mt-1 block text-sm text-gray-600">30 minutes before scheduled start</span>
+                        </div>
                     </div>
                 </div>
 
                 <div className="p-6 space-y-6">
                     <div>
                         <h3 className="text-base font-semibold leading-7 text-gray-900">Complete Gate</h3>
-                        <p className="mt-1 text-sm text-gray-500">These controls decide whether a worker can complete a scheduled job.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">
-                        <ToggleField
-                            label="Enforce end-time window"
-                            checked={enforceEndTimeGate}
-                            onChange={setEnforceEndTimeGate}
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">
-                        <NumberField
-                            label="Minutes before end"
-                            value={endWindowBeforeMinutes}
-                            min={0}
-                            max={240}
-                            onChange={setEndWindowBeforeMinutes}
-                        />
-                        <NumberField
-                            label="Minutes after end"
-                            value={endWindowAfterMinutes}
-                            min={0}
-                            max={240}
-                            onChange={setEndWindowAfterMinutes}
-                        />
+                        <p className="mt-1 text-sm text-gray-500">
+                            Completion is not time restricted. A worker can only complete a job after it has been started.
+                        </p>
                     </div>
                 </div>
 

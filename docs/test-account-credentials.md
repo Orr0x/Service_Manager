@@ -43,7 +43,7 @@ These existed before this seed run. Passwords cannot be read from Supabase, so t
 | manager@fixit.com | password123 | From scripts/seed-users.ts |
 | tech1@fixit.com | password123 | From scripts/seed-users.ts |
 | tech2@fixit.com | password123 | From scripts/seed-users.ts |
-| pw-smoke-admin-20260509133001@example.com | unknown | Existing smoke admin account |
-| pw-smoke-worker-20260509134005@example.com | unknown | Existing smoke worker account |
+| pw-smoke-admin-20260509133001@example.com | PW-smoke-20260509133001! | Existing smoke admin account |
+| pw-smoke-worker-20260509134005@example.com | PW-worker-20260509134005! | Existing smoke worker account |
 
 If you need to standardize or reset older passwords, use Admin > User Management in app settings or a Supabase password reset flow.

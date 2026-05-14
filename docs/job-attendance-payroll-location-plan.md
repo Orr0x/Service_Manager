@@ -5,8 +5,9 @@
 Live turn-by-turn navigation is no longer a core requirement. The worker app may still offer map links or a simple map view, but the important workflow is attendance control:
 
 - A worker can only start a job inside the configured distance from the job site.
-- A worker can only start a job inside the configured scheduled-time window.
-- Admin users manage the distance and time tolerance settings.
+- A worker can start up to 30 minutes before the scheduled start time and any time after that.
+- A worker can complete a job only after it has been started; completion is not time restricted.
+- Admin users manage distance and location accuracy settings. The start-time rule is fixed at 30 minutes early, with no late cutoff.
 - Admin users review actual attendance against scheduled attendance for payroll.
 - Actual worker timestamps must be preserved. Payroll adjustments create payable/effective times without overwriting actual times.
 
@@ -30,8 +31,9 @@ The attendance/payroll extension adds:
 Recommended starting defaults:
 
 - Start distance: `250` metres.
-- Start window before scheduled time: `0` minutes.
-- Start window after scheduled time: `30` minutes.
+- Start window before scheduled time: `30` minutes.
+- No start cutoff after the scheduled start time.
+- No scheduled end-time completion gate.
 - Location required to start: `true`.
 - Location required to complete: `false`.
 - Maximum acceptable GPS accuracy: `100` metres.
@@ -45,7 +47,7 @@ When the worker taps Start Job:
 
 1. The app asks the browser/device for the current location.
 2. The server verifies the worker is assigned to the job.
-3. The server checks the scheduled start window.
+3. The server blocks starts more than 30 minutes before the scheduled start time.
 4. The server checks distance from the job site's stored latitude/longitude.
 5. If allowed, the server records actual start time, location evidence, distance, and sets the job to `in_progress`.
 
@@ -60,6 +62,8 @@ When the worker taps Complete Job:
 3. The server records actual finish time and any available location evidence.
 4. The server calculates payable start/end and payable minutes.
 5. The job status becomes `completed`.
+
+There is no scheduled-time gate for completion. The only time-related rule is that the job must already have an `actual_start_time`.
 
 ## Payroll Calculation Rules
 

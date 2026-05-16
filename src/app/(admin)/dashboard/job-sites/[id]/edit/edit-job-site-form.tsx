@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { api } from '@/trpc/react'
 import { useState } from 'react'
 import { FileUploader } from '@/components/file-uploader'
+import { JobSiteLocationPicker } from '@/components/job-site-location-picker'
 
 interface EditJobSiteFormProps {
     jobSite: {
@@ -25,7 +26,14 @@ interface EditJobSiteFormProps {
         facilities: string | null
         site_type: string | null
         parking_info: string | null
+        coordinates_locked: boolean | null
+        location_radius_meters: number | null
+        location_radius_locked: boolean | null
     }
+}
+
+type AttendanceSettingsView = {
+    start_distance_meters?: number
 }
 
 export function EditJobSiteForm({ jobSite }: EditJobSiteFormProps) {
@@ -36,6 +44,12 @@ export function EditJobSiteForm({ jobSite }: EditJobSiteFormProps) {
     const [latitude, setLatitude] = useState<string>(jobSite.latitude?.toString() || '')
     const [longitude, setLongitude] = useState<string>(jobSite.longitude?.toString() || '')
     const [what3words, setWhat3words] = useState<string>(jobSite.what3words || '')
+    const [coordinatesLocked, setCoordinatesLocked] = useState(jobSite.coordinates_locked ?? false)
+    const [locationRadiusMeters, setLocationRadiusMeters] = useState<number | null>(jobSite.location_radius_meters ?? null)
+    const [locationRadiusLocked, setLocationRadiusLocked] = useState(jobSite.location_radius_locked ?? false)
+    const { data: settings } = api.settings.getSettings.useQuery()
+    const attendance = settings?.attendance_settings as AttendanceSettingsView | undefined
+    const rangeMeters = locationRadiusMeters ?? attendance?.start_distance_meters ?? 250
 
     // Loading states
     const [isLocating, setIsLocating] = useState(false)
@@ -56,11 +70,13 @@ export function EditJobSiteForm({ jobSite }: EditJobSiteFormProps) {
     const handleFindCoordinates = async () => {
         const addressInput = document.getElementById('address') as HTMLInputElement
         const cityInput = document.getElementById('city') as HTMLInputElement
+        const postalCodeInput = document.getElementById('postalCode') as HTMLInputElement
         const countryInput = document.getElementById('country') as HTMLInputElement
 
         const fullAddress = [
             addressInput.value,
             cityInput.value,
+            postalCodeInput.value,
             countryInput.value
         ].filter(Boolean).join(', ')
 
@@ -80,7 +96,7 @@ export function EditJobSiteForm({ jobSite }: EditJobSiteFormProps) {
             } else {
                 setError('Could not find coordinates for this address')
             }
-        } catch (e) {
+        } catch {
             setError('Failed to fetch coordinates')
         } finally {
             setIsLocating(false)
@@ -117,6 +133,9 @@ export function EditJobSiteForm({ jobSite }: EditJobSiteFormProps) {
             latitude,
             longitude,
             what3words,
+            coordinateLocked: coordinatesLocked,
+            locationRadiusMeters: rangeMeters,
+            locationRadiusLocked,
             accessInstructions,
             securityCodes,
             keyHolder,
@@ -291,75 +310,23 @@ export function EditJobSiteForm({ jobSite }: EditJobSiteFormProps) {
                     </div>
                 </div>
 
-                {/* Geolocation Section */}
-                <div className="mt-8 pt-8 border-t border-gray-900/10">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-base font-semibold leading-7 text-gray-900">Geolocation</h3>
-                        <div className="flex gap-2">
-                            <button
-                                type="button"
-                                onClick={handleFindCoordinates}
-                                disabled={isLocating}
-                                className="text-sm font-semibold text-blue-600 hover:text-blue-500 disabled:opacity-50"
-                            >
-                                {isLocating ? 'Locating...' : 'Find Coordinates'}
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="mt-6 grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-6">
-                        <div className="sm:col-span-2">
-                            <label htmlFor="latitude" className="block text-sm font-medium leading-6 text-gray-900">
-                                Latitude
-                            </label>
-                            <div className="mt-2">
-                                <input
-                                    type="number"
-                                    step="any"
-                                    name="latitude"
-                                    id="latitude"
-                                    value={latitude}
-                                    onChange={(e) => setLatitude(e.target.value)}
-                                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                                />
-                            </div>
-                        </div>
-                        <div className="sm:col-span-2">
-                            <label htmlFor="longitude" className="block text-sm font-medium leading-6 text-gray-900">
-                                Longitude
-                            </label>
-                            <div className="mt-2">
-                                <input
-                                    type="number"
-                                    step="any"
-                                    name="longitude"
-                                    id="longitude"
-                                    value={longitude}
-                                    onChange={(e) => setLongitude(e.target.value)}
-                                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                                />
-                            </div>
-                        </div>
-                        <div className="sm:col-span-2">
-                            <label htmlFor="what3words" className="block text-sm font-medium leading-6 text-gray-900">
-                                What3Words
-                            </label>
-                            <div className="mt-2">
-                                <div className="flex rounded-md shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-inset focus-within:ring-blue-600 sm:max-w-md">
-                                    <span className="flex select-none items-center pl-3 text-gray-500 sm:text-sm">///</span>
-                                    <input
-                                        type="text"
-                                        name="what3words"
-                                        id="what3words"
-                                        value={what3words}
-                                        onChange={(e) => setWhat3words(e.target.value)}
-                                        className="block flex-1 border-0 bg-transparent py-1.5 pl-1 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm sm:leading-6"
-                                        placeholder="word.word.word"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <div className="mt-8 border-t border-gray-900/10 pt-8">
+                    <JobSiteLocationPicker
+                        latitude={latitude}
+                        longitude={longitude}
+                        what3words={what3words}
+                        onLatitudeChange={setLatitude}
+                        onLongitudeChange={setLongitude}
+                        onWhat3WordsChange={setWhat3words}
+                        onFindCoordinates={handleFindCoordinates}
+                        isLocating={isLocating}
+                        coordinatesLocked={coordinatesLocked}
+                        onCoordinatesLockedChange={setCoordinatesLocked}
+                        rangeMeters={rangeMeters}
+                        onRangeMetersChange={setLocationRadiusMeters}
+                        rangeLocked={locationRadiusLocked}
+                        onRangeLockedChange={setLocationRadiusLocked}
+                    />
                 </div>
 
                 {/* Access & Facilities Section */}

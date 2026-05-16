@@ -26,6 +26,7 @@ import Link from 'next/link'
 import { AttachmentsSection } from '@/components/attachments-section'
 import CertificationManager from '@/components/certification/CertificationManager'
 import { ActivityFeed } from '@/components/common/activity-feed'
+import { JobSiteLocationSummary } from '@/components/job-site-location-summary'
 
 export function JobSiteDetail({ id }: { id: string }) {
     const router = useRouter()
@@ -165,7 +166,7 @@ export function JobSiteDetail({ id }: { id: string }) {
             {/* Tab Content */}
             <div className="space-y-6">
                 {activeTab === 'info' && (
-                    <div id="printable-content" className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <div id="printable-content" className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-4 xl:items-stretch">
                         {/* Site Information */}
                         <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
                             <div className="border-b border-gray-200 px-4 py-5 sm:px-6">
@@ -241,6 +242,15 @@ export function JobSiteDetail({ id }: { id: string }) {
                                 )}
                             </div>
                         </div>
+
+                        <JobSiteLocationSummary
+                            latitude={jobSite.latitude}
+                            longitude={jobSite.longitude}
+                            what3words={jobSite.what3words}
+                            coordinatesLocked={jobSite.coordinates_locked}
+                            rangeMeters={jobSite.location_radius_meters}
+                            rangeLocked={jobSite.location_radius_locked}
+                        />
                     </div>
                 )}
 

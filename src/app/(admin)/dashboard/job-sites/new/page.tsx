@@ -6,11 +6,20 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { FileUploader } from '@/components/file-uploader'
 import { useEffect } from 'react'
+import { JobSiteLocationPicker } from '@/components/job-site-location-picker'
 
 export default function NewJobSitePage() {
     const router = useRouter()
     const { data: customers, isLoading: isLoadingCustomers } = api.customers.getAll.useQuery()
     const [siteId, setSiteId] = useState<string>('')
+    const [latitude, setLatitude] = useState('')
+    const [longitude, setLongitude] = useState('')
+    const [what3words, setWhat3words] = useState('')
+    const [coordinatesLocked, setCoordinatesLocked] = useState(false)
+    const [locationRadiusMeters, setLocationRadiusMeters] = useState<number | null>(null)
+    const [locationRadiusLocked, setLocationRadiusLocked] = useState(false)
+    const [locationError, setLocationError] = useState<string | null>(null)
+    const [isLocating, setIsLocating] = useState(false)
 
     useEffect(() => {
         setSiteId(crypto.randomUUID())
@@ -18,6 +27,8 @@ export default function NewJobSitePage() {
 
     const { data: settings } = api.settings.getSettings.useQuery()
     const terminology = (settings?.terminology as Record<string, string>) || {}
+    const attendance = settings?.attendance_settings as { start_distance_meters?: number } | undefined
+    const rangeMeters = locationRadiusMeters ?? attendance?.start_distance_meters ?? 250
     const getLabel = (key: string, defaultLabel: string) => terminology[key] || defaultLabel
 
     const createJobSite = api.jobSites.create.useMutation({
@@ -26,6 +37,43 @@ export default function NewJobSitePage() {
             router.refresh()
         },
     })
+    const getCoordinates = api.location.getCoordinates.useMutation()
+
+    const handleFindCoordinates = async () => {
+        const addressInput = document.getElementById('address') as HTMLInputElement | null
+        const cityInput = document.getElementById('city') as HTMLInputElement | null
+        const postalCodeInput = document.getElementById('postalCode') as HTMLInputElement | null
+        const countryInput = document.getElementById('country') as HTMLInputElement | null
+
+        const fullAddress = [
+            addressInput?.value,
+            cityInput?.value,
+            postalCodeInput?.value,
+            countryInput?.value,
+        ].filter(Boolean).join(', ')
+
+        if (!fullAddress) {
+            setLocationError('Please enter an address first')
+            return
+        }
+
+        setIsLocating(true)
+        setLocationError(null)
+
+        try {
+            const result = await getCoordinates.mutateAsync({ address: fullAddress })
+            if (result) {
+                setLatitude(result.latitude.toString())
+                setLongitude(result.longitude.toString())
+            } else {
+                setLocationError('Could not find coordinates for this address')
+            }
+        } catch {
+            setLocationError('Failed to fetch coordinates')
+        } finally {
+            setIsLocating(false)
+        }
+    }
 
     async function onSubmit(formData: FormData) {
         const customerId = formData.get('customerId') as string
@@ -56,6 +104,9 @@ export default function NewJobSitePage() {
             latitude,
             longitude,
             what3words,
+            coordinateLocked: coordinatesLocked,
+            locationRadiusMeters: rangeMeters,
+            locationRadiusLocked,
             accessInstructions,
             securityCodes,
             keyHolder,
@@ -264,61 +315,27 @@ export default function NewJobSitePage() {
                 </div>
 
 
-                {/* Geolocation */}
-                <div className="space-y-6">
-                    <div>
-                        <h3 className="text-base font-semibold leading-7 text-gray-900">Geolocation</h3>
-                        <p className="mt-1 text-sm leading-6 text-gray-600">Precise location details for rural sites.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-6">
-                        <div className="sm:col-span-2">
-                            <label htmlFor="latitude" className="block text-sm font-medium leading-6 text-gray-900">
-                                {getLabel('job_sites.latitude', 'Latitude')}
-                            </label>
-                            <div className="mt-2">
-                                <input
-                                    type="number"
-                                    step="any"
-                                    name="latitude"
-                                    id="latitude"
-                                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                                    placeholder="e.g., 51.5074"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="sm:col-span-2">
-                            <label htmlFor="longitude" className="block text-sm font-medium leading-6 text-gray-900">
-                                {getLabel('job_sites.longitude', 'Longitude')}
-                            </label>
-                            <div className="mt-2">
-                                <input
-                                    type="number"
-                                    step="any"
-                                    name="longitude"
-                                    id="longitude"
-                                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                                    placeholder="e.g., -0.1278"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="sm:col-span-2">
-                            <label htmlFor="what3words" className="block text-sm font-medium leading-6 text-gray-900">
-                                {getLabel('job_sites.what3words', 'What3Words')}
-                            </label>
-                            <div className="mt-2">
-                                <input
-                                    type="text"
-                                    name="what3words"
-                                    id="what3words"
-                                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                                    placeholder="e.g., ///filled.count.soap"
-                                />
-                            </div>
-                        </div>
-                    </div>
+                <div className="space-y-3">
+                    <JobSiteLocationPicker
+                        latitude={latitude}
+                        longitude={longitude}
+                        what3words={what3words}
+                        onLatitudeChange={setLatitude}
+                        onLongitudeChange={setLongitude}
+                        onWhat3WordsChange={setWhat3words}
+                        onFindCoordinates={handleFindCoordinates}
+                        isLocating={isLocating}
+                        coordinatesLocked={coordinatesLocked}
+                        onCoordinatesLockedChange={setCoordinatesLocked}
+                        rangeMeters={rangeMeters}
+                        onRangeMetersChange={setLocationRadiusMeters}
+                        rangeLocked={locationRadiusLocked}
+                        onRangeLockedChange={setLocationRadiusLocked}
+                        getLabel={getLabel}
+                    />
+                    {locationError && (
+                        <p className="text-sm font-medium text-red-600">{locationError}</p>
+                    )}
                 </div>
 
                 {/* Access & Facilities */}

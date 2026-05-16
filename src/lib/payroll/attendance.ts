@@ -151,7 +151,7 @@ export function getStartGateFailure(input: {
 
     if (input.settings.require_location_to_start && !locationOverride) {
         if (!input.hasSiteLocation) {
-            return 'This job site has no saved coordinates. Ask an admin to update the site location.'
+            return 'This job site has missing or invalid coordinates. Ask an admin to update the site location.'
         }
 
         if (!input.hasWorkerLocation) {

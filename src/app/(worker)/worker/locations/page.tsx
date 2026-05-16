@@ -1,9 +1,8 @@
 'use client';
 
 import { api } from '@/trpc/react';
-import { MapPin, Navigation, Building, Search } from 'lucide-react';
+import { MapPin, Building, Search } from 'lucide-react';
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
 
 
 export default function WorkerLocationsPage() {
@@ -92,27 +91,14 @@ export default function WorkerLocationsPage() {
                             </div>
 
                             <div className="flex flex-col gap-2">
-                                <Link
-                                    href={`/worker/navigation?destination=${site.latitude && site.longitude ? `${site.latitude},${site.longitude}` : ''}`}
-                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg flex items-center justify-center gap-2 text-sm transition-colors shadow-sm"
-                                    onClick={(e) => {
-                                        if (!site.latitude || !site.longitude) {
-                                            e.preventDefault();
-                                            alert(`Coordinates missing for ${site.address}. Please use Google Maps.`);
-                                        }
-                                    }}
-                                >
-                                    <Navigation className="h-4 w-4" />
-                                    Start Navigation
-                                </Link>
                                 <a
                                     href={`https://maps.google.com/?q=${encodeURIComponent(`${site.address}, ${site.city}`)}`}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-2 rounded-lg flex items-center justify-center gap-2 text-xs transition-colors"
+                                    className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium py-2 rounded-lg flex items-center justify-center gap-2 text-sm transition-colors"
                                 >
-                                    <MapPin className="h-3 w-3" />
-                                    Google Maps
+                                    <MapPin className="h-4 w-4" />
+                                    Open in Google Maps
                                 </a>
                             </div>
                         </div>

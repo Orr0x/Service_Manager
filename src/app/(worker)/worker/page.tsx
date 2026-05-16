@@ -1,6 +1,6 @@
 'use client';
 
-import { Calendar, Briefcase, Clock, CheckCircle, MapPin, ClipboardList, User, Info, FileText, AlertTriangle, Navigation } from "lucide-react";
+import { Calendar, Briefcase, Clock, CheckCircle, MapPin, ClipboardList, Info, AlertTriangle } from "lucide-react";
 import Link from 'next/link';
 import { api } from "@/trpc/react";
 import { Configurable } from "@/components/ui/configurable";
@@ -35,15 +35,13 @@ export default function WorkerDashboard() {
             </div>
 
             {/* Conflict Alert */}
-            {/* @ts-ignore - stats type inferred */}
-            {stats?.conflictCount && stats.conflictCount > 0 && (
+                {stats?.conflictCount && stats.conflictCount > 0 && (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
                     <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
                     <div>
                         <h3 className="text-sm font-bold text-red-900">Action Required: Scheduling Conflicts</h3>
                         <p className="text-sm text-red-700 mt-1">
                             You have {stats.conflictCount} job{stats.conflictCount > 1 ? 's' : ''} assigned on days you have marked as unavailable.
-                            {/* @ts-ignore */}
                             {stats.firstConflict && (
                                 <span className="block mt-1 font-medium">
                                     Conflict: {stats.firstConflict.jobTitle} on {new Date(stats.firstConflict.date).toLocaleDateString()}
@@ -258,11 +256,11 @@ export default function WorkerDashboard() {
 
                     <Link href="/worker/locations" className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col gap-2 hover:bg-gray-50 transition-colors">
                         <div className="text-blue-500">
-                            <Navigation className="h-5 w-5" />
+                            <MapPin className="h-5 w-5" />
                         </div>
                         <div>
                             <h4 className="text-sm font-bold text-gray-900">My Locations</h4>
-                            <p className="text-[10px] text-gray-500">Navigate to jobs</p>
+                            <p className="text-[10px] text-gray-500">Open job maps</p>
                         </div>
                     </Link>
 

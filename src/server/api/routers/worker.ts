@@ -15,6 +15,15 @@ const locationInput = z.object({
     accuracy: z.number().min(0).optional(),
 });
 
+function isValidCoordinate(latitude: unknown, longitude: unknown) {
+    return typeof latitude === 'number'
+        && typeof longitude === 'number'
+        && latitude >= -90
+        && latitude <= 90
+        && longitude >= -180
+        && longitude <= 180;
+}
+
 type WorkerContext = Context & {
     user: NonNullable<Context['user']>
     tenantId: string
@@ -459,7 +468,8 @@ export const workerRouter = createTRPCRouter({
                     location_override_authorized,
                     job_sites (
                         latitude,
-                        longitude
+                        longitude,
+                        location_radius_meters
                     )
                 `)
                 .eq('id', input.jobId)
@@ -486,10 +496,17 @@ export const workerRouter = createTRPCRouter({
 
             const settings = mergeAttendanceSettings(settingsRow?.attendance_settings);
             const site = Array.isArray(job.job_sites) ? job.job_sites[0] : job.job_sites;
+            const locationRadiusMeters = typeof site?.location_radius_meters === 'number' && site.location_radius_meters > 0
+                ? Math.min(250, Math.max(10, site.location_radius_meters))
+                : Math.min(250, Math.max(10, settings.start_distance_meters));
+            const effectiveSettings = {
+                ...settings,
+                start_distance_meters: locationRadiusMeters,
+            };
             const workerLocation = input.location?.latitude !== undefined && input.location.longitude !== undefined
                 ? { latitude: input.location.latitude, longitude: input.location.longitude }
                 : null;
-            const siteLocation = typeof site?.latitude === 'number' && typeof site?.longitude === 'number'
+            const siteLocation = isValidCoordinate(site?.latitude, site?.longitude)
                 ? { latitude: site.latitude, longitude: site.longitude }
                 : null;
             const distanceMeters = workerLocation && siteLocation
@@ -499,7 +516,7 @@ export const workerRouter = createTRPCRouter({
             const failure = getStartGateFailure({
                 now: new Date(),
                 scheduledStart: job.start_time,
-                settings,
+                settings: effectiveSettings,
                 distanceMeters,
                 accuracyMeters: input.location?.accuracy,
                 hasWorkerLocation: !!workerLocation,
@@ -588,7 +605,8 @@ export const workerRouter = createTRPCRouter({
                     location_override_authorized,
                     job_sites (
                         latitude,
-                        longitude
+                        longitude,
+                        location_radius_meters
                     )
                 `)
                 .eq('id', input.jobId)
@@ -615,36 +633,43 @@ export const workerRouter = createTRPCRouter({
 
             const settings = mergeAttendanceSettings(settingsRow?.attendance_settings);
             const site = Array.isArray(job.job_sites) ? job.job_sites[0] : job.job_sites;
+            const locationRadiusMeters = typeof site?.location_radius_meters === 'number' && site.location_radius_meters > 0
+                ? Math.min(250, Math.max(10, site.location_radius_meters))
+                : Math.min(250, Math.max(10, settings.start_distance_meters));
+            const effectiveSettings = {
+                ...settings,
+                start_distance_meters: locationRadiusMeters,
+            };
             const workerLocation = input.location?.latitude !== undefined && input.location.longitude !== undefined
                 ? { latitude: input.location.latitude, longitude: input.location.longitude }
                 : null;
-            const siteLocation = typeof site?.latitude === 'number' && typeof site?.longitude === 'number'
+            const siteLocation = isValidCoordinate(site?.latitude, site?.longitude)
                 ? { latitude: site.latitude, longitude: site.longitude }
                 : null;
             const distanceMeters = workerLocation && siteLocation
                 ? calculateDistanceMeters(workerLocation, siteLocation)
                 : null;
 
-            if (settings.require_location_to_complete && !job.location_override_authorized) {
+            if (effectiveSettings.require_location_to_complete && !job.location_override_authorized) {
                 if (!siteLocation) {
-                    throw new TRPCError({ code: 'FORBIDDEN', message: 'This job site has no saved coordinates. Ask an admin to update the site location.' });
+                    throw new TRPCError({ code: 'FORBIDDEN', message: 'This job site has missing or invalid coordinates. Ask an admin to update the site location.' });
                 }
                 if (!workerLocation) {
                     throw new TRPCError({ code: 'FORBIDDEN', message: 'Location permission is required before this job can be completed.' });
                 }
                 if (
-                    settings.enforce_location_accuracy_gate
+                    effectiveSettings.enforce_location_accuracy_gate
                     && typeof input.location?.accuracy === 'number'
-                    && input.location.accuracy > settings.max_location_accuracy_meters
+                    && input.location.accuracy > effectiveSettings.max_location_accuracy_meters
                 ) {
-                    throw new TRPCError({ code: 'FORBIDDEN', message: `Location accuracy is ${Math.round(input.location.accuracy)}m. It must be within ${settings.max_location_accuracy_meters}m to complete this job.` });
+                    throw new TRPCError({ code: 'FORBIDDEN', message: `Location accuracy is ${Math.round(input.location.accuracy)}m. It must be within ${effectiveSettings.max_location_accuracy_meters}m to complete this job.` });
                 }
                 if (
-                    settings.enforce_location_distance_gate
+                    effectiveSettings.enforce_location_distance_gate
                     && typeof distanceMeters === 'number'
-                    && distanceMeters > settings.start_distance_meters
+                    && distanceMeters > effectiveSettings.start_distance_meters
                 ) {
-                    throw new TRPCError({ code: 'FORBIDDEN', message: `You are ${Math.round(distanceMeters)}m from the job site. You must be within ${settings.start_distance_meters}m to complete this job.` });
+                    throw new TRPCError({ code: 'FORBIDDEN', message: `You are ${Math.round(distanceMeters)}m from the job site. You must be within ${effectiveSettings.start_distance_meters}m to complete this job.` });
                 }
             }
 

@@ -1,6 +1,10 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '../trpc'
 
+const latitudeSchema = z.number().min(-90, 'Latitude must be between -90 and 90').max(90, 'Latitude must be between -90 and 90')
+const longitudeSchema = z.number().min(-180, 'Longitude must be between -180 and 180').max(180, 'Longitude must be between -180 and 180')
+const locationRadiusSchema = z.number().min(10, 'Location range must be at least 10 metres').max(250, 'Location range cannot exceed 250 metres')
+
 export const jobSitesRouter = createTRPCRouter({
     getAll: protectedProcedure
         .input(z.object({
@@ -116,9 +120,12 @@ export const jobSitesRouter = createTRPCRouter({
                 state: z.string().optional(),
                 postalCode: z.string().optional(),
                 country: z.string().optional(),
-                latitude: z.number().optional(),
-                longitude: z.number().optional(),
+                latitude: latitudeSchema.optional(),
+                longitude: longitudeSchema.optional(),
                 what3words: z.string().optional(),
+                coordinateLocked: z.boolean().optional(),
+                locationRadiusMeters: locationRadiusSchema.optional(),
+                locationRadiusLocked: z.boolean().optional(),
                 accessInstructions: z.string().optional(),
                 securityCodes: z.string().optional(),
                 keyHolder: z.string().optional(),
@@ -143,6 +150,9 @@ export const jobSitesRouter = createTRPCRouter({
                     latitude: input.latitude,
                     longitude: input.longitude,
                     what3words: input.what3words,
+                    coordinates_locked: input.coordinateLocked,
+                    location_radius_meters: input.locationRadiusMeters,
+                    location_radius_locked: input.locationRadiusLocked,
                     access_instructions: input.accessInstructions,
                     security_codes: input.securityCodes,
                     key_holder: input.keyHolder,
@@ -171,9 +181,12 @@ export const jobSitesRouter = createTRPCRouter({
                 postalCode: z.string().optional(),
                 country: z.string().optional(),
                 isActive: z.boolean().optional(),
-                latitude: z.number().optional(),
-                longitude: z.number().optional(),
+                latitude: latitudeSchema.optional(),
+                longitude: longitudeSchema.optional(),
                 what3words: z.string().optional(),
+                coordinateLocked: z.boolean().optional(),
+                locationRadiusMeters: locationRadiusSchema.optional(),
+                locationRadiusLocked: z.boolean().optional(),
                 accessInstructions: z.string().optional(),
                 securityCodes: z.string().optional(),
                 keyHolder: z.string().optional(),
@@ -196,6 +209,9 @@ export const jobSitesRouter = createTRPCRouter({
                     latitude: input.latitude,
                     longitude: input.longitude,
                     what3words: input.what3words,
+                    coordinates_locked: input.coordinateLocked,
+                    location_radius_meters: input.locationRadiusMeters,
+                    location_radius_locked: input.locationRadiusLocked,
                     access_instructions: input.accessInstructions,
                     security_codes: input.securityCodes,
                     key_holder: input.keyHolder,

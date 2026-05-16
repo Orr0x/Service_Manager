@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Clock, MapPin, Home, Key, User, Wrench, FileText, ChevronDown, Navigation, Play, ClipboardList, CheckSquare, Square, Camera, ExternalLink, RefreshCw, Send } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, Home, Key, User, Wrench, FileText, ChevronDown, Play, ClipboardList, CheckSquare, Square, Camera, ExternalLink, RefreshCw, Send } from "lucide-react";
 import Link from 'next/link';
 import { api } from "@/trpc/react";
 import { use, useState } from "react";
@@ -112,11 +112,6 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     const endTime = job.end_time ? new Date(job.end_time) : null;
     const duration = startTime && endTime ?
         ((endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)).toFixed(1) + 'h' : 'TBD';
-
-    // Extract coordinates if available, otherwise defaulting to null (UI will handle)
-    const coordinates = job.job_sites?.latitude && job.job_sites?.longitude
-        ? { lat: job.job_sites.latitude, lng: job.job_sites.longitude }
-        : null;
 
     const getCurrentLocation = async () => {
         if (!navigator.geolocation) return undefined;
@@ -234,19 +229,6 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                             </div>
 
                             <div className="flex flex-col gap-2">
-                                <Link
-                                    href={`/worker/navigation?destination=${coordinates ? `${coordinates.lat},${coordinates.lng}` : ''}`}
-                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm shadow-sm transition-colors"
-                                    onClick={(e) => {
-                                        if (!coordinates) {
-                                            e.preventDefault();
-                                            alert('Location coordinates not available for this job.');
-                                        }
-                                    }}
-                                >
-                                    <Navigation className="h-4 w-4" />
-                                    Start Navigation
-                                </Link>
                                 <a
                                     href={`https://maps.google.com/?q=${encodeURIComponent(`${job.job_sites?.address}, ${job.job_sites?.city}`)}`}
                                     target="_blank"

@@ -59,6 +59,13 @@ export const payrollRouter = createTRPCRouter({
                     job_assignments (
                         id,
                         worker_id,
+                        actual_start_time,
+                        actual_end_time,
+                        payable_start_time,
+                        payable_end_time,
+                        payable_minutes,
+                        payable_start_source,
+                        payable_end_source,
                         workers (
                             id,
                             first_name,
@@ -84,70 +91,75 @@ export const payrollRouter = createTRPCRouter({
                     if (!input?.workerId) return true
                     return (job.job_assignments || []).some((assignment) => assignment.worker_id === input.workerId)
                 })
-                .map((job) => {
-                    const payable = calculatePayableTime({
-                        scheduledStart: job.start_time,
-                        scheduledEnd: job.end_time,
-                        actualStart: job.actual_start_time,
-                        actualEnd: job.actual_end_time,
-                        earlyStartAuthorized: job.early_start_authorized,
-                        lateStartAuthorized: job.late_start_authorized,
-                        lateFinishAuthorized: job.late_finish_authorized,
-                    })
-
-                    const effectivePayableMinutes = typeof job.payable_minutes === 'number'
-                        ? job.payable_minutes
-                        : payable.payableMinutes || 0
-                    const payableHours = Number((effectivePayableMinutes / 60).toFixed(2))
-
-                    const workerCards = (job.job_assignments || [])
-                        .map((assignment) => Array.isArray(assignment.workers) ? assignment.workers[0] : assignment.workers)
-                        .filter(Boolean)
-
-                    const workerNames = workerCards.map((worker) => `${worker.first_name} ${worker.last_name}`)
-                    const workerRoles = workerCards.map((worker) => worker.role).filter(Boolean)
-                    const workerSkills = workerCards.flatMap((worker) => parseSkills(worker.skills))
-                    const workerRates = workerCards
-                        .map((worker) => typeof worker.hourly_rate === 'number' ? worker.hourly_rate : 0)
-                        .filter((rate) => rate > 0)
+                .flatMap((job) => {
+                    const workerAssignments = (job.job_assignments || [])
+                        .filter((assignment) => !input?.workerId || assignment.worker_id === input.workerId)
+                        .map((assignment) => ({
+                            assignment,
+                            worker: Array.isArray(assignment.workers) ? assignment.workers[0] : assignment.workers,
+                        }))
+                        .filter((entry) => Boolean(entry.worker))
                     const customer = Array.isArray(job.customers) ? job.customers[0] : null
                     const site = Array.isArray(job.job_sites) ? job.job_sites[0] : null
 
-                    const hourlyRateLabel = workerRates.length > 0
-                        ? workerRates.map((rate) => `£${rate.toFixed(2)}`).join(', ')
-                        : '-'
+                    return workerAssignments.map(({ assignment, worker }) => {
+                        const workerActualStart = assignment.actual_start_time || job.actual_start_time
+                        const workerActualEnd = assignment.actual_end_time || job.actual_end_time
+                        const payable = calculatePayableTime({
+                            scheduledStart: job.start_time,
+                            scheduledEnd: job.end_time,
+                            actualStart: workerActualStart,
+                            actualEnd: workerActualEnd,
+                            earlyStartAuthorized: job.early_start_authorized,
+                            lateStartAuthorized: job.late_start_authorized,
+                            lateFinishAuthorized: job.late_finish_authorized,
+                        })
+                        const effectivePayableMinutes = typeof job.payable_minutes === 'number'
+                            ? job.payable_minutes
+                            : payable.payableMinutes || 0
+                        const workerName = worker ? `${worker.first_name} ${worker.last_name}` : 'Unassigned'
+                        const hourlyRate = worker && typeof worker.hourly_rate === 'number' ? worker.hourly_rate : 0
+                        const workerPayableMinutes = typeof assignment.payable_minutes === 'number'
+                            ? assignment.payable_minutes
+                            : effectivePayableMinutes
+                        const workerPayableHours = Number((workerPayableMinutes / 60).toFixed(2))
+                        const workerPayableStart = assignment.payable_start_time || job.payable_start_time || payable.payableStart?.toISOString() || null
+                        const workerPayableEnd = assignment.payable_end_time || job.payable_end_time || payable.payableEnd?.toISOString() || null
+                        const estimatedPay = hourlyRate > 0 ? hourlyRate * workerPayableHours : 0
 
-                    const estimatedPay = workerRates.reduce((sum, rate) => sum + (rate * payableHours), 0)
-
-                    return {
-                        id: job.id,
-                        title: job.title,
-                        status: job.status,
-                        customerName: customer?.business_name || customer?.contact_name || 'Unknown',
-                        siteName: site?.name || site?.address || 'Unknown',
-                        scheduledStart: job.start_time,
-                        scheduledEnd: job.end_time,
-                        actualStart: job.actual_start_time,
-                        actualEnd: job.actual_end_time,
-                        payableStart: job.payable_start_time || payable.payableStart?.toISOString() || null,
-                        payableEnd: job.payable_end_time || payable.payableEnd?.toISOString() || null,
-                        payableMinutes: effectivePayableMinutes,
-                        payableHours,
-                        assignedWorkers: workerNames,
-                        workerFunctions: workerRoles,
-                        workerSkills: Array.from(new Set(workerSkills)),
-                        hourlyRateLabel,
-                        estimatedPay,
-                    }
+                        return {
+                            id: `${job.id}:${assignment.id}`,
+                            jobId: job.id,
+                            assignmentId: assignment.id,
+                            workerId: assignment.worker_id,
+                            title: job.title,
+                            status: job.status,
+                            customerName: customer?.business_name || customer?.contact_name || 'Unknown',
+                            siteName: site?.name || site?.address || 'Unknown',
+                            scheduledStart: job.start_time,
+                            scheduledEnd: job.end_time,
+                            actualStart: workerActualStart,
+                            actualEnd: workerActualEnd,
+                            payableStart: workerPayableStart,
+                            payableEnd: workerPayableEnd,
+                            payableMinutes: workerPayableMinutes,
+                            payableHours: workerPayableHours,
+                            assignedWorkers: [workerName],
+                            workerFunctions: worker?.role ? [worker.role] : [],
+                            workerSkills: Array.from(new Set(parseSkills(worker?.skills))),
+                            hourlyRateLabel: hourlyRate > 0 ? `£${hourlyRate.toFixed(2)}` : '-',
+                            estimatedPay,
+                        }
+                    })
                 })
 
+            const jobIds = new Set(rows.map((row) => row.jobId))
             const summary = rows.reduce((acc, row) => {
-                acc.totalJobs += 1
                 acc.totalPayableHours += row.payableHours
                 acc.totalEstimatedPay += row.estimatedPay
                 return acc
             }, {
-                totalJobs: 0,
+                totalJobs: jobIds.size,
                 totalPayableHours: 0,
                 totalEstimatedPay: 0,
             })

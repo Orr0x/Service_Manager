@@ -64,6 +64,8 @@ export type PayableTimeInput = {
     scheduledEnd?: string | Date | null
     actualStart?: string | Date | null
     actualEnd?: string | Date | null
+    payableStartOverride?: string | Date | null
+    payableEndOverride?: string | Date | null
     earlyStartAuthorized?: boolean
     lateStartAuthorized?: boolean
     lateFinishAuthorized?: boolean
@@ -90,10 +92,12 @@ export function calculatePayableTime(input: PayableTimeInput) {
     const actualStart = toDate(input.actualStart)
     const actualEnd = toDate(input.actualEnd)
 
-    let payableStart: Date | null = null
-    let payableEnd: Date | null = null
+    let payableStart: Date | null = toDate(input.payableStartOverride)
+    let payableEnd: Date | null = toDate(input.payableEndOverride)
 
-    if (scheduledStart && actualStart) {
+    if (payableStart) {
+        // Explicit admin override wins over rule-based payable start calculation.
+    } else if (scheduledStart && actualStart) {
         if (actualStart.getTime() < scheduledStart.getTime()) {
             payableStart = input.earlyStartAuthorized ? actualStart : scheduledStart
         } else if (actualStart.getTime() > scheduledStart.getTime()) {
@@ -105,7 +109,9 @@ export function calculatePayableTime(input: PayableTimeInput) {
         payableStart = actualStart || scheduledStart
     }
 
-    if (scheduledEnd && actualEnd) {
+    if (payableEnd) {
+        // Explicit admin override wins over rule-based payable end calculation.
+    } else if (scheduledEnd && actualEnd) {
         if (actualEnd.getTime() <= scheduledEnd.getTime()) {
             payableEnd = scheduledEnd
         } else {

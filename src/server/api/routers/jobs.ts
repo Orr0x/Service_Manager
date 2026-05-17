@@ -119,7 +119,17 @@ export const jobsRouter = createTRPCRouter({
             status,
             worker_id,
             contractor_id,
-            workers(id, first_name, last_name, email, role),
+            payable_start_time,
+            payable_end_time,
+            payable_minutes,
+            actual_start_time,
+            actual_end_time,
+            start_distance_meters,
+            end_distance_meters,
+            payable_start_source,
+            payable_end_source,
+            payroll_adjustment_notes,
+            workers(id, first_name, last_name, email, role, hourly_rate),
             contractors(id, company_name, contact_name)
           ),
           job_checklists(
@@ -598,6 +608,166 @@ export const jobsRouter = createTRPCRouter({
             return data
         }),
 
+    updateAssignmentPayrollAdjustment: protectedProcedure
+        .input(z.object({
+            jobId: z.string().uuid(),
+            assignmentId: z.string().uuid(),
+            payableStartSource: z.enum(['job', 'scheduled', 'actual', 'custom']).default('job'),
+            payableEndSource: z.enum(['job', 'scheduled', 'actual', 'custom']).default('job'),
+            customPayableStart: z.string().optional().nullable(),
+            customPayableEnd: z.string().optional().nullable(),
+            notes: z.string().optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const { data: job, error: jobError } = await ctx.db
+                .from('jobs')
+                .select(`
+                    id,
+                    tenant_id,
+                    start_time,
+                    end_time,
+                    actual_start_time,
+                    actual_end_time,
+                    payable_start_time,
+                    payable_end_time,
+                    payable_minutes,
+                    early_start_authorized,
+                    late_start_authorized,
+                    late_finish_authorized
+                `)
+                .eq('id', input.jobId)
+                .eq('tenant_id', ctx.tenantId)
+                .single()
+
+            if (jobError || !job) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: 'Job not found' })
+            }
+
+            const { data: assignment, error: assignmentError } = await ctx.db
+                .from('job_assignments')
+                .select(`
+                    id,
+                    job_id,
+                    payable_start_time,
+                    payable_end_time,
+                    payable_minutes,
+                    actual_start_time,
+                    actual_end_time,
+                    payable_start_source,
+                    payable_end_source,
+                    payroll_adjustment_notes
+                `)
+                .eq('id', input.assignmentId)
+                .eq('job_id', input.jobId)
+                .single()
+
+            if (assignmentError || !assignment) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: 'Job assignment not found' })
+            }
+
+            const jobPayable = calculatePayableTime({
+                scheduledStart: job.start_time,
+                scheduledEnd: job.end_time,
+                actualStart: job.actual_start_time,
+                actualEnd: job.actual_end_time,
+                payableStartOverride: job.payable_start_time,
+                payableEndOverride: job.payable_end_time,
+                earlyStartAuthorized: job.early_start_authorized,
+                lateStartAuthorized: job.late_start_authorized,
+                lateFinishAuthorized: job.late_finish_authorized,
+            })
+
+            const payableStartOverride = resolveAssignmentPayableOverride({
+                source: input.payableStartSource,
+                jobValue: job.payable_start_time || jobPayable.payableStart?.toISOString() || null,
+                scheduled: job.start_time,
+                actual: assignment.actual_start_time || job.actual_start_time,
+                custom: input.customPayableStart,
+                label: 'worker payable start',
+            })
+            const payableEndOverride = resolveAssignmentPayableOverride({
+                source: input.payableEndSource,
+                jobValue: job.payable_end_time || jobPayable.payableEnd?.toISOString() || null,
+                scheduled: job.end_time,
+                actual: assignment.actual_end_time || job.actual_end_time,
+                custom: input.customPayableEnd,
+                label: 'worker payable end',
+            })
+
+            const payable = calculatePayableTime({
+                scheduledStart: job.start_time,
+                scheduledEnd: job.end_time,
+                actualStart: assignment.actual_start_time || job.actual_start_time,
+                actualEnd: assignment.actual_end_time || job.actual_end_time,
+                payableStartOverride,
+                payableEndOverride,
+            })
+
+            const newValues = {
+                payable_start_time: payable.payableStart?.toISOString() || null,
+                payable_end_time: payable.payableEnd?.toISOString() || null,
+                payable_minutes: payable.payableMinutes,
+                payable_start_source: input.payableStartSource,
+                payable_end_source: input.payableEndSource,
+                payroll_adjustment_notes: input.notes || null,
+            }
+
+            const { data, error } = await ctx.db
+                .from('job_assignments')
+                .update({
+                    ...newValues,
+                    payroll_adjusted_by: ctx.user.id,
+                    payroll_adjusted_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', input.assignmentId)
+                .eq('job_id', input.jobId)
+                .select()
+                .single()
+
+            if (error) {
+                throw new Error(`Failed to update worker payroll adjustment: ${error.message}`)
+            }
+
+            await ctx.db
+                .from('job_payroll_adjustments')
+                .insert({
+                    tenant_id: ctx.tenantId,
+                    job_id: input.jobId,
+                    adjusted_by: ctx.user.id,
+                    previous_values: {
+                        assignment_id: assignment.id,
+                        payable_start_time: assignment.payable_start_time,
+                        payable_end_time: assignment.payable_end_time,
+                        payable_minutes: assignment.payable_minutes,
+                        payable_start_source: assignment.payable_start_source,
+                        payable_end_source: assignment.payable_end_source,
+                        payroll_adjustment_notes: assignment.payroll_adjustment_notes,
+                    },
+                    new_values: {
+                        assignment_id: assignment.id,
+                        ...newValues,
+                    },
+                    notes: input.notes || null,
+                })
+
+            await logActivity({
+                tenantId: ctx.tenantId,
+                actorId: ctx.user.id,
+                actionType: 'updated',
+                entityType: 'job',
+                entityId: input.jobId,
+                details: {
+                    update_type: 'worker_payroll_adjustment',
+                    assignment_id: input.assignmentId,
+                    ...newValues,
+                },
+                db: ctx.db
+            })
+
+            return data
+        }),
+
     updatePayrollAdjustment: protectedProcedure
         .input(z.object({
             id: z.string().uuid(),
@@ -605,6 +775,10 @@ export const jobsRouter = createTRPCRouter({
             lateStartAuthorized: z.boolean(),
             lateFinishAuthorized: z.boolean(),
             locationOverrideAuthorized: z.boolean(),
+            payableStartSource: z.enum(['calculated', 'scheduled', 'actual', 'custom']).default('calculated'),
+            payableEndSource: z.enum(['calculated', 'scheduled', 'actual', 'custom']).default('calculated'),
+            customPayableStart: z.string().optional().nullable(),
+            customPayableEnd: z.string().optional().nullable(),
             notes: z.string().optional(),
         }))
         .mutation(async ({ ctx, input }) => {
@@ -634,11 +808,28 @@ export const jobsRouter = createTRPCRouter({
                 throw new TRPCError({ code: 'NOT_FOUND', message: 'Job not found' })
             }
 
+            const payableStartOverride = resolvePayableOverride({
+                source: input.payableStartSource,
+                scheduled: job.start_time,
+                actual: job.actual_start_time,
+                custom: input.customPayableStart,
+                label: 'payable start',
+            })
+            const payableEndOverride = resolvePayableOverride({
+                source: input.payableEndSource,
+                scheduled: job.end_time,
+                actual: job.actual_end_time,
+                custom: input.customPayableEnd,
+                label: 'payable end',
+            })
+
             const payable = calculatePayableTime({
                 scheduledStart: job.start_time,
                 scheduledEnd: job.end_time,
                 actualStart: job.actual_start_time,
                 actualEnd: job.actual_end_time,
+                payableStartOverride,
+                payableEndOverride,
                 earlyStartAuthorized: input.earlyStartAuthorized,
                 lateStartAuthorized: input.lateStartAuthorized,
                 lateFinishAuthorized: input.lateFinishAuthorized,
@@ -653,6 +844,8 @@ export const jobsRouter = createTRPCRouter({
                 payable_start_time: payable.payableStart?.toISOString() || null,
                 payable_end_time: payable.payableEnd?.toISOString() || null,
                 payable_minutes: payable.payableMinutes,
+                payable_start_source: input.payableStartSource,
+                payable_end_source: input.payableEndSource,
             }
 
             const { data, error } = await ctx.db
@@ -922,3 +1115,70 @@ export const jobsRouter = createTRPCRouter({
             return { success: true }
         }),
 })
+
+function resolvePayableOverride(input: {
+    source: 'calculated' | 'scheduled' | 'actual' | 'custom'
+    scheduled?: string | null
+    actual?: string | null
+    custom?: string | null
+    label: string
+}) {
+    if (input.source === 'calculated') return null
+
+    const value = input.source === 'scheduled'
+        ? input.scheduled
+        : input.source === 'actual'
+            ? input.actual
+            : input.custom
+
+    if (!value) {
+        throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Choose a valid ${input.label} value or switch back to calculated.`,
+        })
+    }
+
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) {
+        throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Choose a valid ${input.label} date and time.`,
+        })
+    }
+
+    return date
+}
+
+function resolveAssignmentPayableOverride(input: {
+    source: 'job' | 'scheduled' | 'actual' | 'custom'
+    jobValue?: string | null
+    scheduled?: string | null
+    actual?: string | null
+    custom?: string | null
+    label: string
+}) {
+    const value = input.source === 'job'
+        ? input.jobValue
+        : input.source === 'scheduled'
+            ? input.scheduled
+            : input.source === 'actual'
+                ? input.actual
+                : input.custom
+
+    if (!value) {
+        throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Choose a valid ${input.label} value or use the job-level payable time.`,
+        })
+    }
+
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) {
+        throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Choose a valid ${input.label} date and time.`,
+        })
+    }
+
+    return date
+}

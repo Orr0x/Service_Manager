@@ -25,7 +25,7 @@ import {
     ExternalLink
 } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { NotesSection } from '@/components/notes-section'
 import { AttachmentsSection } from '@/components/attachments-section'
 import CertificationManager from '@/components/certification/CertificationManager'
@@ -34,10 +34,11 @@ import { useState } from 'react'
 
 export function JobDetail({ id }: { id: string }) {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const utils = api.useUtils()
     const { data: job, isLoading: isLoadingJob } = api.jobs.getById.useQuery(id)
 
-    const [activeTab, setActiveTab] = useState('overview')
+    const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'overview')
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
     const updateChecklist = api.jobs.updateChecklistProgress.useMutation({
@@ -544,6 +545,8 @@ type PayrollJob = {
     actual_end_time?: string | null
     payable_start_time?: string | null
     payable_end_time?: string | null
+    payable_start_source?: PayableTimeSource | null
+    payable_end_source?: PayableTimeSource | null
     payable_minutes?: number | null
     start_distance_meters?: number | null
     early_start_authorized?: boolean | null
@@ -551,6 +554,29 @@ type PayrollJob = {
     late_finish_authorized?: boolean | null
     location_override_authorized?: boolean | null
     payroll_adjustment_notes?: string | null
+    job_assignments?: PayrollAssignment[] | null
+}
+
+type PayableTimeSource = 'calculated' | 'scheduled' | 'actual' | 'custom'
+type AssignmentPayableTimeSource = 'job' | 'scheduled' | 'actual' | 'custom'
+
+type PayrollAssignment = {
+    id: string
+    worker_id?: string | null
+    actual_start_time?: string | null
+    actual_end_time?: string | null
+    payable_start_time?: string | null
+    payable_end_time?: string | null
+    payable_minutes?: number | null
+    payable_start_source?: AssignmentPayableTimeSource | null
+    payable_end_source?: AssignmentPayableTimeSource | null
+    payroll_adjustment_notes?: string | null
+    workers?: {
+        first_name?: string | null
+        last_name?: string | null
+        role?: string | null
+        hourly_rate?: number | null
+    } | null
 }
 
 type AdminJobPhoto = {
@@ -625,6 +651,10 @@ function PayrollReview({ job, onUpdated }: { job: PayrollJob; onUpdated: () => v
     const [lateStartAuthorized, setLateStartAuthorized] = useState(job.late_start_authorized ?? false)
     const [lateFinishAuthorized, setLateFinishAuthorized] = useState(job.late_finish_authorized ?? false)
     const [locationOverrideAuthorized, setLocationOverrideAuthorized] = useState(job.location_override_authorized ?? false)
+    const [payableStartSource, setPayableStartSource] = useState<PayableTimeSource>(job.payable_start_source || 'calculated')
+    const [payableEndSource, setPayableEndSource] = useState<PayableTimeSource>(job.payable_end_source || 'calculated')
+    const [customPayableStart, setCustomPayableStart] = useState(toDateTimeInputValue(job.payable_start_time))
+    const [customPayableEnd, setCustomPayableEnd] = useState(toDateTimeInputValue(job.payable_end_time))
     const [payrollNotes, setPayrollNotes] = useState(job.payroll_adjustment_notes || '')
 
     const updatePayrollAdjustment = api.jobs.updatePayrollAdjustment.useMutation({
@@ -641,6 +671,10 @@ function PayrollReview({ job, onUpdated }: { job: PayrollJob; onUpdated: () => v
             lateStartAuthorized,
             lateFinishAuthorized,
             locationOverrideAuthorized,
+            payableStartSource,
+            payableEndSource,
+            customPayableStart: payableStartSource === 'custom' ? customPayableStart : null,
+            customPayableEnd: payableEndSource === 'custom' ? customPayableEnd : null,
             notes: payrollNotes,
         })
     }
@@ -685,6 +719,24 @@ function PayrollReview({ job, onUpdated }: { job: PayrollJob; onUpdated: () => v
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <PayableSourceControl
+                        label="Payable start"
+                        source={payableStartSource}
+                        onSourceChange={setPayableStartSource}
+                        customValue={customPayableStart}
+                        onCustomChange={setCustomPayableStart}
+                        scheduledLabel={formatPayrollDateTime(job.start_time)}
+                        actualLabel={formatPayrollDateTime(job.actual_start_time)}
+                    />
+                    <PayableSourceControl
+                        label="Payable end"
+                        source={payableEndSource}
+                        onSourceChange={setPayableEndSource}
+                        customValue={customPayableEnd}
+                        onCustomChange={setCustomPayableEnd}
+                        scheduledLabel={formatPayrollDateTime(job.end_time)}
+                        actualLabel={formatPayrollDateTime(job.actual_end_time)}
+                    />
                     <PayrollToggle
                         label="Pay early start from actual start"
                         checked={earlyStartAuthorized}
@@ -718,6 +770,29 @@ function PayrollReview({ job, onUpdated }: { job: PayrollJob; onUpdated: () => v
                     />
                 </label>
             </div>
+
+            <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6 space-y-5">
+                <div>
+                    <h3 className="text-base font-semibold leading-7 text-gray-900">Worker Payroll Overrides</h3>
+                    <p className="mt-1 text-sm text-gray-500">Use these when workers on the same job need different payable start or end times.</p>
+                </div>
+
+                <div className="space-y-4">
+                    {(job.job_assignments || [])
+                        .filter((assignment) => assignment.worker_id && assignment.workers)
+                        .map((assignment) => (
+                            <WorkerPayrollOverride
+                                key={assignment.id}
+                                job={job}
+                                assignment={assignment}
+                                onUpdated={onUpdated}
+                            />
+                        ))}
+                    {(job.job_assignments || []).filter((assignment) => assignment.worker_id && assignment.workers).length === 0 && (
+                        <p className="rounded-lg border border-gray-200 px-4 py-3 text-sm text-gray-500">No workers are assigned to this job yet.</p>
+                    )}
+                </div>
+            </div>
         </div>
     )
 }
@@ -733,11 +808,215 @@ function formatPayrollMinutes(value?: number | null) {
     return `${hours}h ${minutes}m`
 }
 
+function toDateTimeInputValue(value?: string | null) {
+    if (!value) return ''
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return ''
+
+    const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    return offsetDate.toISOString().slice(0, 16)
+}
+
 function PayrollMetric({ label, value }: { label: string; value: string }) {
     return (
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
             <dt className="text-xs font-medium uppercase text-gray-500">{label}</dt>
             <dd className="mt-1 text-sm font-semibold text-gray-900">{value}</dd>
+        </div>
+    )
+}
+
+function PayableSourceControl({
+    label,
+    source,
+    onSourceChange,
+    customValue,
+    onCustomChange,
+    scheduledLabel,
+    actualLabel,
+}: {
+    label: string
+    source: PayableTimeSource
+    onSourceChange: (source: PayableTimeSource) => void
+    customValue: string
+    onCustomChange: (value: string) => void
+    scheduledLabel: string
+    actualLabel: string
+}) {
+    return (
+        <div className="rounded-lg border border-gray-200 px-4 py-3">
+            <label className="block text-sm font-medium text-gray-900">
+                {label}
+                <select
+                    value={source}
+                    onChange={(event) => onSourceChange(event.target.value as PayableTimeSource)}
+                    className="mt-2 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+                >
+                    <option value="calculated">Calculated from authorisations</option>
+                    <option value="scheduled">Scheduled time ({scheduledLabel})</option>
+                    <option value="actual">Actual time ({actualLabel})</option>
+                    <option value="custom">Custom date and time</option>
+                </select>
+            </label>
+            {source === 'custom' && (
+                <label className="mt-3 block text-sm font-medium text-gray-900">
+                    Custom {label.toLowerCase()}
+                    <input
+                        type="datetime-local"
+                        value={customValue}
+                        onChange={(event) => onCustomChange(event.target.value)}
+                        className="mt-2 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+                    />
+                </label>
+            )}
+        </div>
+    )
+}
+
+function WorkerPayrollOverride({
+    job,
+    assignment,
+    onUpdated,
+}: {
+    job: PayrollJob
+    assignment: PayrollAssignment
+    onUpdated: () => void
+}) {
+    const [payableStartSource, setPayableStartSource] = useState<AssignmentPayableTimeSource>(assignment.payable_start_source || 'job')
+    const [payableEndSource, setPayableEndSource] = useState<AssignmentPayableTimeSource>(assignment.payable_end_source || 'job')
+    const [customPayableStart, setCustomPayableStart] = useState(toDateTimeInputValue(assignment.payable_start_time || job.payable_start_time))
+    const [customPayableEnd, setCustomPayableEnd] = useState(toDateTimeInputValue(assignment.payable_end_time || job.payable_end_time))
+    const [notes, setNotes] = useState(assignment.payroll_adjustment_notes || '')
+
+    const updateAssignmentPayrollAdjustment = api.jobs.updateAssignmentPayrollAdjustment.useMutation({
+        onSuccess: () => {
+            onUpdated()
+            alert('Worker payroll override saved.')
+        }
+    })
+
+    const workerName = `${assignment.workers?.first_name || ''} ${assignment.workers?.last_name || ''}`.trim() || 'Worker'
+
+    const handleSave = () => {
+        updateAssignmentPayrollAdjustment.mutate({
+            jobId: job.id,
+            assignmentId: assignment.id,
+            payableStartSource,
+            payableEndSource,
+            customPayableStart: payableStartSource === 'custom' ? customPayableStart : null,
+            customPayableEnd: payableEndSource === 'custom' ? customPayableEnd : null,
+            notes,
+        })
+    }
+
+    return (
+        <div className="rounded-lg border border-gray-200 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <p className="font-semibold text-gray-900">{workerName}</p>
+                    <p className="text-sm text-gray-500">
+                        {assignment.workers?.role || 'Worker'} · {typeof assignment.workers?.hourly_rate === 'number' ? `£${assignment.workers.hourly_rate.toFixed(2)}/hr` : 'No rate set'}
+                    </p>
+                    <p className="mt-1 text-sm text-gray-600">
+                        Actual: {formatPayrollDateTime(assignment.actual_start_time || job.actual_start_time)} to {formatPayrollDateTime(assignment.actual_end_time || job.actual_end_time)}
+                    </p>
+                    <p className="mt-1 text-sm text-gray-600">
+                        Payable: {formatPayrollDateTime(assignment.payable_start_time || job.payable_start_time)} to {formatPayrollDateTime(assignment.payable_end_time || job.payable_end_time)}
+                        {' '}({formatPayrollMinutes(assignment.payable_minutes ?? job.payable_minutes)})
+                    </p>
+                </div>
+                <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={updateAssignmentPayrollAdjustment.isPending}
+                    className="inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50"
+                >
+                    {updateAssignmentPayrollAdjustment.isPending ? 'Saving...' : 'Save Worker'}
+                </button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <AssignmentPayableSourceControl
+                    label="Worker payable start"
+                    source={payableStartSource}
+                    onSourceChange={setPayableStartSource}
+                    customValue={customPayableStart}
+                    onCustomChange={setCustomPayableStart}
+                    jobLabel={formatPayrollDateTime(job.payable_start_time)}
+                    scheduledLabel={formatPayrollDateTime(job.start_time)}
+                    actualLabel={formatPayrollDateTime(assignment.actual_start_time || job.actual_start_time)}
+                />
+                <AssignmentPayableSourceControl
+                    label="Worker payable end"
+                    source={payableEndSource}
+                    onSourceChange={setPayableEndSource}
+                    customValue={customPayableEnd}
+                    onCustomChange={setCustomPayableEnd}
+                    jobLabel={formatPayrollDateTime(job.payable_end_time)}
+                    scheduledLabel={formatPayrollDateTime(job.end_time)}
+                    actualLabel={formatPayrollDateTime(assignment.actual_end_time || job.actual_end_time)}
+                />
+            </div>
+
+            <label className="mt-4 block">
+                <span className="block text-sm font-medium text-gray-900">Worker payroll notes</span>
+                <textarea
+                    value={notes}
+                    onChange={(event) => setNotes(event.target.value)}
+                    rows={2}
+                    className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                    placeholder="Reason for this worker-specific adjustment"
+                />
+            </label>
+        </div>
+    )
+}
+
+function AssignmentPayableSourceControl({
+    label,
+    source,
+    onSourceChange,
+    customValue,
+    onCustomChange,
+    jobLabel,
+    scheduledLabel,
+    actualLabel,
+}: {
+    label: string
+    source: AssignmentPayableTimeSource
+    onSourceChange: (source: AssignmentPayableTimeSource) => void
+    customValue: string
+    onCustomChange: (value: string) => void
+    jobLabel: string
+    scheduledLabel: string
+    actualLabel: string
+}) {
+    return (
+        <div className="rounded-lg border border-gray-200 px-4 py-3">
+            <label className="block text-sm font-medium text-gray-900">
+                {label}
+                <select
+                    value={source}
+                    onChange={(event) => onSourceChange(event.target.value as AssignmentPayableTimeSource)}
+                    className="mt-2 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+                >
+                    <option value="job">Use job payable time ({jobLabel})</option>
+                    <option value="scheduled">Scheduled time ({scheduledLabel})</option>
+                    <option value="actual">Actual time ({actualLabel})</option>
+                    <option value="custom">Custom date and time</option>
+                </select>
+            </label>
+            {source === 'custom' && (
+                <label className="mt-3 block text-sm font-medium text-gray-900">
+                    Custom {label.toLowerCase()}
+                    <input
+                        type="datetime-local"
+                        value={customValue}
+                        onChange={(event) => onCustomChange(event.target.value)}
+                        className="mt-2 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+                    />
+                </label>
+            )}
         </div>
     )
 }

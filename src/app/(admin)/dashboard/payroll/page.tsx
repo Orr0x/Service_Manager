@@ -4,6 +4,7 @@ import { api } from '@/trpc/react'
 import { useState, type ComponentType, type ReactNode } from 'react'
 import { format } from 'date-fns'
 import { Calculator, Clock3, PoundSterling } from 'lucide-react'
+import Link from 'next/link'
 
 type RangeOption = 'week' | 'month' | 'all' | 'custom'
 
@@ -33,10 +34,10 @@ export default function PayrollPage() {
         scheduled_end: formatPayrollDateTime(row.scheduledEnd),
         actual_end: formatPayrollDateTime(row.actualEnd),
         payable_hours: row.payableHours.toFixed(2),
-        workers: row.assignedWorkers.join(', '),
-        functions: row.workerFunctions.join(', '),
+        worker: row.assignedWorkers.join(', '),
+        function: row.workerFunctions.join(', '),
         skills: row.workerSkills.join(', '),
-        hourly_rates: row.hourlyRateLabel,
+        hourly_rate: row.hourlyRateLabel,
         estimated_pay: row.estimatedPay.toFixed(2),
     }))
 
@@ -74,7 +75,7 @@ export default function PayrollPage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-gray-900">Payroll Dashboard</h1>
-                    <p className="mt-2 text-sm text-gray-600">Per-job payroll table using scheduled and actual attendance times.</p>
+                    <p className="mt-2 text-sm text-gray-600">Worker-level payroll rows using scheduled, actual, and approved payable times.</p>
                 </div>
                 <button
                     type="button"
@@ -87,7 +88,7 @@ export default function PayrollPage() {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <MetricCard label="Jobs in View" value={summary?.totalJobs?.toString() || '0'} icon={Calculator} />
-                <MetricCard label="Payable Hours" value={summary ? summary.totalPayableHours.toFixed(2) : '0.00'} icon={Clock3} />
+                <MetricCard label="Payable Worker Hours" value={summary ? summary.totalPayableHours.toFixed(2) : '0.00'} icon={Clock3} />
                 <MetricCard label="Estimated Gross Pay" value={`£${summary ? summary.totalEstimatedPay.toFixed(2) : '0.00'}`} icon={PoundSterling} />
             </div>
 
@@ -152,27 +153,28 @@ export default function PayrollPage() {
                     <thead className="bg-gray-50">
                         <tr>
                             <HeaderCell>Job</HeaderCell>
-                            <HeaderCell>Worker(s)</HeaderCell>
-                            <HeaderCell>Function(s)</HeaderCell>
+                            <HeaderCell>Worker</HeaderCell>
+                            <HeaderCell>Function</HeaderCell>
                             <HeaderCell>Skill(s)</HeaderCell>
                             <HeaderCell>Scheduled Start</HeaderCell>
                             <HeaderCell>Actual Start</HeaderCell>
                             <HeaderCell>Scheduled End</HeaderCell>
                             <HeaderCell>Actual End</HeaderCell>
                             <HeaderCell>Payable Hours</HeaderCell>
-                            <HeaderCell>Rate(s)</HeaderCell>
+                            <HeaderCell>Rate</HeaderCell>
                             <HeaderCell>Estimated Pay</HeaderCell>
+                            <HeaderCell>Review</HeaderCell>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                         {payrollQuery.isLoading && (
                             <tr>
-                                <td className="px-4 py-6 text-gray-500" colSpan={11}>Loading payroll rows...</td>
+                                <td className="px-4 py-6 text-gray-500" colSpan={12}>Loading payroll rows...</td>
                             </tr>
                         )}
                         {!payrollQuery.isLoading && rows.length === 0 && (
                             <tr>
-                                <td className="px-4 py-6 text-gray-500" colSpan={11}>No jobs found for this filter.</td>
+                                <td className="px-4 py-6 text-gray-500" colSpan={12}>No jobs found for this filter.</td>
                             </tr>
                         )}
                         {rows.map((row) => (
@@ -191,6 +193,14 @@ export default function PayrollPage() {
                                 <DataCell>{row.payableHours.toFixed(2)}</DataCell>
                                 <DataCell>{row.hourlyRateLabel}</DataCell>
                                 <DataCell>£{row.estimatedPay.toFixed(2)}</DataCell>
+                                <td className="whitespace-nowrap px-4 py-3 text-sm">
+                                    <Link
+                                        href={`/dashboard/jobs/${row.jobId}?tab=payroll`}
+                                        className="font-semibold text-blue-600 hover:text-blue-500"
+                                    >
+                                        Payroll tab
+                                    </Link>
+                                </td>
                             </tr>
                         ))}
                     </tbody>

@@ -112,6 +112,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     const endTime = job.end_time ? new Date(job.end_time) : null;
     const duration = startTime && endTime ?
         ((endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)).toFixed(1) + 'h' : 'TBD';
+    const attendanceStatus = job.assignmentStatus || job.status;
 
     const getCurrentLocation = async () => {
         if (!navigator.geolocation) return undefined;
@@ -140,7 +141,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         const location = await getCurrentLocation();
 
         try {
-            if (job.status === 'in_progress') {
+            if (attendanceStatus === 'in_progress') {
                 await completeJob.mutateAsync({ jobId: id, location });
             } else {
                 await startJob.mutateAsync({ jobId: id, location });
@@ -151,7 +152,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     };
 
     const isActionPending = startJob.isPending || completeJob.isPending;
-    const canAddEvidence = job.status === 'in_progress' || job.status === 'completed';
+    const canAddEvidence = attendanceStatus === 'in_progress' || attendanceStatus === 'completed';
 
     const handleNoteSubmit = (event: React.FormEvent) => {
         event.preventDefault();
@@ -174,10 +175,10 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                     </div>
                 </div>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border capitalize
-                    ${job.status === 'completed' ? 'bg-green-100 text-green-800 border-green-200' :
-                        job.status === 'in_progress' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                    ${attendanceStatus === 'completed' ? 'bg-green-100 text-green-800 border-green-200' :
+                        attendanceStatus === 'in_progress' ? 'bg-blue-100 text-blue-800 border-blue-200' :
                             'bg-yellow-100 text-yellow-800 border-yellow-200'}`}>
-                    {job.status.replace('_', ' ')}
+                    {attendanceStatus.replace('_', ' ')}
                 </span>
             </div>
 
@@ -495,14 +496,14 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                         {actionError}
                     </div>
                 )}
-                {job.status !== 'completed' && (
+                {attendanceStatus !== 'completed' && (
                     <button
                         onClick={handlePrimaryAction}
                         disabled={isActionPending}
                         className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:hover:bg-blue-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-sm transition-colors"
                     >
                         <Play className="h-5 w-5 fill-current" />
-                        {isActionPending ? 'Checking...' : job.status === 'in_progress' ? 'Complete Job' : 'Start Job'}
+                        {isActionPending ? 'Checking...' : attendanceStatus === 'in_progress' ? 'Complete Job' : 'Start Job'}
                     </button>
                 )}
             </div>

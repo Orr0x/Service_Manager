@@ -402,7 +402,7 @@ export const workerRouter = createTRPCRouter({
 
             const { data: assignment } = await ctx.db
                 .from('job_assignments')
-                .select('id')
+                .select('id, status, actual_start_time, actual_end_time, payable_start_time, payable_end_time, payable_minutes')
                 .eq('worker_id', workerId)
                 .eq('job_id', input.jobId)
                 .single();
@@ -429,7 +429,15 @@ export const workerRouter = createTRPCRouter({
                 .eq('id', input.jobId)
                 .single();
 
-            return job;
+            return {
+                ...job,
+                assignmentStatus: assignment.status,
+                actual_start_time: assignment.actual_start_time || job?.actual_start_time,
+                actual_end_time: assignment.actual_end_time || job?.actual_end_time,
+                payable_start_time: assignment.payable_start_time || job?.payable_start_time,
+                payable_end_time: assignment.payable_end_time || job?.payable_end_time,
+                payable_minutes: assignment.payable_minutes ?? job?.payable_minutes,
+            };
         }),
 
     startJob: protectedProcedure
@@ -443,7 +451,7 @@ export const workerRouter = createTRPCRouter({
 
             const { data: assignment } = await ctx.db
                 .from('job_assignments')
-                .select('id')
+                .select('id, actual_start_time, actual_end_time')
                 .eq('worker_id', workerId)
                 .eq('job_id', input.jobId)
                 .single();
@@ -462,6 +470,9 @@ export const workerRouter = createTRPCRouter({
                     end_time,
                     actual_start_time,
                     actual_end_time,
+                    payable_start_time,
+                    payable_end_time,
+                    payable_minutes,
                     early_start_authorized,
                     late_start_authorized,
                     late_finish_authorized,
@@ -484,8 +495,8 @@ export const workerRouter = createTRPCRouter({
                 throw new TRPCError({ code: 'BAD_REQUEST', message: 'This job is already completed.' });
             }
 
-            if (job.status === 'in_progress' || job.actual_start_time) {
-                throw new TRPCError({ code: 'BAD_REQUEST', message: 'This job has already been started.' });
+            if (assignment.actual_start_time) {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: 'You have already started this job.' });
             }
 
             const { data: settingsRow } = await ctx.db
@@ -543,10 +554,10 @@ export const workerRouter = createTRPCRouter({
                 .from('jobs')
                 .update({
                     status: 'in_progress',
-                    actual_start_time: actualStart.toISOString(),
-                    payable_start_time: payable.payableStart?.toISOString() || null,
-                    payable_end_time: payable.payableEnd?.toISOString() || null,
-                    payable_minutes: payable.payableMinutes,
+                    actual_start_time: job.actual_start_time || actualStart.toISOString(),
+                    payable_start_time: job.payable_start_time || payable.payableStart?.toISOString() || null,
+                    payable_end_time: job.payable_end_time || payable.payableEnd?.toISOString() || null,
+                    payable_minutes: job.payable_minutes ?? payable.payableMinutes,
                     start_latitude: input.location?.latitude ?? null,
                     start_longitude: input.location?.longitude ?? null,
                     start_location_accuracy_meters: input.location?.accuracy ?? null,
@@ -564,7 +575,18 @@ export const workerRouter = createTRPCRouter({
 
             await ctx.db
                 .from('job_assignments')
-                .update({ status: 'in_progress' })
+                .update({
+                    status: 'in_progress',
+                    actual_start_time: actualStart.toISOString(),
+                    payable_start_time: payable.payableStart?.toISOString() || null,
+                    payable_end_time: payable.payableEnd?.toISOString() || null,
+                    payable_minutes: payable.payableMinutes,
+                    start_latitude: input.location?.latitude ?? null,
+                    start_longitude: input.location?.longitude ?? null,
+                    start_location_accuracy_meters: input.location?.accuracy ?? null,
+                    start_distance_meters: distanceMeters,
+                    updated_at: new Date().toISOString(),
+                })
                 .eq('id', assignment.id);
 
             return updatedJob;
@@ -581,7 +603,7 @@ export const workerRouter = createTRPCRouter({
 
             const { data: assignment } = await ctx.db
                 .from('job_assignments')
-                .select('id')
+                .select('id, actual_start_time, actual_end_time')
                 .eq('worker_id', workerId)
                 .eq('job_id', input.jobId)
                 .single();
@@ -599,6 +621,10 @@ export const workerRouter = createTRPCRouter({
                     start_time,
                     end_time,
                     actual_start_time,
+                    actual_end_time,
+                    payable_start_time,
+                    payable_end_time,
+                    payable_minutes,
                     early_start_authorized,
                     late_start_authorized,
                     late_finish_authorized,
@@ -621,8 +647,14 @@ export const workerRouter = createTRPCRouter({
                 throw new TRPCError({ code: 'BAD_REQUEST', message: 'This job is already completed.' });
             }
 
-            if (!job.actual_start_time) {
-                throw new TRPCError({ code: 'BAD_REQUEST', message: 'This job must be started before it can be completed.' });
+            const assignmentActualStart = assignment.actual_start_time || job.actual_start_time;
+
+            if (!assignmentActualStart) {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: 'You must start this job before you can complete it.' });
+            }
+
+            if (assignment.actual_end_time) {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: 'You have already completed this job.' });
             }
 
             const { data: settingsRow } = await ctx.db
@@ -674,10 +706,19 @@ export const workerRouter = createTRPCRouter({
             }
 
             const actualEnd = new Date();
+            const { data: remainingAssignments } = await ctx.db
+                .from('job_assignments')
+                .select('id')
+                .eq('job_id', input.jobId)
+                .neq('id', assignment.id)
+                .not('worker_id', 'is', null)
+                .neq('status', 'completed');
+            const jobStatus = remainingAssignments && remainingAssignments.length > 0 ? 'in_progress' : 'completed';
+
             const payable = calculatePayableTime({
                 scheduledStart: job.start_time,
                 scheduledEnd: job.end_time,
-                actualStart: job.actual_start_time,
+                actualStart: assignmentActualStart,
                 actualEnd,
                 earlyStartAuthorized: job.early_start_authorized,
                 lateStartAuthorized: job.late_start_authorized,
@@ -687,11 +728,11 @@ export const workerRouter = createTRPCRouter({
             const { data: updatedJob, error: updateError } = await ctx.db
                 .from('jobs')
                 .update({
-                    status: 'completed',
-                    actual_end_time: actualEnd.toISOString(),
-                    payable_start_time: payable.payableStart?.toISOString() || null,
-                    payable_end_time: payable.payableEnd?.toISOString() || null,
-                    payable_minutes: payable.payableMinutes,
+                    status: jobStatus,
+                    actual_end_time: jobStatus === 'completed' ? actualEnd.toISOString() : job.actual_end_time,
+                    payable_start_time: job.payable_start_time || payable.payableStart?.toISOString() || null,
+                    payable_end_time: jobStatus === 'completed' ? (job.payable_end_time || payable.payableEnd?.toISOString() || null) : job.payable_end_time,
+                    payable_minutes: jobStatus === 'completed' ? (job.payable_minutes ?? payable.payableMinutes) : job.payable_minutes,
                     end_latitude: input.location?.latitude ?? null,
                     end_longitude: input.location?.longitude ?? null,
                     end_location_accuracy_meters: input.location?.accuracy ?? null,
@@ -709,7 +750,18 @@ export const workerRouter = createTRPCRouter({
 
             await ctx.db
                 .from('job_assignments')
-                .update({ status: 'completed' })
+                .update({
+                    status: 'completed',
+                    actual_end_time: actualEnd.toISOString(),
+                    payable_start_time: payable.payableStart?.toISOString() || null,
+                    payable_end_time: payable.payableEnd?.toISOString() || null,
+                    payable_minutes: payable.payableMinutes,
+                    end_latitude: input.location?.latitude ?? null,
+                    end_longitude: input.location?.longitude ?? null,
+                    end_location_accuracy_meters: input.location?.accuracy ?? null,
+                    end_distance_meters: distanceMeters,
+                    updated_at: new Date().toISOString(),
+                })
                 .eq('id', assignment.id);
 
             return updatedJob;

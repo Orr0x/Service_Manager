@@ -3,6 +3,7 @@
 import { ExternalLink, Lock, MapPin, Unlock } from 'lucide-react'
 import Map, { Layer, Marker, NavigationControl, Source } from 'react-map-gl/mapbox'
 import type { Feature, Polygon } from 'geojson'
+import { getMapboxTokenUnavailableMessage, getPublicMapboxToken } from '@/lib/mapbox-token'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
 type JobSiteLocationSummaryProps = {
@@ -29,7 +30,7 @@ export function JobSiteLocationSummary({
         && longitude >= -180
         && longitude <= 180
     const normalizedRangeMeters = Math.min(250, Math.max(10, rangeMeters || 250))
-    const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+    const mapboxToken = getPublicMapboxToken()
     const rangeCircle = hasValidCoordinates
         ? createCirclePolygon(latitude, longitude, normalizedRangeMeters)
         : null
@@ -106,7 +107,7 @@ export function JobSiteLocationSummary({
                 </div>
             </div>
             <div className="px-4 py-5 sm:p-6">
-                {hasValidCoordinates && mapboxToken ? (
+                {hasValidCoordinates && mapboxToken.token ? (
                     <div className="space-y-2">
                         <div className="aspect-square overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
                             <Map
@@ -117,7 +118,7 @@ export function JobSiteLocationSummary({
                                         maxZoom: 18,
                                     },
                                 }}
-                                mapboxAccessToken={mapboxToken}
+                                mapboxAccessToken={mapboxToken.token}
                                 mapStyle="mapbox://styles/mapbox/streets-v12"
                                 style={{ width: '100%', height: '100%' }}
                             >
@@ -155,7 +156,7 @@ export function JobSiteLocationSummary({
                 ) : (
                     <div className="flex aspect-square items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white p-4 text-center text-sm text-gray-600">
                         {hasValidCoordinates
-                            ? 'Map unavailable because the Mapbox token is not configured.'
+                            ? getMapboxTokenUnavailableMessage(mapboxToken.status)
                             : 'No valid coordinates saved for this job site.'}
                     </div>
                 )}

@@ -61,7 +61,7 @@ export default function NewCustomerPage() {
                 </div>
             </div>
 
-            <form action={onSubmit} className="mt-8 space-y-8">
+            <form action={onSubmit} className="mt-6 space-y-6 sm:mt-8 sm:space-y-8">
                 {createCustomer.error && (
                     <div className="rounded-md bg-red-50 p-4">
                         <div className="flex">

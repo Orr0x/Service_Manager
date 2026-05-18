@@ -4,9 +4,8 @@ import { api } from '@/trpc/react'
 
 import { useSearchParams } from 'next/navigation'
 import { DollarSign, Clock, Wrench } from 'lucide-react'
-import { useState } from 'react'
+import { useMobileDefaultView } from '@/hooks/use-mobile-default-view'
 import { ViewToggle } from '@/components/common/view-toggle'
-import { cn } from '@/lib/utils'
 
 export function ServicesList() {
     const searchParams = useSearchParams()
@@ -14,7 +13,7 @@ export function ServicesList() {
 
     const { data: services, isLoading } = api.services.getAll.useQuery({ search })
 
-    const [view, setView] = useState<'list' | 'grid'>('list')
+    const [view, setView] = useMobileDefaultView()
 
     if (isLoading) {
         return <div className="py-4 text-center">Loading services...</div>
@@ -23,7 +22,7 @@ export function ServicesList() {
     if (!services || services.length === 0) {
         return (
             <div className="py-10 text-center text-sm text-gray-500">
-                No services found. Click "Add service" to create one.
+                No services found. Use Add service to create one.
             </div>
         )
     }
@@ -31,7 +30,7 @@ export function ServicesList() {
     return (
         <div className="space-y-4">
             {/* Header */}
-            <div className="flex justify-between items-center px-4 py-4 sm:px-6 bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-4 shadow-sm ring-1 ring-gray-900/5 sm:px-6 sm:rounded-xl">
                 <h3 className="text-base font-semibold leading-6 text-gray-900">All Services</h3>
                 <ViewToggle view={view} setView={setView} />
             </div>

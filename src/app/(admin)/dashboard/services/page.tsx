@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { api, HydrateClient } from '@/trpc/server'
-import { Plus, Wrench, CheckCircle, DollarSign, Clock } from 'lucide-react'
+import { Wrench, CheckCircle, DollarSign, Clock } from 'lucide-react'
 import { ServicesList } from './services-list'
 import { SearchInput } from '@/components/common/search-input'
 
@@ -11,28 +11,28 @@ export default async function ServicesPage() {
 
     return (
         <HydrateClient>
-            <div className="space-y-8">
+            <div className="space-y-5 sm:space-y-8">
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Services</h1>
+                        <h1 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">Services</h1>
                         <p className="mt-2 text-sm text-gray-700">
                             A list of all the services you offer including their name, price, and duration.
                         </p>
                     </div>
                     <Link
                         href="/dashboard/services/new"
-                        className="inline-flex items-center rounded-md bg-blue-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                        className="inline-flex w-full items-center justify-center rounded-md bg-blue-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:w-auto"
                     >
                         Add service
                     </Link>
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                     {/* Total Services */}
                     <div className="overflow-hidden rounded-lg bg-white shadow">
-                        <div className="p-5">
+                        <div className="p-4 sm:p-5">
                             <div className="flex items-center">
                                 <div className="flex-shrink-0">
                                     <Wrench className="h-6 w-6 text-blue-400" aria-hidden="true" />
@@ -51,7 +51,7 @@ export default async function ServicesPage() {
 
                     {/* Active Services */}
                     <div className="overflow-hidden rounded-lg bg-white shadow">
-                        <div className="p-5">
+                        <div className="p-4 sm:p-5">
                             <div className="flex items-center">
                                 <div className="flex-shrink-0">
                                     <CheckCircle className="h-6 w-6 text-green-400" aria-hidden="true" />
@@ -70,7 +70,7 @@ export default async function ServicesPage() {
 
                     {/* Fixed Price */}
                     <div className="overflow-hidden rounded-lg bg-white shadow">
-                        <div className="p-5">
+                        <div className="p-4 sm:p-5">
                             <div className="flex items-center">
                                 <div className="flex-shrink-0">
                                     <DollarSign className="h-6 w-6 text-yellow-400" aria-hidden="true" />
@@ -89,7 +89,7 @@ export default async function ServicesPage() {
 
                     {/* Hourly */}
                     <div className="overflow-hidden rounded-lg bg-white shadow">
-                        <div className="p-5">
+                        <div className="p-4 sm:p-5">
                             <div className="flex items-center">
                                 <div className="flex-shrink-0">
                                     <Clock className="h-6 w-6 text-purple-400" aria-hidden="true" />
@@ -117,5 +117,4 @@ export default async function ServicesPage() {
         </HydrateClient>
     )
 }
-
 

@@ -1,53 +1,57 @@
 'use client'
 
-import { Calendar, CheckCircle2, Clock, PlayCircle, AlertCircle, User, Briefcase, FileText, Receipt, FileCheck, Plus } from 'lucide-react'
+import { Calendar, CheckCircle2, Clock, PlayCircle, User, Briefcase, Receipt, FileCheck, Plus } from 'lucide-react'
 import { api } from '@/trpc/react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { useState } from 'react'
 
-function ActivityItem({ activity }: { activity: any }) {
+type DashboardRange = 'today' | 'week' | 'month' | 'year' | 'all'
+
+type Activity = {
+    id: string
+    entity_type: string
+    action_type: string
+    created_at: string | number | Date
+    actor?: {
+        first_name?: string | null
+        last_name?: string | null
+    } | null
+    details?: {
+        title?: string | null
+        name?: string | null
+        status?: string | null
+    } | null
+}
+
+function ActivityItem({ activity }: { activity: Activity }) {
     let icon = User
     let color = 'text-gray-500'
-    let bgColor = 'bg-gray-50'
-    let ringColor = 'ring-gray-500/10'
 
     switch (activity.entity_type) {
         case 'job':
             icon = Briefcase
             color = 'text-blue-600'
-            bgColor = 'bg-blue-50'
-            ringColor = 'ring-blue-600/10'
             break
         case 'worker':
             icon = User
             color = 'text-green-600'
-            bgColor = 'bg-green-50'
-            ringColor = 'ring-green-600/10'
             break
         case 'invoice':
             icon = Receipt
             color = 'text-amber-600'
-            bgColor = 'bg-amber-50'
-            ringColor = 'ring-amber-600/10'
             break
         case 'quote':
             icon = FileCheck
             color = 'text-purple-600'
-            bgColor = 'bg-purple-50'
-            ringColor = 'ring-purple-600/10'
             break
         case 'site':
             icon = Briefcase // Building2 ideally
             color = 'text-indigo-600'
-            bgColor = 'bg-indigo-50'
-            ringColor = 'ring-indigo-600/10'
             break
         case 'customer':
             icon = User
             color = 'text-cyan-600'
-            bgColor = 'bg-cyan-50'
-            ringColor = 'ring-cyan-600/10'
             break
     }
 
@@ -83,11 +87,11 @@ function ActivityItem({ activity }: { activity: any }) {
 }
 
 export default function DashboardPage() {
-    const [range, setRange] = useState<'today' | 'week' | 'month' | 'year' | 'all'>('all')
+    const [range, setRange] = useState<DashboardRange>('all')
     const { data: stats, isLoading: statsLoading } = api.dashboard.getStats.useQuery({ range })
     const { data: recentActivity, isLoading: activityLoading } = api.activity.getRecent.useQuery({ limit: 10, range })
 
-    const tabs = [
+    const tabs: { name: string; value: DashboardRange }[] = [
         { name: 'Today', value: 'today' },
         { name: 'Week', value: 'week' },
         { name: 'Month', value: 'month' },
@@ -96,18 +100,18 @@ export default function DashboardPage() {
     ]
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-5 sm:space-y-8">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <h1 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
                     Cleaning Services Dashboard
                 </h1>
-                <div className="flex bg-gray-100 p-1 rounded-lg">
+                <div className="flex w-full overflow-x-auto rounded-lg bg-gray-100 p-1 sm:w-auto">
                     {tabs.map((tab) => (
                         <button
                             key={tab.value}
-                            onClick={() => setRange(tab.value as any)}
-                            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${range === tab.value
+                            onClick={() => setRange(tab.value)}
+                            className={`flex-1 whitespace-nowrap px-3 py-1.5 text-sm font-medium rounded-md transition-colors sm:flex-none ${range === tab.value
                                 ? 'bg-white text-gray-900 shadow-sm'
                                 : 'text-gray-500 hover:text-gray-900'
                                 }`}
@@ -119,10 +123,10 @@ export default function DashboardPage() {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                 {/* Total Jobs */}
                 <div className="overflow-hidden rounded-lg bg-white shadow">
-                    <div className="p-5">
+                    <div className="p-4 sm:p-5">
                         <div className="flex items-center">
                             <div className="flex-shrink-0">
                                 <Calendar className="h-6 w-6 text-gray-400" aria-hidden="true" />
@@ -148,7 +152,7 @@ export default function DashboardPage() {
 
                 {/* Scheduled */}
                 <div className="overflow-hidden rounded-lg bg-white shadow">
-                    <div className="p-5">
+                    <div className="p-4 sm:p-5">
                         <div className="flex items-center">
                             <div className="flex-shrink-0">
                                 <Clock className="h-6 w-6 text-blue-400" aria-hidden="true" />
@@ -174,7 +178,7 @@ export default function DashboardPage() {
 
                 {/* In Progress */}
                 <div className="overflow-hidden rounded-lg bg-white shadow">
-                    <div className="p-5">
+                    <div className="p-4 sm:p-5">
                         <div className="flex items-center">
                             <div className="flex-shrink-0">
                                 <PlayCircle className="h-6 w-6 text-orange-400" aria-hidden="true" />
@@ -200,7 +204,7 @@ export default function DashboardPage() {
 
                 {/* Completed */}
                 <div className="overflow-hidden rounded-lg bg-white shadow">
-                    <div className="p-5">
+                    <div className="p-4 sm:p-5">
                         <div className="flex items-center">
                             <div className="flex-shrink-0">
                                 <CheckCircle2 className="h-6 w-6 text-green-400" aria-hidden="true" />

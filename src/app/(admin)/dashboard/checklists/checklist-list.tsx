@@ -2,14 +2,13 @@
 
 import { api } from '@/trpc/react'
 import Link from 'next/link'
-import { FileText, CheckSquare, LayoutTemplate, Calendar } from 'lucide-react'
-import { useState } from 'react'
+import { CheckSquare, Calendar } from 'lucide-react'
+import { useMobileDefaultView } from '@/hooks/use-mobile-default-view'
 import { ViewToggle } from '@/components/common/view-toggle'
-import { cn } from '@/lib/utils'
 import { useSearchParams } from 'next/navigation'
 
 export function ChecklistList() {
-    const [view, setView] = useState<'list' | 'grid'>('list')
+    const [view, setView] = useMobileDefaultView()
     const searchParams = useSearchParams()
     const search = searchParams.get('search') || undefined
 
@@ -39,7 +38,7 @@ export function ChecklistList() {
     return (
         <div className="space-y-4">
             {/* Header */}
-            <div className="flex justify-between items-center px-4 py-4 sm:px-6 bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-4 shadow-sm ring-1 ring-gray-900/5 sm:px-6 sm:rounded-xl">
                 <h3 className="text-base font-semibold leading-6 text-gray-900">All Checklists</h3>
                 <ViewToggle view={view} setView={setView} />
             </div>

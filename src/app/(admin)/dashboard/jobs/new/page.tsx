@@ -90,7 +90,7 @@ export default function NewJobPage() {
                 </p>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-gray-200">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:space-y-8 sm:p-8">
 
                 {/* Basic Info */}
                 <div className="space-y-6">

@@ -95,7 +95,7 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
                 <h1 className="text-2xl font-bold text-gray-900">Edit Job</h1>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-gray-200">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:space-y-8 sm:p-8">
 
                 <div className="space-y-6">
                     <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">

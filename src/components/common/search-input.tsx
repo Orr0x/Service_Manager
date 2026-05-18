@@ -39,7 +39,7 @@ export function SearchInput({
     }, [debouncedValue, pathname, router, searchParams])
 
     return (
-        <div className={`relative ${className}`}>
+        <div className={`relative ${className ?? ''}`}>
             <label htmlFor="search" className="sr-only">
                 Search
             </label>
@@ -49,7 +49,7 @@ export function SearchInput({
                 </div>
                 <input
                     id="search"
-                    className="block w-full rounded-md border-0 py-3 pl-10 pr-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-[var(--primary-color)] sm:text-sm sm:leading-6"
+                    className="block w-full rounded-md border-0 py-3 pl-10 pr-10 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-[var(--primary-color)] sm:text-sm sm:leading-6"
                     placeholder={placeholder}
                     type="search"
                     value={value}

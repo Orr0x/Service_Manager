@@ -3,6 +3,7 @@
 import { ExternalLink, LocateFixed, Lock, MapPin, Unlock } from 'lucide-react'
 import Map, { Layer, Marker, NavigationControl, Source } from 'react-map-gl/mapbox'
 import type { Feature, Polygon } from 'geojson'
+import { getMapboxTokenUnavailableMessage, getPublicMapboxToken } from '@/lib/mapbox-token'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
 type JobSiteLocationPickerProps = {
@@ -54,7 +55,7 @@ export function JobSiteLocationPicker({
         && numericLatitude <= 90
         && numericLongitude >= -180
         && numericLongitude <= 180
-    const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+    const mapboxToken = getPublicMapboxToken()
     const viewState = hasValidCoordinates
         ? { latitude: numericLatitude, longitude: numericLongitude, zoom: 16 }
         : defaultView
@@ -217,13 +218,13 @@ export function JobSiteLocationPicker({
                 </div>
             </div>
 
-            {mapboxToken ? (
+            {mapboxToken.token ? (
                 <div className="space-y-2">
                     <div className="h-80 overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
                     <Map
                         key={`${viewState.latitude}:${viewState.longitude}:${viewState.zoom}`}
                         initialViewState={viewState}
-                        mapboxAccessToken={mapboxToken}
+                        mapboxAccessToken={mapboxToken.token}
                         mapStyle="mapbox://styles/mapbox/streets-v12"
                         style={{ width: '100%', height: '100%' }}
                         onClick={(event) => setCoordinates(event.lngLat.lat, event.lngLat.lng)}
@@ -282,7 +283,7 @@ export function JobSiteLocationPicker({
                 </div>
             ) : (
                 <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
-                    Map picker unavailable because the Mapbox token is not configured.
+                    {getMapboxTokenUnavailableMessage(mapboxToken.status, 'Map picker')}
                 </div>
             )}
         </div>

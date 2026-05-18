@@ -4,16 +4,15 @@ import { api } from '@/trpc/react'
 import Link from 'next/link'
 import { Building2, FileText, Phone, Mail } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
-import { useState } from 'react'
+import { useMobileDefaultView } from '@/hooks/use-mobile-default-view'
 import { ViewToggle } from '@/components/common/view-toggle'
-import { cn } from '@/lib/utils'
 
 export function CustomerList() {
     const searchParams = useSearchParams()
     const search = searchParams.get('search') || undefined
 
     const { data: customers, isLoading } = api.customers.getAll.useQuery({ search })
-    const [view, setView] = useState<'list' | 'grid'>('list')
+    const [view, setView] = useMobileDefaultView()
 
     if (isLoading) {
         return <div className="p-8 text-center text-gray-500">Loading customers...</div>
@@ -39,7 +38,7 @@ export function CustomerList() {
     return (
         <div className="space-y-4">
             {/* Header */}
-            <div className="flex justify-between items-center px-4 py-4 sm:px-6 bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-4 shadow-sm ring-1 ring-gray-900/5 sm:px-6 sm:rounded-xl">
                 <h3 className="text-base font-semibold leading-6 text-gray-900">All Customers</h3>
                 <ViewToggle view={view} setView={setView} />
             </div>

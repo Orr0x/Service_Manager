@@ -12,7 +12,7 @@ export function ViewToggle({ view, setView }: ViewToggleProps) {
             <button
                 onClick={() => setView('list')}
                 className={cn(
-                    "flex items-center justify-center rounded-md p-1.5 transition-all text-sm font-medium",
+                    "flex items-center justify-center rounded-md p-2 text-sm font-medium transition-all",
                     view === 'list'
                         ? "bg-gray-100 text-gray-900 shadow-sm"
                         : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
@@ -25,7 +25,7 @@ export function ViewToggle({ view, setView }: ViewToggleProps) {
             <button
                 onClick={() => setView('grid')}
                 className={cn(
-                    "flex items-center justify-center rounded-md p-1.5 transition-all text-sm font-medium",
+                    "flex items-center justify-center rounded-md p-2 text-sm font-medium transition-all",
                     view === 'grid'
                         ? "bg-gray-100 text-gray-900 shadow-sm"
                         : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"

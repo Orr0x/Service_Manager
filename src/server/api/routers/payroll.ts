@@ -103,8 +103,8 @@ export const payrollRouter = createTRPCRouter({
                     const site = Array.isArray(job.job_sites) ? job.job_sites[0] : null
 
                     return workerAssignments.map(({ assignment, worker }) => {
-                        const workerActualStart = assignment.actual_start_time || job.actual_start_time
-                        const workerActualEnd = assignment.actual_end_time || job.actual_end_time
+                        const workerActualStart = assignment.actual_start_time
+                        const workerActualEnd = assignment.actual_end_time
                         const payable = calculatePayableTime({
                             scheduledStart: job.start_time,
                             scheduledEnd: job.end_time,
@@ -114,17 +114,14 @@ export const payrollRouter = createTRPCRouter({
                             lateStartAuthorized: job.late_start_authorized,
                             lateFinishAuthorized: job.late_finish_authorized,
                         })
-                        const effectivePayableMinutes = typeof job.payable_minutes === 'number'
-                            ? job.payable_minutes
-                            : payable.payableMinutes || 0
                         const workerName = worker ? `${worker.first_name} ${worker.last_name}` : 'Unassigned'
                         const hourlyRate = worker && typeof worker.hourly_rate === 'number' ? worker.hourly_rate : 0
                         const workerPayableMinutes = typeof assignment.payable_minutes === 'number'
                             ? assignment.payable_minutes
-                            : effectivePayableMinutes
+                            : payable.payableMinutes || 0
                         const workerPayableHours = Number((workerPayableMinutes / 60).toFixed(2))
-                        const workerPayableStart = assignment.payable_start_time || job.payable_start_time || payable.payableStart?.toISOString() || null
-                        const workerPayableEnd = assignment.payable_end_time || job.payable_end_time || payable.payableEnd?.toISOString() || null
+                        const workerPayableStart = assignment.payable_start_time || payable.payableStart?.toISOString() || null
+                        const workerPayableEnd = assignment.payable_end_time || payable.payableEnd?.toISOString() || null
                         const estimatedPay = hourlyRate > 0 ? hourlyRate * workerPayableHours : 0
 
                         return {
@@ -134,8 +131,8 @@ export const payrollRouter = createTRPCRouter({
                             workerId: assignment.worker_id,
                             title: job.title,
                             status: job.status,
-                            customerName: customer?.business_name || customer?.contact_name || 'Unknown',
-                            siteName: site?.name || site?.address || 'Unknown',
+                            customerName: customer?.business_name || customer?.contact_name || '',
+                            siteName: site?.name || site?.address || '',
                             scheduledStart: job.start_time,
                             scheduledEnd: job.end_time,
                             actualStart: workerActualStart,

@@ -20,6 +20,7 @@ export default function CertificationManager({ entityType, entityId }: Certifica
     const [editValue, setEditValue] = useState('')
     const [uploading, setUploading] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const mobileColumns = CATEGORIES.length > 6 ? 6 : CATEGORIES.length
 
     const utils = api.useUtils()
     const supabase = createClient()
@@ -112,7 +113,11 @@ export default function CertificationManager({ entityType, entityId }: Certifica
         <div className="bg-white shadow sm:rounded-lg">
             {/* Tabs */}
             <div className="border-b border-gray-200">
-                <nav className="-mb-px flex space-x-8 px-4 overflow-x-auto" aria-label="Tabs">
+                <nav
+                    className="grid gap-x-1 gap-y-1 px-4 sm:-mb-px sm:flex sm:min-w-max sm:gap-8 sm:overflow-x-auto"
+                    style={{ gridTemplateColumns: `repeat(${Math.max(1, mobileColumns)}, minmax(0, 1fr))` }}
+                    aria-label="Tabs"
+                >
                     {CATEGORIES.map((key) => {
                         const isCurrent = activeTab === key
                         const label = getTabLabel(key)
@@ -121,7 +126,7 @@ export default function CertificationManager({ entityType, entityId }: Certifica
                             <div
                                 key={key}
                                 className={`
-                                    whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium flex items-center gap-2 group cursor-pointer
+                                    flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 border-b-2 px-2 py-3 text-sm font-medium group sm:min-w-0 sm:w-auto sm:px-1 sm:py-4
                                     ${isCurrent
                                         ? 'border-blue-500 text-blue-600'
                                         : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
@@ -129,6 +134,7 @@ export default function CertificationManager({ entityType, entityId }: Certifica
                                 `}
                                 onClick={() => !editingTab && setActiveTab(key)}
                             >
+                                <Folder className="h-5 w-5 shrink-0 text-gray-400 group-hover:text-gray-500 sm:hidden" aria-hidden />
                                 {editingTab === key ? (
                                     <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                                         <input
@@ -147,7 +153,7 @@ export default function CertificationManager({ entityType, entityId }: Certifica
                                     </div>
                                 ) : (
                                     <>
-                                        {label}
+                                        <span className="hidden whitespace-nowrap sm:inline">{label}</span>
                                         {isCurrent && (
                                             <button
                                                 onClick={(e) => {

@@ -230,7 +230,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Bottom Grid */}
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
                 {/* Quick Actions */}
                 <div className="overflow-hidden rounded-lg bg-white shadow">
                     <div className="border-b border-gray-200 px-4 py-5 sm:px-6">
@@ -259,40 +259,6 @@ export default function DashboardPage() {
                                 <Receipt className="mr-2 h-4 w-4 text-gray-500" /> Create Invoice
                             </button>
                         </Link>
-                    </div>
-                </div>
-
-                {/* Revenue/Stats Summary */}
-                <div className="overflow-hidden rounded-lg bg-white shadow">
-                    <div className="border-b border-gray-200 px-4 py-5 sm:px-6">
-                        <h3 className="text-base font-semibold leading-6 text-gray-900">
-                            Financial Overview
-                        </h3>
-                    </div>
-                    <div className="px-4 py-5 sm:p-6">
-                        <dl className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2">
-                            <div className="sm:col-span-1">
-                                <dt className="text-sm font-medium text-gray-500">Est. Revenue</dt>
-                                <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
-                                    {statsLoading ? '...' : `£${stats?.revenue.toFixed(2)}`}
-                                </dd>
-                                <p className="mt-1 text-xs text-gray-500">Based on invoices in range</p>
-                            </div>
-                            <div className="sm:col-span-1">
-                                <dt className="text-sm font-medium text-gray-500">Potential Value</dt>
-                                <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
-                                    {statsLoading ? '...' : `£${stats?.quotesValue.toFixed(2)}`}
-                                </dd>
-                                <p className="mt-1 text-xs text-gray-500">From quotes in range</p>
-                            </div>
-                            <div className="sm:col-span-1">
-                                <dt className="text-sm font-medium text-gray-500">Est. Labour Cost</dt>
-                                <dd className="mt-1 text-3xl font-semibold tracking-tight text-red-600">
-                                    {statsLoading ? '...' : `£${stats?.laborCost.toFixed(2)}`}
-                                </dd>
-                                <p className="mt-1 text-xs text-gray-500">Based on assigned hours & rates</p>
-                            </div>
-                        </dl>
                     </div>
                 </div>
 

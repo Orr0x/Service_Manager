@@ -233,14 +233,14 @@ export function KanbanBoard() {
     if (isJobsLoading) return <div>Loading board...</div>
 
     return (
-        <div className="flex h-full border rounded-lg overflow-hidden bg-white shadow-sm ring-1 ring-gray-900/5">
+        <div className="flex h-full min-h-[28rem] flex-col overflow-hidden rounded-lg border bg-white shadow-sm ring-1 ring-gray-900/5 lg:flex-row">
             <DndContext
                 sensors={sensors}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
             >
                 {/* Board Area */}
-                <div className="flex-1 flex overflow-x-auto p-4 gap-4 bg-gray-50/50">
+                <div className="flex min-h-[24rem] flex-1 gap-4 overflow-x-auto bg-gray-50/50 p-3 sm:p-4">
                     {/* Draft */}
                     <div className="flex-1 min-w-[280px] h-full">
                         <KanbanColumn
@@ -313,7 +313,7 @@ export function KanbanBoard() {
                 </div>
 
                 {/* Sidebar */}
-                <div className="h-full flex-shrink-0">
+                <div className="max-h-72 flex-shrink-0 border-t border-gray-200 lg:h-full lg:max-h-none lg:border-l lg:border-t-0">
                     <KanbanResources />
                 </div>
 

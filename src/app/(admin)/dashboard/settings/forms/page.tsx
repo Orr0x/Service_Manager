@@ -3,8 +3,9 @@
 import { api } from '@/trpc/react'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { Users, Briefcase, HardHat, Building2, UserSquare2, ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Briefcase, Building2, ClipboardList, FileText, HardHat, Receipt, UserSquare2, Users, Wrench } from 'lucide-react'
 import Link from 'next/link'
+import { AdminTabs } from '@/components/common/admin-tabs'
 
 // Define the fields for each form
 const formFields = {
@@ -120,16 +121,17 @@ const formFields = {
 
 type FormType = keyof typeof formFields
 
-function classNames(...classes: string[]) {
-    return classes.filter(Boolean).join(' ')
-}
-
 const tabs = [
-    { id: 'customers', label: 'Customers', icon: Users },
-    { id: 'jobs', label: 'Jobs', icon: Briefcase },
-    { id: 'workers', label: 'Workers', icon: HardHat },
-    { id: 'contractors', label: 'Contractors', icon: UserSquare2 },
-    { id: 'job_sites', label: 'Job Sites', icon: Building2 },
+    { id: 'customers', name: 'Customers', icon: Users },
+    { id: 'jobs', name: 'Jobs', icon: Briefcase },
+    { id: 'job_sites', name: 'Job Sites', icon: Building2 },
+    { id: 'workers', name: 'Workers', icon: HardHat },
+    { id: 'contractors', name: 'Contractors', icon: UserSquare2 },
+    { id: 'quotes', name: 'Quotes', icon: FileText },
+    { id: 'invoices', name: 'Invoices', icon: Receipt },
+    { id: 'contracts', name: 'Contracts', icon: FileText },
+    { id: 'services', name: 'Services', icon: Wrench },
+    { id: 'checklists', name: 'Checklists', icon: ClipboardList },
 ]
 
 export default function FormSettingsPage() {
@@ -200,36 +202,11 @@ export default function FormSettingsPage() {
             </div>
 
             <div className="mt-8">
-                {/* Tabs */}
-                <div className="border-b border-gray-200">
-                    <nav className="-mb-px flex flex-wrap gap-4" aria-label="Tabs">
-                        {[
-                            { id: 'customers', name: 'Customers' },
-                            { id: 'jobs', name: 'Jobs' },
-                            { id: 'job_sites', name: 'Job Sites' },
-                            { id: 'workers', name: 'Workers' },
-                            { id: 'contractors', name: 'Contractors' },
-                            { id: 'quotes', name: 'Quotes' },
-                            { id: 'invoices', name: 'Invoices' },
-                            { id: 'contracts', name: 'Contracts' },
-                            { id: 'services', name: 'Services' },
-                            { id: 'checklists', name: 'Checklists' },
-                        ].map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id as FormType)}
-                                className={classNames(
-                                    activeTab === tab.id
-                                        ? 'border-blue-500 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700',
-                                    'whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium'
-                                )}
-                            >
-                                {tab.name}
-                            </button>
-                        ))}
-                    </nav>
-                </div>
+                <AdminTabs
+                    tabs={tabs}
+                    activeTab={activeTab}
+                    onChange={(tabId) => setActiveTab(tabId as FormType)}
+                />
 
                 {/* Field List */}
                 <div className="mt-6 bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">

@@ -7,6 +7,7 @@ import { use, useState } from "react";
 import { format } from 'date-fns';
 import { ReportIssueModal } from "@/components/report-issue-modal";
 import { createClient } from "@/utils/supabase/client";
+import { JobSiteMapPreview } from "@/components/job-site-location-summary";
 
 type ChecklistItem = {
     text?: string;
@@ -230,6 +231,11 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
                             </div>
 
                             <div className="flex flex-col gap-2">
+                                <JobSiteMapPreview
+                                    latitude={job.job_sites?.latitude}
+                                    longitude={job.job_sites?.longitude}
+                                    rangeMeters={job.job_sites?.location_radius_meters}
+                                />
                                 <a
                                     href={`https://maps.google.com/?q=${encodeURIComponent(`${job.job_sites?.address}, ${job.job_sites?.city}`)}`}
                                     target="_blank"

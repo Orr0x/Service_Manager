@@ -9,6 +9,7 @@ import { ContractorAvailability } from './contractor-availability'
 import { AttachmentsSection } from '@/components/attachments-section'
 import CertificationManager from '@/components/certification/CertificationManager'
 import { ActivityFeed } from '@/components/common/activity-feed'
+import { AdminTabs } from '@/components/common/admin-tabs'
 import { useState } from 'react'
 import { format } from 'date-fns'
 
@@ -143,32 +144,7 @@ export function ContractorDetail({ id }: { id: string }) {
                     </div>
                 </div>
 
-                {/* Tabs */}
-                <div className="mt-8 border-b border-gray-200">
-                    <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-                        {tabs.map((tab) => (
-                            <button
-                                key={tab.name}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`
-                  ${activeTab === tab.id
-                                        ? 'border-blue-500 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}
-                  group inline-flex items-center border-b-2 py-4 px-1 text-sm font-medium
-                `}
-                            >
-                                <tab.icon
-                                    className={`
-                    ${activeTab === tab.id ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'}
-                    -ml-0.5 mr-2 h-5 w-5
-                  `}
-                                    aria-hidden="true"
-                                />
-                                {tab.name}
-                            </button>
-                        ))}
-                    </nav>
-                </div>
+                <AdminTabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} className="mt-8" />
             </div>
 
             {/* Tab Content */}

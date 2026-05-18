@@ -15,6 +15,13 @@ type JobSiteLocationSummaryProps = {
     rangeLocked?: boolean | null
 }
 
+type JobSiteMapPreviewProps = {
+    latitude?: number | null
+    longitude?: number | null
+    rangeMeters?: number | null
+    className?: string
+}
+
 export function JobSiteLocationSummary({
     latitude,
     longitude,
@@ -109,7 +116,7 @@ export function JobSiteLocationSummary({
             <div className="px-4 py-5 sm:p-6">
                 {hasValidCoordinates && mapboxToken.token ? (
                     <div className="space-y-2">
-                        <div className="aspect-square overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
+                        <div className="aspect-[4/3] max-h-80 overflow-hidden rounded-lg border border-gray-200 bg-gray-100 sm:aspect-square sm:max-h-none">
                             <Map
                                 initialViewState={{
                                     bounds: mapBounds ?? undefined,
@@ -154,7 +161,7 @@ export function JobSiteLocationSummary({
                         </p>
                     </div>
                 ) : (
-                    <div className="flex aspect-square items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white p-4 text-center text-sm text-gray-600">
+                    <div className="flex aspect-[4/3] max-h-80 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white p-4 text-center text-sm text-gray-600 sm:aspect-square sm:max-h-none">
                         {hasValidCoordinates
                             ? getMapboxTokenUnavailableMessage(mapboxToken.status)
                             : 'No valid coordinates saved for this job site.'}
@@ -163,6 +170,82 @@ export function JobSiteLocationSummary({
             </div>
         </div>
         </>
+    )
+}
+
+export function JobSiteMapPreview({
+    latitude,
+    longitude,
+    rangeMeters,
+    className = '',
+}: JobSiteMapPreviewProps) {
+    const hasValidCoordinates = typeof latitude === 'number'
+        && typeof longitude === 'number'
+        && latitude >= -90
+        && latitude <= 90
+        && longitude >= -180
+        && longitude <= 180
+    const normalizedRangeMeters = Math.min(250, Math.max(10, rangeMeters || 250))
+    const mapboxToken = getPublicMapboxToken()
+    const rangeCircle = hasValidCoordinates
+        ? createCirclePolygon(latitude, longitude, normalizedRangeMeters)
+        : null
+    const mapBounds = hasValidCoordinates
+        ? createBoundsFromRadius(latitude, longitude, 120)
+        : null
+
+    if (!hasValidCoordinates || !mapboxToken.token) {
+        return (
+            <div className={`flex aspect-[5/3] items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 p-3 text-center text-xs text-gray-500 ${className}`}>
+                {hasValidCoordinates
+                    ? getMapboxTokenUnavailableMessage(mapboxToken.status, 'Map preview')
+                    : 'No map coordinates'}
+            </div>
+        )
+    }
+
+    return (
+        <div className={`aspect-[5/3] overflow-hidden rounded-lg border border-gray-200 bg-gray-100 ${className}`}>
+            <Map
+                initialViewState={{
+                    bounds: mapBounds ?? undefined,
+                    fitBoundsOptions: {
+                        padding: 18,
+                        maxZoom: 18,
+                    },
+                }}
+                mapboxAccessToken={mapboxToken.token}
+                mapStyle="mapbox://styles/mapbox/streets-v12"
+                style={{ width: '100%', height: '100%' }}
+                interactive={false}
+                attributionControl={false}
+            >
+                {rangeCircle && (
+                    <Source id="job-site-card-range" type="geojson" data={rangeCircle}>
+                        <Layer
+                            id="job-site-card-range-fill"
+                            type="fill"
+                            paint={{
+                                'fill-color': '#2563eb',
+                                'fill-opacity': 0.14,
+                            }}
+                        />
+                        <Layer
+                            id="job-site-card-range-line"
+                            type="line"
+                            paint={{
+                                'line-color': '#2563eb',
+                                'line-width': 2,
+                                'line-opacity': 0.7,
+                            }}
+                        />
+                    </Source>
+                )}
+                <Marker latitude={latitude} longitude={longitude} anchor="bottom">
+                    <MapPin className="h-7 w-7 fill-red-600 text-white drop-shadow" />
+                </Marker>
+            </Map>
+        </div>
     )
 }
 

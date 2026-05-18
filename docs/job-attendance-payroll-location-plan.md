@@ -86,6 +86,18 @@ Initial admin functionality:
 - Add payroll adjustment notes.
 - Persist an audit entry for each payroll adjustment.
 
+### Payroll Authorisation UI Plan
+
+The job payroll tab should make the normal payroll rule obvious: payable time starts at the scheduled start and ends at the scheduled end unless the admin explicitly changes it.
+
+Planned interaction:
+
+- Default state: use scheduled start and scheduled end. No separate "use scheduled" control is needed.
+- Recorded attendance: expose only two explicit checkboxes, "Use recorded start date" and "Use recorded end date". These select the actual/recorded attendance timestamps as the payable timestamps.
+- Custom overrides: show date/time inputs directly in the authorisation area for custom payable start and custom payable end. A populated custom field takes precedence over the recorded checkbox for that side.
+- Worker overrides: use the same pattern per worker so two workers on the same job can have different payable start/end values. If no recorded checkbox or custom value is set, the worker payable time uses the scheduled job time.
+- Existing API compatibility: continue sending the existing `scheduled`, `actual`, and `custom` payable source values to the server. Keep actual attendance timestamps unchanged and only recalculate payable timestamps.
+
 Next payroll-reporting phase:
 
 - Add a payroll review screen filtered by worker and date range.

@@ -29,7 +29,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { NotesSection } from '@/components/notes-section'
 import { AttachmentsSection } from '@/components/attachments-section'
 import CertificationManager from '@/components/certification/CertificationManager'
+import { AdminTabs } from '@/components/common/admin-tabs'
 import { ActivityFeed } from '@/components/common/activity-feed'
+import { JobSiteMapPreview } from '@/components/job-site-location-summary'
 import { useState } from 'react'
 
 export function JobDetail({ id }: { id: string }) {
@@ -175,41 +177,16 @@ export function JobDetail({ id }: { id: string }) {
                     </div>
                 </div>
 
-                {/* Tabs */}
-                <div className="mt-8 border-b border-gray-200">
-                    <nav className="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
-                        {tabs.map((tab) => (
-                            <button
-                                key={tab.name}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`
-                  ${activeTab === tab.id
-                                        ? 'border-blue-500 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}
-                  group inline-flex items-center border-b-2 py-4 px-1 text-sm font-medium whitespace-nowrap
-                `}
-                            >
-                                <tab.icon
-                                    className={`
-                    ${activeTab === tab.id ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'}
-                    -ml-0.5 mr-2 h-5 w-5
-                  `}
-                                    aria-hidden="true"
-                                />
-                                {tab.name}
-                            </button>
-                        ))}
-                    </nav>
-                </div>
+                <AdminTabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} className="mt-8" />
             </div>
 
             {/* Tab Content */}
             <div id="printable-content" className="space-y-6">
                 {activeTab === 'overview' && (
                     <div className="space-y-6">
-                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                             {/* Description */}
-                            <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6 lg:col-span-2">
+                            <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6 lg:col-span-3">
                                 <h3 className="text-base font-semibold leading-7 text-gray-900 flex items-center">
                                     <FileText className="mr-2 h-5 w-5 text-blue-500" />
                                     Description
@@ -284,6 +261,29 @@ export function JobDetail({ id }: { id: string }) {
                                     </dl>
                                 ) : (
                                     <p className="text-sm text-gray-500">No customer linked.</p>
+                                )}
+                            </div>
+
+                            {/* Job Site Map */}
+                            <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
+                                <h3 className="text-base font-semibold leading-7 text-gray-900 flex items-center mb-4">
+                                    <MapPin className="mr-2 h-5 w-5 text-blue-500" />
+                                    Job Site Map
+                                </h3>
+                                {job.job_sites ? (
+                                    <div className="space-y-3">
+                                        <JobSiteMapPreview
+                                            latitude={job.job_sites.latitude}
+                                            longitude={job.job_sites.longitude}
+                                            rangeMeters={job.job_sites.location_radius_meters}
+                                            className="max-h-80"
+                                        />
+                                        <p className="text-xs text-gray-600">
+                                            Read-only view of the start gate saved against {job.job_sites.name}.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-gray-500">No job site linked.</p>
                                 )}
                             </div>
                         </div>
@@ -647,14 +647,11 @@ function JobPhotosGallery({ photos }: { photos: AdminJobPhoto[] }) {
 }
 
 function PayrollReview({ job, onUpdated }: { job: PayrollJob; onUpdated: () => void }) {
-    const [earlyStartAuthorized, setEarlyStartAuthorized] = useState(job.early_start_authorized ?? false)
-    const [lateStartAuthorized, setLateStartAuthorized] = useState(job.late_start_authorized ?? false)
-    const [lateFinishAuthorized, setLateFinishAuthorized] = useState(job.late_finish_authorized ?? false)
     const [locationOverrideAuthorized, setLocationOverrideAuthorized] = useState(job.location_override_authorized ?? false)
-    const [payableStartSource, setPayableStartSource] = useState<PayableTimeSource>(job.payable_start_source || 'calculated')
-    const [payableEndSource, setPayableEndSource] = useState<PayableTimeSource>(job.payable_end_source || 'calculated')
-    const [customPayableStart, setCustomPayableStart] = useState(toDateTimeInputValue(job.payable_start_time))
-    const [customPayableEnd, setCustomPayableEnd] = useState(toDateTimeInputValue(job.payable_end_time))
+    const [useRecordedStart, setUseRecordedStart] = useState(job.payable_start_source === 'actual' && Boolean(job.actual_start_time))
+    const [useRecordedEnd, setUseRecordedEnd] = useState(job.payable_end_source === 'actual' && Boolean(job.actual_end_time))
+    const [customPayableStart, setCustomPayableStart] = useState(job.payable_start_source === 'custom' ? toDateTimeInputValue(job.payable_start_time) : '')
+    const [customPayableEnd, setCustomPayableEnd] = useState(job.payable_end_source === 'custom' ? toDateTimeInputValue(job.payable_end_time) : '')
     const [payrollNotes, setPayrollNotes] = useState(job.payroll_adjustment_notes || '')
 
     const updatePayrollAdjustment = api.jobs.updatePayrollAdjustment.useMutation({
@@ -665,11 +662,14 @@ function PayrollReview({ job, onUpdated }: { job: PayrollJob; onUpdated: () => v
     })
 
     const handlePayrollSave = () => {
+        const payableStartSource = resolvePayrollSource(customPayableStart, useRecordedStart)
+        const payableEndSource = resolvePayrollSource(customPayableEnd, useRecordedEnd)
+
         updatePayrollAdjustment.mutate({
             id: job.id,
-            earlyStartAuthorized,
-            lateStartAuthorized,
-            lateFinishAuthorized,
+            earlyStartAuthorized: false,
+            lateStartAuthorized: false,
+            lateFinishAuthorized: false,
             locationOverrideAuthorized,
             payableStartSource,
             payableEndSource,
@@ -719,38 +719,31 @@ function PayrollReview({ job, onUpdated }: { job: PayrollJob; onUpdated: () => v
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <PayableSourceControl
-                        label="Payable start"
-                        source={payableStartSource}
-                        onSourceChange={setPayableStartSource}
-                        customValue={customPayableStart}
-                        onCustomChange={setCustomPayableStart}
-                        scheduledLabel={formatPayrollDateTime(job.start_time)}
-                        actualLabel={formatPayrollDateTime(job.actual_start_time)}
-                    />
-                    <PayableSourceControl
-                        label="Payable end"
-                        source={payableEndSource}
-                        onSourceChange={setPayableEndSource}
-                        customValue={customPayableEnd}
-                        onCustomChange={setCustomPayableEnd}
-                        scheduledLabel={formatPayrollDateTime(job.end_time)}
-                        actualLabel={formatPayrollDateTime(job.actual_end_time)}
+                    <PayrollToggle
+                        label="Use recorded start date"
+                        checked={useRecordedStart}
+                        onChange={setUseRecordedStart}
+                        disabled={!job.actual_start_time}
+                        helpText={`Scheduled start is the default: ${formatPayrollDateTime(job.start_time)}`}
                     />
                     <PayrollToggle
-                        label="Pay early start from actual start"
-                        checked={earlyStartAuthorized}
-                        onChange={setEarlyStartAuthorized}
+                        label="Use recorded end date"
+                        checked={useRecordedEnd}
+                        onChange={setUseRecordedEnd}
+                        disabled={!job.actual_end_time}
+                        helpText={`Scheduled end is the default: ${formatPayrollDateTime(job.end_time)}`}
                     />
-                    <PayrollToggle
-                        label="Pay late start from scheduled start"
-                        checked={lateStartAuthorized}
-                        onChange={setLateStartAuthorized}
+                    <CustomPayableDateTime
+                        label="Custom payable start"
+                        value={customPayableStart}
+                        onChange={setCustomPayableStart}
+                        placeholderText="Leave blank to use the scheduled start, or the recorded start if selected."
                     />
-                    <PayrollToggle
-                        label="Pay late finish through actual finish"
-                        checked={lateFinishAuthorized}
-                        onChange={setLateFinishAuthorized}
+                    <CustomPayableDateTime
+                        label="Custom payable end"
+                        value={customPayableEnd}
+                        onChange={setCustomPayableEnd}
+                        placeholderText="Leave blank to use the scheduled end, or the recorded end if selected."
                     />
                     <PayrollToggle
                         label="Authorise location override"
@@ -826,49 +819,41 @@ function PayrollMetric({ label, value }: { label: string; value: string }) {
     )
 }
 
-function PayableSourceControl({
+function resolvePayrollSource(customValue: string, useRecorded: boolean): PayableTimeSource {
+    if (customValue) return 'custom'
+    if (useRecorded) return 'actual'
+    return 'scheduled'
+}
+
+function resolveAssignmentPayrollSource(customValue: string, useRecorded: boolean): AssignmentPayableTimeSource {
+    if (customValue) return 'custom'
+    if (useRecorded) return 'actual'
+    return 'scheduled'
+}
+
+function CustomPayableDateTime({
     label,
-    source,
-    onSourceChange,
-    customValue,
-    onCustomChange,
-    scheduledLabel,
-    actualLabel,
+    value,
+    onChange,
+    placeholderText,
 }: {
     label: string
-    source: PayableTimeSource
-    onSourceChange: (source: PayableTimeSource) => void
-    customValue: string
-    onCustomChange: (value: string) => void
-    scheduledLabel: string
-    actualLabel: string
+    value: string
+    onChange: (value: string) => void
+    placeholderText: string
 }) {
     return (
-        <div className="rounded-lg border border-gray-200 px-4 py-3">
+        <div className="rounded-lg border border-gray-200 px-4 py-3 sm:col-span-2">
             <label className="block text-sm font-medium text-gray-900">
                 {label}
-                <select
-                    value={source}
-                    onChange={(event) => onSourceChange(event.target.value as PayableTimeSource)}
+                <input
+                    type="datetime-local"
+                    value={value}
+                    onChange={(event) => onChange(event.target.value)}
                     className="mt-2 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
-                >
-                    <option value="calculated">Calculated from authorisations</option>
-                    <option value="scheduled">Scheduled time ({scheduledLabel})</option>
-                    <option value="actual">Actual time ({actualLabel})</option>
-                    <option value="custom">Custom date and time</option>
-                </select>
+                />
             </label>
-            {source === 'custom' && (
-                <label className="mt-3 block text-sm font-medium text-gray-900">
-                    Custom {label.toLowerCase()}
-                    <input
-                        type="datetime-local"
-                        value={customValue}
-                        onChange={(event) => onCustomChange(event.target.value)}
-                        className="mt-2 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
-                    />
-                </label>
-            )}
+            <p className="mt-2 text-xs text-gray-500">{placeholderText}</p>
         </div>
     )
 }
@@ -882,10 +867,10 @@ function WorkerPayrollOverride({
     assignment: PayrollAssignment
     onUpdated: () => void
 }) {
-    const [payableStartSource, setPayableStartSource] = useState<AssignmentPayableTimeSource>(assignment.payable_start_source || 'job')
-    const [payableEndSource, setPayableEndSource] = useState<AssignmentPayableTimeSource>(assignment.payable_end_source || 'job')
-    const [customPayableStart, setCustomPayableStart] = useState(toDateTimeInputValue(assignment.payable_start_time || job.payable_start_time))
-    const [customPayableEnd, setCustomPayableEnd] = useState(toDateTimeInputValue(assignment.payable_end_time || job.payable_end_time))
+    const [useRecordedStart, setUseRecordedStart] = useState(assignment.payable_start_source === 'actual' && Boolean(assignment.actual_start_time))
+    const [useRecordedEnd, setUseRecordedEnd] = useState(assignment.payable_end_source === 'actual' && Boolean(assignment.actual_end_time))
+    const [customPayableStart, setCustomPayableStart] = useState(assignment.payable_start_source === 'custom' ? toDateTimeInputValue(assignment.payable_start_time) : '')
+    const [customPayableEnd, setCustomPayableEnd] = useState(assignment.payable_end_source === 'custom' ? toDateTimeInputValue(assignment.payable_end_time) : '')
     const [notes, setNotes] = useState(assignment.payroll_adjustment_notes || '')
 
     const updateAssignmentPayrollAdjustment = api.jobs.updateAssignmentPayrollAdjustment.useMutation({
@@ -898,6 +883,9 @@ function WorkerPayrollOverride({
     const workerName = `${assignment.workers?.first_name || ''} ${assignment.workers?.last_name || ''}`.trim() || 'Worker'
 
     const handleSave = () => {
+        const payableStartSource = resolveAssignmentPayrollSource(customPayableStart, useRecordedStart)
+        const payableEndSource = resolveAssignmentPayrollSource(customPayableEnd, useRecordedEnd)
+
         updateAssignmentPayrollAdjustment.mutate({
             jobId: job.id,
             assignmentId: assignment.id,
@@ -918,11 +906,11 @@ function WorkerPayrollOverride({
                         {assignment.workers?.role || 'Worker'} · {typeof assignment.workers?.hourly_rate === 'number' ? `£${assignment.workers.hourly_rate.toFixed(2)}/hr` : 'No rate set'}
                     </p>
                     <p className="mt-1 text-sm text-gray-600">
-                        Actual: {formatPayrollDateTime(assignment.actual_start_time || job.actual_start_time)} to {formatPayrollDateTime(assignment.actual_end_time || job.actual_end_time)}
+                        Actual: {formatPayrollDateTime(assignment.actual_start_time)} to {formatPayrollDateTime(assignment.actual_end_time)}
                     </p>
                     <p className="mt-1 text-sm text-gray-600">
-                        Payable: {formatPayrollDateTime(assignment.payable_start_time || job.payable_start_time)} to {formatPayrollDateTime(assignment.payable_end_time || job.payable_end_time)}
-                        {' '}({formatPayrollMinutes(assignment.payable_minutes ?? job.payable_minutes)})
+                        Payable: {formatPayrollDateTime(assignment.payable_start_time)} to {formatPayrollDateTime(assignment.payable_end_time)}
+                        {' '}({formatPayrollMinutes(assignment.payable_minutes)})
                     </p>
                 </div>
                 <button
@@ -936,25 +924,31 @@ function WorkerPayrollOverride({
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <AssignmentPayableSourceControl
-                    label="Worker payable start"
-                    source={payableStartSource}
-                    onSourceChange={setPayableStartSource}
-                    customValue={customPayableStart}
-                    onCustomChange={setCustomPayableStart}
-                    jobLabel={formatPayrollDateTime(job.payable_start_time)}
-                    scheduledLabel={formatPayrollDateTime(job.start_time)}
-                    actualLabel={formatPayrollDateTime(assignment.actual_start_time || job.actual_start_time)}
+                <PayrollToggle
+                    label="Use recorded start date"
+                    checked={useRecordedStart}
+                    onChange={setUseRecordedStart}
+                    disabled={!assignment.actual_start_time}
+                    helpText={`Scheduled start is the default: ${formatPayrollDateTime(job.start_time)}`}
                 />
-                <AssignmentPayableSourceControl
-                    label="Worker payable end"
-                    source={payableEndSource}
-                    onSourceChange={setPayableEndSource}
-                    customValue={customPayableEnd}
-                    onCustomChange={setCustomPayableEnd}
-                    jobLabel={formatPayrollDateTime(job.payable_end_time)}
-                    scheduledLabel={formatPayrollDateTime(job.end_time)}
-                    actualLabel={formatPayrollDateTime(assignment.actual_end_time || job.actual_end_time)}
+                <PayrollToggle
+                    label="Use recorded end date"
+                    checked={useRecordedEnd}
+                    onChange={setUseRecordedEnd}
+                    disabled={!assignment.actual_end_time}
+                    helpText={`Scheduled end is the default: ${formatPayrollDateTime(job.end_time)}`}
+                />
+                <CustomPayableDateTime
+                    label="Custom worker payable start"
+                    value={customPayableStart}
+                    onChange={setCustomPayableStart}
+                    placeholderText="Leave blank to use the scheduled start, or the recorded start if selected."
+                />
+                <CustomPayableDateTime
+                    label="Custom worker payable end"
+                    value={customPayableEnd}
+                    onChange={setCustomPayableEnd}
+                    placeholderText="Leave blank to use the scheduled end, or the recorded end if selected."
                 />
             </div>
 
@@ -972,72 +966,31 @@ function WorkerPayrollOverride({
     )
 }
 
-function AssignmentPayableSourceControl({
-    label,
-    source,
-    onSourceChange,
-    customValue,
-    onCustomChange,
-    jobLabel,
-    scheduledLabel,
-    actualLabel,
-}: {
-    label: string
-    source: AssignmentPayableTimeSource
-    onSourceChange: (source: AssignmentPayableTimeSource) => void
-    customValue: string
-    onCustomChange: (value: string) => void
-    jobLabel: string
-    scheduledLabel: string
-    actualLabel: string
-}) {
-    return (
-        <div className="rounded-lg border border-gray-200 px-4 py-3">
-            <label className="block text-sm font-medium text-gray-900">
-                {label}
-                <select
-                    value={source}
-                    onChange={(event) => onSourceChange(event.target.value as AssignmentPayableTimeSource)}
-                    className="mt-2 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
-                >
-                    <option value="job">Use job payable time ({jobLabel})</option>
-                    <option value="scheduled">Scheduled time ({scheduledLabel})</option>
-                    <option value="actual">Actual time ({actualLabel})</option>
-                    <option value="custom">Custom date and time</option>
-                </select>
-            </label>
-            {source === 'custom' && (
-                <label className="mt-3 block text-sm font-medium text-gray-900">
-                    Custom {label.toLowerCase()}
-                    <input
-                        type="datetime-local"
-                        value={customValue}
-                        onChange={(event) => onCustomChange(event.target.value)}
-                        className="mt-2 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
-                    />
-                </label>
-            )}
-        </div>
-    )
-}
-
 function PayrollToggle({
     label,
     checked,
     onChange,
+    disabled = false,
+    helpText,
 }: {
     label: string
     checked: boolean
     onChange: (checked: boolean) => void
+    disabled?: boolean
+    helpText?: string
 }) {
     return (
-        <label className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 px-4 py-3">
-            <span className="text-sm font-medium text-gray-900">{label}</span>
+        <label className={`flex items-start justify-between gap-4 rounded-lg border border-gray-200 px-4 py-3 ${disabled ? 'bg-gray-50 text-gray-400' : ''}`}>
+            <span>
+                <span className="block text-sm font-medium text-gray-900">{label}</span>
+                {helpText && <span className="mt-1 block text-xs text-gray-500">{helpText}</span>}
+            </span>
             <input
                 type="checkbox"
                 checked={checked}
+                disabled={disabled}
                 onChange={(event) => onChange(event.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600"
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
             />
         </label>
     )

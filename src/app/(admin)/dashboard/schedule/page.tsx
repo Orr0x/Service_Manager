@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { CalendarView } from './calendar-view'
 import { ListView } from './list-view'
 import { KanbanBoard } from './kanban-board'
@@ -12,17 +12,30 @@ export default function SchedulePage() {
     const [viewMode, setViewMode] = useState<'calendar' | 'kanban' | 'list'>('calendar')
     const { data: stats } = api.jobs.getDashboardStats.useQuery()
 
+    useEffect(() => {
+        const mediaQuery = window.matchMedia('(max-width: 1023px)')
+        const syncMobileView = () => {
+            if (mediaQuery.matches) {
+                setViewMode('list')
+            }
+        }
+
+        syncMobileView()
+        mediaQuery.addEventListener('change', syncMobileView)
+        return () => mediaQuery.removeEventListener('change', syncMobileView)
+    }, [])
+
     return (
-        <div id="printable-content" className="h-[calc(100vh-8rem)] flex flex-col space-y-4">
+        <div id="printable-content" className="flex min-h-0 flex-col space-y-4 lg:h-[calc(100vh-8rem)]">
             <div className="space-y-4 shrink-0">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:justify-start lg:space-x-4">
                         <h1 className="text-2xl font-semibold text-gray-900">Schedule</h1>
                         {/* View Toggles */}
-                        <div className="flex bg-gray-100 p-1 rounded-lg">
+                        <div className="flex w-full overflow-x-auto rounded-lg bg-gray-100 p-1 lg:w-auto">
                             <button
                                 onClick={() => setViewMode('calendar')}
-                                className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'calendar'
+                                className={`hidden flex-1 items-center justify-center whitespace-nowrap px-3 py-1.5 rounded-md text-sm font-medium transition-all lg:flex lg:flex-none ${viewMode === 'calendar'
                                     ? 'bg-white text-gray-900 shadow-sm'
                                     : 'text-gray-500 hover:text-gray-700'
                                     }`}
@@ -32,7 +45,7 @@ export default function SchedulePage() {
                             </button>
                             <button
                                 onClick={() => setViewMode('kanban')}
-                                className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'kanban'
+                                className={`hidden flex-1 items-center justify-center whitespace-nowrap px-3 py-1.5 rounded-md text-sm font-medium transition-all lg:flex lg:flex-none ${viewMode === 'kanban'
                                     ? 'bg-white text-gray-900 shadow-sm'
                                     : 'text-gray-500 hover:text-gray-700'
                                     }`}
@@ -42,7 +55,7 @@ export default function SchedulePage() {
                             </button>
                             <button
                                 onClick={() => setViewMode('list')}
-                                className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'list'
+                                className={`flex flex-1 items-center justify-center whitespace-nowrap px-3 py-1.5 rounded-md text-sm font-medium transition-all lg:flex-none ${viewMode === 'list'
                                     ? 'bg-white text-gray-900 shadow-sm'
                                     : 'text-gray-500 hover:text-gray-700'
                                     }`}
@@ -53,18 +66,18 @@ export default function SchedulePage() {
                         </div>
                     </div>
 
-                    <div className="flex items-center space-x-3">
+                    <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center sm:space-x-3 sm:gap-0">
                         <button
                             type="button"
                             onClick={() => window.print()}
-                            className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                            className="inline-flex items-center justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                         >
                             <Download className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
                             Download
                         </button>
                         <Link
                             href="/dashboard/jobs/new"
-                            className="inline-flex items-center rounded-md bg-[var(--primary-color)] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                            className="inline-flex items-center justify-center rounded-md bg-[var(--primary-color)] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
                         >
                             <Plus className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
                             New Job
@@ -73,7 +86,7 @@ export default function SchedulePage() {
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
                     {/* Total Jobs */}
                     <div className="overflow-hidden rounded-lg bg-white shadow ring-1 ring-gray-900/5">
                         <div className="p-4">
@@ -152,7 +165,7 @@ export default function SchedulePage() {
                 </div>
             </div>
 
-            <div className="flex-1 bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-4 overflow-hidden">
+            <div className="min-h-[28rem] flex-1 overflow-hidden bg-white p-2 shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl sm:p-4">
                 {viewMode === 'calendar' ? (
                     <CalendarView />
                 ) : viewMode === 'kanban' ? (

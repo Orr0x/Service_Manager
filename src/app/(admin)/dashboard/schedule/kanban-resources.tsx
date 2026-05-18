@@ -60,7 +60,7 @@ export function KanbanResources() {
     const { data: checklists } = api.checklists.getAll.useQuery()
 
     return (
-        <div className="w-80 bg-white border-l border-gray-200 flex flex-col h-full">
+        <div className="flex h-full w-full flex-col bg-white lg:w-80">
             <div className="p-4 border-b border-gray-200">
                 <h3 className="font-semibold text-gray-900">Resources</h3>
                 <p className="text-xs text-gray-500 mt-1">Drag onto jobs to assign</p>

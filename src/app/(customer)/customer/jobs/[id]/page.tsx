@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { api } from "@/trpc/react";
 import { use } from "react";
 import { format } from 'date-fns';
+import { JobSiteMapPreview } from "@/components/job-site-location-summary";
 
 export default function CustomerJobDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
@@ -76,6 +77,11 @@ export default function CustomerJobDetailPage({ params }: { params: Promise<{ id
                                 </div>
                             </div>
                         </div>
+                        <JobSiteMapPreview
+                            latitude={job.job_sites?.latitude}
+                            longitude={job.job_sites?.longitude}
+                            rangeMeters={job.job_sites?.location_radius_meters}
+                        />
                     </div>
                 </div>
 

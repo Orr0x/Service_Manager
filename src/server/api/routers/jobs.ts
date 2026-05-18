@@ -113,7 +113,7 @@ export const jobsRouter = createTRPCRouter({
             contracts(id, name, status, start_date, end_date),
             quotes(id, quote_number, title, status, total_amount)
           ),
-          job_sites(id, name, address, city, state, postal_code, country, is_active),
+          job_sites(id, name, address, city, state, postal_code, country, is_active, latitude, longitude, location_radius_meters),
           job_assignments(
             id,
             status,
@@ -681,7 +681,7 @@ export const jobsRouter = createTRPCRouter({
                 source: input.payableStartSource,
                 jobValue: job.payable_start_time || jobPayable.payableStart?.toISOString() || null,
                 scheduled: job.start_time,
-                actual: assignment.actual_start_time || job.actual_start_time,
+                actual: assignment.actual_start_time,
                 custom: input.customPayableStart,
                 label: 'worker payable start',
             })
@@ -689,7 +689,7 @@ export const jobsRouter = createTRPCRouter({
                 source: input.payableEndSource,
                 jobValue: job.payable_end_time || jobPayable.payableEnd?.toISOString() || null,
                 scheduled: job.end_time,
-                actual: assignment.actual_end_time || job.actual_end_time,
+                actual: assignment.actual_end_time,
                 custom: input.customPayableEnd,
                 label: 'worker payable end',
             })
@@ -697,8 +697,8 @@ export const jobsRouter = createTRPCRouter({
             const payable = calculatePayableTime({
                 scheduledStart: job.start_time,
                 scheduledEnd: job.end_time,
-                actualStart: assignment.actual_start_time || job.actual_start_time,
-                actualEnd: assignment.actual_end_time || job.actual_end_time,
+                actualStart: assignment.actual_start_time,
+                actualEnd: assignment.actual_end_time,
                 payableStartOverride,
                 payableEndOverride,
             })

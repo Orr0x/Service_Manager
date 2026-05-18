@@ -8,7 +8,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css'
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css'
 import { api } from '@/trpc/react'
 import { useRouter } from 'next/navigation'
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
 import { JobPreviewModal } from '@/components/job-preview-modal'
 
 const locales = {
@@ -42,6 +42,19 @@ export function CalendarView() {
             utils.jobs.getAll.invalidate()
         }
     })
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia('(max-width: 640px)')
+        const syncMobileView = () => {
+            if (mediaQuery.matches) {
+                setView(Views.AGENDA)
+            }
+        }
+
+        syncMobileView()
+        mediaQuery.addEventListener('change', syncMobileView)
+        return () => mediaQuery.removeEventListener('change', syncMobileView)
+    }, [])
 
     const events = useMemo(() => {
         const unavailabilityMap = new Map<string, Set<string>>();
@@ -156,10 +169,23 @@ export function CalendarView() {
     }
 
     return (
-        <div className="h-full relative">
+        <div className="relative h-full min-h-[26rem]">
             <style jsx global>{`
         .rbc-calendar {
             font-family: inherit;
+            min-width: 0;
+        }
+        .rbc-toolbar {
+            gap: 0.5rem;
+        }
+        .rbc-toolbar button {
+            color: #374151;
+            border-color: #d1d5db;
+            padding: 0.35rem 0.65rem;
+        }
+        .rbc-toolbar-label {
+            min-width: 8rem;
+            padding: 0.25rem 0;
         }
         .rbc-event {
             background-color: var(--primary-color);
@@ -179,6 +205,37 @@ export function CalendarView() {
         }
         .rbc-today {
             background-color: #f3f4f6;
+        }
+        @media (max-width: 640px) {
+            .rbc-toolbar {
+                align-items: stretch;
+                flex-direction: column;
+            }
+            .rbc-toolbar .rbc-btn-group {
+                display: grid;
+                grid-auto-columns: 1fr;
+                grid-auto-flow: column;
+                width: 100%;
+            }
+            .rbc-toolbar .rbc-btn-group button {
+                font-size: 0.8125rem;
+                min-width: 0;
+                padding-left: 0.35rem;
+                padding-right: 0.35rem;
+            }
+            .rbc-toolbar-label {
+                font-size: 0.9375rem;
+                font-weight: 600;
+                text-align: center;
+                width: 100%;
+            }
+            .rbc-time-view,
+            .rbc-month-view {
+                min-width: 38rem;
+            }
+            .rbc-agenda-view {
+                overflow-x: auto;
+            }
         }
       `}</style>
             <DnDCalendar

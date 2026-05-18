@@ -4,16 +4,41 @@ import { api } from '@/trpc/react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { Calendar, MapPin, User, Clock, Plus, Briefcase } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { useMobileDefaultView } from '@/hooks/use-mobile-default-view'
 import { ViewToggle } from '@/components/common/view-toggle'
 import { useSearchParams } from 'next/navigation'
+import { DataViewControls } from '@/components/common/data-view-controls'
+import { compareValues, groupRows, includesSearch } from '@/lib/data-view'
 
 export function JobList() {
     const [view, setView] = useMobileDefaultView()
     const searchParams = useSearchParams()
     const search = searchParams.get('search') || undefined
+    const [refineSearch, setRefineSearch] = useState('')
+    const [statusFilter, setStatusFilter] = useState('all')
+    const [sortBy, setSortBy] = useState('start_time')
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+    const [groupBy, setGroupBy] = useState('none')
 
     const { data: jobs, isLoading } = api.jobs.getAll.useQuery({ search })
+
+    const visibleJobs = useMemo(() => {
+        return [...(jobs || [])]
+            .filter((job) => statusFilter === 'all' || job.status === statusFilter)
+            .filter((job) => includesSearch([
+                job.title,
+                job.description,
+                job.status,
+                job.customers?.business_name,
+                job.customers?.contact_name,
+                job.job_sites?.name,
+                job.job_sites?.address,
+            ], refineSearch))
+            .sort((a, b) => compareValues(getJobSortValue(a, sortBy), getJobSortValue(b, sortBy), sortDirection))
+    }, [jobs, refineSearch, sortBy, sortDirection, statusFilter])
+
+    const groupedJobs = useMemo(() => groupRows(visibleJobs, groupBy, getJobGroup), [visibleJobs, groupBy])
 
     if (isLoading) {
         return <div className="animate-pulse space-y-4">
@@ -45,15 +70,74 @@ export function JobList() {
         <div className="space-y-4">
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-4 shadow-sm ring-1 ring-gray-900/5 sm:px-6 sm:rounded-xl">
-                <h3 className="text-base font-semibold leading-6 text-gray-900">All Jobs</h3>
+                <h3 className="text-base font-semibold leading-6 text-gray-900">All Jobs ({visibleJobs.length})</h3>
                 <ViewToggle view={view} setView={setView} />
             </div>
 
+            <DataViewControls
+                search={refineSearch}
+                onSearchChange={setRefineSearch}
+                searchPlaceholder="Refine jobs by title, customer, site, or status..."
+                sortBy={sortBy}
+                onSortByChange={setSortBy}
+                sortOptions={[
+                    { value: 'start_time', label: 'Start date' },
+                    { value: 'title', label: 'Title' },
+                    { value: 'customer', label: 'Customer' },
+                    { value: 'site', label: 'Job site' },
+                    { value: 'status', label: 'Status' },
+                ]}
+                sortDirection={sortDirection}
+                onSortDirectionChange={setSortDirection}
+                groupBy={groupBy}
+                onGroupByChange={setGroupBy}
+                groupOptions={[
+                    { value: 'none', label: 'No grouping' },
+                    { value: 'status', label: 'Status' },
+                    { value: 'date', label: 'Date' },
+                    { value: 'customer', label: 'Customer' },
+                    { value: 'site', label: 'Job site' },
+                ]}
+                filters={[
+                    {
+                        id: 'status',
+                        label: 'Status',
+                        value: statusFilter,
+                        onChange: setStatusFilter,
+                        options: [
+                            { value: 'all', label: 'All statuses' },
+                            { value: 'draft', label: 'Draft' },
+                            { value: 'pending', label: 'Pending' },
+                            { value: 'scheduled', label: 'Scheduled' },
+                            { value: 'in_progress', label: 'In progress' },
+                            { value: 'completed', label: 'Completed' },
+                            { value: 'cancelled', label: 'Cancelled' },
+                        ],
+                    },
+                ]}
+                onReset={() => {
+                    setRefineSearch('')
+                    setStatusFilter('all')
+                    setSortBy('start_time')
+                    setSortDirection('desc')
+                    setGroupBy('none')
+                }}
+            />
+
+            {visibleJobs.length === 0 && (
+                <div className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">
+                    No jobs match the current filters.
+                </div>
+            )}
+
             {view === 'list' ? (
-                <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
-                    <ul role="list" className="divide-y divide-gray-100">
-                        {jobs.map((job) => (
-                            <li key={job.id} className="relative flex justify-between gap-x-6 py-5 hover:bg-gray-50 px-4 rounded-md transition-colors">
+                <div className="space-y-4">
+                    {groupedJobs.map((group) => (
+                        <div key={group.key} className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
+                            {groupBy !== 'none' && <GroupHeader label={group.label} count={group.rows.length} />}
+                            <ul role="list" className="divide-y divide-gray-100">
+                                {group.rows.map((job) => (
+                                    <li key={job.id} className="relative flex justify-between gap-x-6 py-5 hover:bg-gray-50 px-4 rounded-md transition-colors">
                                 <div className="flex min-w-0 gap-x-4">
                                     <div className="min-w-0 flex-auto">
                                         <p className="text-sm font-semibold leading-6 text-gray-900">
@@ -97,14 +181,20 @@ export function JobList() {
                                         <Clock className="h-5 w-5" />
                                     </div>
                                 </div>
-                            </li>
-                        ))}
-                    </ul>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    ))}
                 </div>
             ) : (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {jobs.map((job) => (
-                        <div key={job.id} className="group relative flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow">
+                <div className="space-y-4">
+                    {groupedJobs.map((group) => (
+                        <section key={group.key} className="space-y-3">
+                            {groupBy !== 'none' && <GroupHeader label={group.label} count={group.rows.length} />}
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                {group.rows.map((job) => (
+                                    <div key={job.id} className="group relative flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow">
                             <div className="flex flex-1 flex-col p-6">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
@@ -155,7 +245,10 @@ export function JobList() {
                                     </dl>
                                 </div>
                             </div>
-                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
                     ))}
                 </div>
             )}
@@ -163,4 +256,52 @@ export function JobList() {
     )
 }
 
+function getJobSortValue(job: any, sortBy: string) {
+    switch (sortBy) {
+        case 'title':
+            return job.title
+        case 'customer':
+            return job.customers?.business_name || job.customers?.contact_name
+        case 'site':
+            return job.job_sites?.name
+        case 'status':
+            return job.status
+        case 'start_time':
+        default:
+            return job.start_time
+    }
+}
 
+function getJobGroup(job: any, groupBy: string) {
+    switch (groupBy) {
+        case 'status':
+            return { key: job.status || 'unknown', label: formatLabel(job.status || 'Unknown') }
+        case 'date': {
+            const label = job.start_time ? format(new Date(job.start_time), 'dd MMM yyyy') : 'Unscheduled'
+            return { key: label, label }
+        }
+        case 'customer': {
+            const label = job.customers?.business_name || job.customers?.contact_name || 'No customer'
+            return { key: label, label }
+        }
+        case 'site': {
+            const label = job.job_sites?.name || 'No site'
+            return { key: label, label }
+        }
+        default:
+            return { key: 'all', label: 'All jobs' }
+    }
+}
+
+function GroupHeader({ label, count }: { label: string; count: number }) {
+    return (
+        <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-2 text-sm">
+            <h4 className="font-semibold text-gray-900">{label}</h4>
+            <span className="text-xs font-medium text-gray-500">{count} jobs</span>
+        </div>
+    )
+}
+
+function formatLabel(value: string) {
+    return value.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+}

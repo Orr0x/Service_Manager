@@ -3,8 +3,9 @@
 import { api } from '@/trpc/react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, CheckSquare, Pencil, Trash2, CheckCircle2, Circle, Download } from 'lucide-react'
+import { ArrowLeft, Briefcase, Building2, CheckCircle2, CheckSquare, Circle, Download, FileText, Pencil, Receipt, Trash2, User } from 'lucide-react'
 import { useState } from 'react'
+import { AdminTabs } from '@/components/common/admin-tabs'
 
 interface ChecklistItem {
     text: string
@@ -92,13 +93,13 @@ export function ChecklistDetail({ id }: { id: string }) {
     ).values())
 
     const tabs = [
-        { id: 'tasks', name: 'Tasks', count: items.length },
-        { id: 'jobs', name: 'Jobs', count: relatedJobs?.length || 0 },
-        { id: 'job-sites', name: 'Job Sites', count: uniqueJobSites.length },
-        { id: 'customers', name: 'Customers', count: uniqueCustomers.length },
-        { id: 'contracts', name: 'Contracts', count: uniqueContracts.length },
-        { id: 'quotes', name: 'Quotes', count: uniqueQuotes.length },
-        { id: 'invoices', name: 'Invoices', count: uniqueInvoices.length },
+        { id: 'tasks', name: 'Tasks', count: items.length, icon: CheckSquare },
+        { id: 'jobs', name: 'Jobs', count: relatedJobs?.length || 0, icon: Briefcase },
+        { id: 'job-sites', name: 'Job Sites', count: uniqueJobSites.length, icon: Building2 },
+        { id: 'customers', name: 'Customers', count: uniqueCustomers.length, icon: User },
+        { id: 'contracts', name: 'Contracts', count: uniqueContracts.length, icon: FileText },
+        { id: 'quotes', name: 'Quotes', count: uniqueQuotes.length, icon: FileText },
+        { id: 'invoices', name: 'Invoices', count: uniqueInvoices.length, icon: Receipt },
     ]
 
     return (
@@ -158,29 +159,7 @@ export function ChecklistDetail({ id }: { id: string }) {
                     </div>
                 </div>
 
-                {/* Tabs */}
-                <div className="mt-8 border-b border-gray-200">
-                    <nav className="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
-                        {tabs.map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`
-                  ${activeTab === tab.id
-                                        ? 'border-blue-500 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}
-                  whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium
-                `}
-                            >
-                                {tab.name}
-                                <span className={`ml-2 rounded-full py-0.5 px-2.5 text-xs font-medium ${activeTab === tab.id ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-900'
-                                    }`}>
-                                    {tab.count}
-                                </span>
-                            </button>
-                        ))}
-                    </nav>
-                </div>
+                <AdminTabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} className="mt-8" />
             </div>
 
             <div id="printable-content" className="grid grid-cols-1 gap-6 lg:grid-cols-3">

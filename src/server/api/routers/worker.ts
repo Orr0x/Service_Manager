@@ -432,11 +432,11 @@ export const workerRouter = createTRPCRouter({
             return {
                 ...job,
                 assignmentStatus: assignment.status,
-                actual_start_time: assignment.actual_start_time || job?.actual_start_time,
-                actual_end_time: assignment.actual_end_time || job?.actual_end_time,
-                payable_start_time: assignment.payable_start_time || job?.payable_start_time,
-                payable_end_time: assignment.payable_end_time || job?.payable_end_time,
-                payable_minutes: assignment.payable_minutes ?? job?.payable_minutes,
+                actual_start_time: assignment.actual_start_time,
+                actual_end_time: assignment.actual_end_time,
+                payable_start_time: assignment.payable_start_time,
+                payable_end_time: assignment.payable_end_time,
+                payable_minutes: assignment.payable_minutes,
             };
         }),
 
@@ -647,9 +647,7 @@ export const workerRouter = createTRPCRouter({
                 throw new TRPCError({ code: 'BAD_REQUEST', message: 'This job is already completed.' });
             }
 
-            const assignmentActualStart = assignment.actual_start_time || job.actual_start_time;
-
-            if (!assignmentActualStart) {
+            if (!assignment.actual_start_time) {
                 throw new TRPCError({ code: 'BAD_REQUEST', message: 'You must start this job before you can complete it.' });
             }
 
@@ -718,7 +716,7 @@ export const workerRouter = createTRPCRouter({
             const payable = calculatePayableTime({
                 scheduledStart: job.start_time,
                 scheduledEnd: job.end_time,
-                actualStart: assignmentActualStart,
+                actualStart: assignment.actual_start_time,
                 actualEnd,
                 earlyStartAuthorized: job.early_start_authorized,
                 lateStartAuthorized: job.late_start_authorized,

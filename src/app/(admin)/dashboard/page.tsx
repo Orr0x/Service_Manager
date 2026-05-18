@@ -1,12 +1,12 @@
 'use client'
 
-import { Calendar, CheckCircle2, Clock, PlayCircle, User, Briefcase, Receipt, FileCheck, Plus } from 'lucide-react'
+import { Building2, Calendar, CheckCircle2, Clock, PlayCircle, User, Users, Briefcase, Receipt, FileCheck, Plus } from 'lucide-react'
 import { api } from '@/trpc/react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
-import { useState } from 'react'
+import { useMemo, useState, type ComponentType } from 'react'
 
-type DashboardRange = 'today' | 'week' | 'month' | 'year' | 'all'
+type DashboardRange = 'today' | 'week' | 'month' | 'year' | 'all' | 'custom'
 
 type Activity = {
     id: string
@@ -22,6 +22,56 @@ type Activity = {
         name?: string | null
         status?: string | null
     } | null
+}
+
+type DashboardCardFilter = 'unscheduled' | 'scheduled' | 'in_progress' | 'completed'
+
+function DashboardSummaryCard({
+    title,
+    count,
+    isLoading,
+    icon: Icon,
+    iconClassName,
+    caption,
+    href,
+    actionLabel = 'Open jobs',
+}: {
+    title: string
+    count?: number
+    isLoading: boolean
+    icon: ComponentType<{ className?: string; 'aria-hidden'?: boolean }>
+    iconClassName: string
+    caption: string
+    href: string
+    actionLabel?: string
+}) {
+    return (
+        <Link href={href} className="block overflow-hidden rounded-lg bg-white shadow transition hover:-translate-y-0.5 hover:shadow-md">
+            <div className="p-4 sm:p-5">
+                <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                        <Icon className={`h-6 w-6 ${iconClassName}`} aria-hidden />
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt className="truncate text-sm font-medium text-gray-500">{title}</dt>
+                            <dd>
+                                <div className="text-lg font-medium text-gray-900">
+                                    {isLoading ? '...' : count ?? 0}
+                                </div>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            <div className="bg-gray-50 px-5 py-3">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-gray-500">{caption}</span>
+                    <span className="font-semibold text-blue-600">{actionLabel}</span>
+                </div>
+            </div>
+        </Link>
+    )
 }
 
 function ActivityItem({ activity }: { activity: Activity }) {
@@ -88,8 +138,26 @@ function ActivityItem({ activity }: { activity: Activity }) {
 
 export default function DashboardPage() {
     const [range, setRange] = useState<DashboardRange>('all')
-    const { data: stats, isLoading: statsLoading } = api.dashboard.getStats.useQuery({ range })
-    const { data: recentActivity, isLoading: activityLoading } = api.activity.getRecent.useQuery({ limit: 10, range })
+    const [customStartDate, setCustomStartDate] = useState('')
+    const [customEndDate, setCustomEndDate] = useState('')
+    const dashboardInput = useMemo(() => ({
+        range,
+        startDate: range === 'custom' ? customStartDate || undefined : undefined,
+        endDate: range === 'custom' ? customEndDate || undefined : undefined,
+    }), [range, customStartDate, customEndDate])
+    const { data: stats, isLoading: statsLoading } = api.dashboard.getStats.useQuery(dashboardInput, {
+        refetchInterval: 10000,
+        refetchOnWindowFocus: true,
+    })
+    const { data: recentActivity, isLoading: activityLoading } = api.activity.getRecent.useQuery({
+        limit: 10,
+        range,
+        startDate: range === 'custom' ? customStartDate || undefined : undefined,
+        endDate: range === 'custom' ? customEndDate || undefined : undefined,
+    }, {
+        refetchInterval: 10000,
+        refetchOnWindowFocus: true,
+    })
 
     const tabs: { name: string; value: DashboardRange }[] = [
         { name: 'Today', value: 'today' },
@@ -97,7 +165,33 @@ export default function DashboardPage() {
         { name: 'Month', value: 'month' },
         { name: 'Year', value: 'year' },
         { name: 'All', value: 'all' },
+        { name: 'Custom', value: 'custom' },
     ]
+    const getJobsHref = (filter: DashboardCardFilter) => {
+        const params = getRangeParams()
+        params.set('dashboard', filter)
+
+        return `/dashboard/jobs?${params.toString()}`
+    }
+    const getRangeParams = () => {
+        const params = new URLSearchParams({ range })
+        if (range === 'custom') {
+            if (customStartDate) params.set('startDate', customStartDate)
+            if (customEndDate) params.set('endDate', customEndDate)
+        }
+
+        return params
+    }
+    const getWorkersHref = () => {
+        const params = getRangeParams()
+        params.set('dashboard', 'scheduled')
+        return `/dashboard/workers?${params.toString()}`
+    }
+    const getJobSitesHref = () => {
+        const params = getRangeParams()
+        params.set('dashboard', 'range')
+        return `/dashboard/job-sites?${params.toString()}`
+    }
 
     return (
         <div className="space-y-5 sm:space-y-8">
@@ -122,111 +216,89 @@ export default function DashboardPage() {
                 </div>
             </div>
 
+            {range === 'custom' && (
+                <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <label className="text-sm">
+                            <span className="mb-1 block font-medium text-gray-700">From</span>
+                            <input
+                                type="date"
+                                value={customStartDate}
+                                onChange={(event) => setCustomStartDate(event.target.value)}
+                                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                            />
+                        </label>
+                        <label className="text-sm">
+                            <span className="mb-1 block font-medium text-gray-700">To</span>
+                            <input
+                                type="date"
+                                value={customEndDate}
+                                onChange={(event) => setCustomEndDate(event.target.value)}
+                                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                            />
+                        </label>
+                    </div>
+                </div>
+            )}
+
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-                {/* Total Jobs */}
-                <div className="overflow-hidden rounded-lg bg-white shadow">
-                    <div className="p-4 sm:p-5">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                <Calendar className="h-6 w-6 text-gray-400" aria-hidden="true" />
-                            </div>
-                            <div className="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt className="truncate text-sm font-medium text-gray-500">Total Jobs</dt>
-                                    <dd>
-                                        <div className="text-lg font-medium text-gray-900">
-                                            {statsLoading ? '...' : stats?.jobs.total}
-                                        </div>
-                                    </dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="bg-gray-50 px-5 py-3">
-                        <div className="text-sm">
-                            <span className="text-gray-500">{range === 'today' ? 'Scheduled today' : `In selected range`}</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Scheduled */}
-                <div className="overflow-hidden rounded-lg bg-white shadow">
-                    <div className="p-4 sm:p-5">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                <Clock className="h-6 w-6 text-blue-400" aria-hidden="true" />
-                            </div>
-                            <div className="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt className="truncate text-sm font-medium text-gray-500">Scheduled</dt>
-                                    <dd>
-                                        <div className="text-lg font-medium text-gray-900">
-                                            {statsLoading ? '...' : stats?.jobs.scheduled}
-                                        </div>
-                                    </dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="bg-gray-50 px-5 py-3">
-                        <div className="text-sm">
-                            <span className="text-gray-500">Pending jobs</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* In Progress */}
-                <div className="overflow-hidden rounded-lg bg-white shadow">
-                    <div className="p-4 sm:p-5">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                <PlayCircle className="h-6 w-6 text-orange-400" aria-hidden="true" />
-                            </div>
-                            <div className="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt className="truncate text-sm font-medium text-gray-500">In Progress</dt>
-                                    <dd>
-                                        <div className="text-lg font-medium text-gray-900">
-                                            {statsLoading ? '...' : stats?.jobs.inProgress}
-                                        </div>
-                                    </dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="bg-gray-50 px-5 py-3">
-                        <div className="text-sm">
-                            <span className="text-gray-500">Currently active</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Completed */}
-                <div className="overflow-hidden rounded-lg bg-white shadow">
-                    <div className="p-4 sm:p-5">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                <CheckCircle2 className="h-6 w-6 text-green-400" aria-hidden="true" />
-                            </div>
-                            <div className="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt className="truncate text-sm font-medium text-gray-500">Completed</dt>
-                                    <dd>
-                                        <div className="text-lg font-medium text-gray-900">
-                                            {statsLoading ? '...' : stats?.jobs.completed}
-                                        </div>
-                                    </dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="bg-gray-50 px-5 py-3">
-                        <div className="text-sm">
-                            <span className="text-gray-500">Finished in range</span>
-                        </div>
-                    </div>
-                </div>
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-6">
+                <DashboardSummaryCard
+                    title="Unscheduled"
+                    count={stats?.jobs.unscheduled}
+                    isLoading={statsLoading}
+                    icon={Calendar}
+                    iconClassName="text-gray-400"
+                    caption="Needs scheduling"
+                    href={getJobsHref('unscheduled')}
+                />
+                <DashboardSummaryCard
+                    title="Scheduled"
+                    count={stats?.jobs.scheduled}
+                    isLoading={statsLoading}
+                    icon={Clock}
+                    iconClassName="text-blue-400"
+                    caption="Pending jobs"
+                    href={getJobsHref('scheduled')}
+                />
+                <DashboardSummaryCard
+                    title="In Progress"
+                    count={stats?.jobs.inProgress}
+                    isLoading={statsLoading}
+                    icon={PlayCircle}
+                    iconClassName="text-orange-400"
+                    caption="Currently active"
+                    href={getJobsHref('in_progress')}
+                />
+                <DashboardSummaryCard
+                    title="Completed"
+                    count={stats?.jobs.completed}
+                    isLoading={statsLoading}
+                    icon={CheckCircle2}
+                    iconClassName="text-green-400"
+                    caption="Finished in range"
+                    href={getJobsHref('completed')}
+                />
+                <DashboardSummaryCard
+                    title="Scheduled Workers"
+                    count={stats?.workers.scheduled}
+                    isLoading={statsLoading}
+                    icon={Users}
+                    iconClassName="text-purple-400"
+                    caption="Assigned to scheduled jobs"
+                    href={getWorkersHref()}
+                    actionLabel="Open workers"
+                />
+                <DashboardSummaryCard
+                    title="Job Sites"
+                    count={stats?.jobSites.inRange}
+                    isLoading={statsLoading}
+                    icon={Building2}
+                    iconClassName="text-indigo-400"
+                    caption="Used in selected range"
+                    href={getJobSitesHref()}
+                    actionLabel="Open sites"
+                />
             </div>
 
             {/* Bottom Grid */}

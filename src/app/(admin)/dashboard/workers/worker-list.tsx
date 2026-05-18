@@ -11,8 +11,12 @@ export function WorkerList() {
     const [view, setView] = useMobileDefaultView()
     const searchParams = useSearchParams()
     const search = searchParams.get('search') || undefined
+    const dashboard = searchParams.get('dashboard') === 'scheduled' ? 'scheduled' : undefined
+    const range = searchParams.get('range') || undefined
+    const startDate = searchParams.get('startDate') || undefined
+    const endDate = searchParams.get('endDate') || undefined
 
-    const { data: workers, isLoading } = api.workers.getAll.useQuery({ search })
+    const { data: workers, isLoading } = api.workers.getAll.useQuery({ search, dashboard, range: range as any, startDate, endDate })
 
     if (isLoading) {
         return <div className="p-8 text-center text-gray-500">Loading workers...</div>
@@ -39,7 +43,16 @@ export function WorkerList() {
         <div className="space-y-4">
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-4 shadow-sm ring-1 ring-gray-900/5 sm:px-6 sm:rounded-xl">
-                <h3 className="text-base font-semibold leading-6 text-gray-900">All Workers</h3>
+                <div>
+                    <h3 className="text-base font-semibold leading-6 text-gray-900">
+                        {dashboard === 'scheduled' ? `Scheduled Workers (${workers.length})` : 'All Workers'}
+                    </h3>
+                    {dashboard === 'scheduled' && (
+                        <Link href="/dashboard/workers" className="text-sm font-medium text-blue-600 hover:text-blue-500">
+                            Clear dashboard filter
+                        </Link>
+                    )}
+                </div>
                 <ViewToggle view={view} setView={setView} />
             </div>
 

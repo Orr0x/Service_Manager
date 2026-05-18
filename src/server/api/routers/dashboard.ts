@@ -2,148 +2,176 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 
+const dashboardRangeSchema = z.enum(['today', 'week', 'month', 'year', 'all', 'custom']).default('today')
+
 export const dashboardRouter = createTRPCRouter({
     getStats: protectedProcedure
         .input(z.object({
-            range: z.enum(['today', 'week', 'month', 'year', 'all']).default('today')
+            range: dashboardRangeSchema,
+            startDate: z.string().optional(),
+            endDate: z.string().optional(),
         }))
         .query(async ({ ctx, input }) => {
             const now = new Date();
-            let startDate: string | undefined;
-            let endDate: string | undefined;
+            let startDate: Date | null = null;
+            let endDate: Date | null = null;
 
             switch (input.range) {
                 case 'today':
-                    startDate = startOfDay(now).toISOString();
-                    endDate = endOfDay(now).toISOString();
+                    startDate = startOfDay(now);
+                    endDate = endOfDay(now);
                     break;
                 case 'week':
-                    startDate = startOfWeek(now, { weekStartsOn: 1 }).toISOString();
-                    endDate = endOfWeek(now, { weekStartsOn: 1 }).toISOString();
+                    startDate = startOfWeek(now, { weekStartsOn: 1 });
+                    endDate = endOfWeek(now, { weekStartsOn: 1 });
                     break;
                 case 'month':
-                    startDate = startOfMonth(now).toISOString();
-                    endDate = endOfMonth(now).toISOString();
+                    startDate = startOfMonth(now);
+                    endDate = endOfMonth(now);
                     break;
                 case 'year':
-                    startDate = startOfYear(now).toISOString();
-                    endDate = endOfYear(now).toISOString();
+                    startDate = startOfYear(now);
+                    endDate = endOfYear(now);
+                    break;
+                case 'custom':
+                    startDate = input.startDate ? startOfDay(new Date(input.startDate)) : null;
+                    endDate = input.endDate ? endOfDay(new Date(input.endDate)) : null;
                     break;
                 case 'all':
-                    startDate = undefined;
-                    endDate = undefined;
+                    startDate = null;
+                    endDate = null;
                     break;
             }
 
-            const tenantId = ctx.user.user_metadata.tenant_id;
+            const tenantId = ctx.tenantId;
 
-            // Helper to apply range filter
-            const applyRange = (query: any, field: string) => {
-                if (startDate && endDate) {
-                    return query.gte(field, startDate).lte(field, endDate);
-                }
-                return query;
+            const isInRange = (value?: string | null) => {
+                if (!startDate && !endDate) return true;
+                if (!value) return false;
+
+                const date = new Date(value);
+                if (Number.isNaN(date.getTime())) return false;
+                if (startDate && date < startDate) return false;
+                if (endDate && date > endDate) return false;
+
+                return true;
             };
 
-            // Parallel queries
+            const getJobRangeDate = (job: any) => job.start_time || job.created_at;
+            const getCompletedRangeDate = (job: any) => job.actual_end_time || job.end_time || job.updated_at || job.start_time;
+            const toMillis = (value?: string | null) => {
+                if (!value) return 0;
+                const date = new Date(value);
+                return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+            };
+            const { data: jobsData, error: jobsError } = await ctx.db
+                .from('jobs')
+                .select(`
+                    id,
+                    title,
+                    status,
+                    created_at,
+                    updated_at,
+                    start_time,
+                    end_time,
+                    job_site_id,
+                    actual_end_time,
+                    job_sites (
+                        name,
+                        address,
+                        city
+                    ),
+                    job_assignments (
+                        worker_id,
+                        workers (
+                            first_name,
+                            last_name,
+                            hourly_rate
+                        ),
+                        contractors (
+                            company_name,
+                            contact_name
+                        )
+                    )
+                `)
+                .eq('tenant_id', tenantId)
+                .neq('status', 'cancelled');
+
+            if (jobsError) {
+                throw new Error(`Failed to fetch dashboard jobs: ${jobsError.message}`);
+            }
+
+            const jobs = jobsData || [];
+            const rangedJobs = jobs.filter((job) => isInRange(getJobRangeDate(job)));
+            const unscheduledJobs = rangedJobs.filter((job) => isUnscheduledJob(job));
+            const scheduledJobs = rangedJobs.filter((job) => job.status === 'scheduled');
+            const inProgressJobs = rangedJobs.filter((job) => job.status === 'in_progress');
+            const completedJobs = jobs.filter((job) => job.status === 'completed' && isInRange(getCompletedRangeDate(job)));
+            const scheduledWorkerIds = new Set(
+                scheduledJobs
+                    .flatMap((job) => job.job_assignments || [])
+                    .map((assignment) => assignment.worker_id)
+                    .filter(Boolean)
+            );
+            const rangedJobSiteIds = new Set(rangedJobs.map((job) => job.job_site_id).filter(Boolean));
+
             const [
-                jobsTotal,
-                jobsScheduled,
-                jobsInProgress,
-                jobsCompleted,
                 revenueData,
                 quotesData,
-                laborData
             ] = await Promise.all([
-                // Total Jobs (in range)
-                applyRange(
-                    ctx.db.from('jobs').select('id', { count: 'exact' }).eq('tenant_id', tenantId),
-                    'created_at' // Using created_at for "Total Jobs" metric in range
-                ),
-
-                // Scheduled (Status = Scheduled) - In Range (using start_time)
-                applyRange(
-                    ctx.db.from('jobs').select('id', { count: 'exact' }).eq('tenant_id', tenantId).eq('status', 'scheduled'),
-                    'start_date' // Changed from start_time to start_date based on original code's field usage
-                ),
-
-                // In Progress
-                applyRange(
-                    ctx.db.from('jobs').select('id', { count: 'exact' }).eq('tenant_id', tenantId).eq('status', 'In Progress'),
-                    'start_date' // Changed from start_time to start_date based on original code's field usage
-                ),
-
-                // Completed
-                applyRange(
-                    ctx.db.from('jobs').select('id', { count: 'exact' }).eq('tenant_id', tenantId).eq('status', 'Completed'),
-                    'updated_at' // Use updated_at for completion, consistent with original code's approximation
-                ),
-
-                // Revenue (Sum of Invoices in range)
-                applyRange(
+                applyServerRange(
                     ctx.db.from('invoices').select('total_amount').eq('tenant_id', tenantId),
+                    startDate,
+                    endDate,
                     'created_at'
                 ),
-
-                // Quotes Value (Sum of Quotes in range)
-                applyRange(
+                applyServerRange(
                     ctx.db.from('quotes').select('total_amount').eq('tenant_id', tenantId),
+                    startDate,
+                    endDate,
                     'created_at'
                 ),
-
-                // Jobs with Assignments for Labor Cost Calculation
-                // We need more complex filtering here: jobs that *occur* during the range
-                // For simplicity/performance MVP: Calculate labor for jobs *scheduled (start_time)* or *completed (end_time)* in range.
-                // Or to match user request: "filtering should show the correct calculations" based on range.
-                // Let's use jobs that have start_time in the range for now as a proxy for "active/scheduled work".
-                applyRange(
-                    ctx.db.from('jobs')
-                        .select(`
-                            start_time, 
-                            end_time, 
-                            job_assignments(
-                                width:workers(hourly_rate)
-                            )
-                        `)
-                        .eq('tenant_id', tenantId)
-                        .not('start_time', 'is', null) // start_time IS NOT NULL (Correct syntax might vary, using filter)
-                        .not('end_time', 'is', null),  // end_time IS NOT NULL
-                    'start_time'
-                )
             ]);
+
+            if (revenueData.error) {
+                throw new Error(`Failed to fetch dashboard invoice totals: ${revenueData.error.message}`);
+            }
+
+            if (quotesData.error) {
+                throw new Error(`Failed to fetch dashboard quote totals: ${quotesData.error.message}`);
+            }
 
             const revenue = revenueData.data?.reduce((sum: number, inv: any) => sum + (Number(inv.total_amount) || 0), 0) || 0;
             const quotesValue = quotesData.data?.reduce((sum: number, q: any) => sum + (Number(q.total_amount) || 0), 0) || 0;
 
-            // Calculate Labor Cost
-            let laborCost = 0;
-            if (laborData.data) {
-                laborData.data.forEach((job: any) => {
-                    const start = new Date(job.start_time).getTime();
-                    const end = new Date(job.end_time).getTime();
-                    const durationHours = (end - start) / (1000 * 60 * 60);
+            const laborCost = rangedJobs.reduce((sum, job: any) => {
+                const start = toMillis(job.start_time);
+                const end = toMillis(job.end_time);
+                const durationHours = start && end && end > start ? (end - start) / (1000 * 60 * 60) : 0;
 
-                    if (durationHours > 0 && job.job_assignments) {
-                        job.job_assignments.forEach((assignment: any) => {
-                            // assignment.workers is an array due to relation, take first if exists
-                            // With nested select: workers(hourly_rate).
-                            // The structure returned by Supabase for 'workers(hourly_rate)' 
-                            // inside job_assignments might vary based on join type.
-                            // Usually it's an object if 1:1 or 1:Many (worker is 1 here).
-                            const worker = assignment.workers;
-                            const rate = Number(worker?.hourly_rate) || 0;
-                            laborCost += durationHours * rate;
-                        });
-                    }
-                });
-            }
+                if (!durationHours) return sum;
+
+                const assignmentCost = (job.job_assignments || []).reduce((assignmentSum: number, assignment: any) => {
+                    const worker = Array.isArray(assignment.workers) ? assignment.workers[0] : assignment.workers;
+                    return assignmentSum + durationHours * (Number(worker?.hourly_rate) || 0);
+                }, 0);
+
+                return sum + assignmentCost;
+            }, 0);
 
             return {
                 jobs: {
-                    total: jobsTotal.count || 0,
-                    scheduled: jobsScheduled.count || 0,
-                    inProgress: jobsInProgress.count || 0,
-                    completed: jobsCompleted.count || 0,
+                    total: rangedJobs.length,
+                    unscheduled: unscheduledJobs.length,
+                    scheduled: scheduledJobs.length,
+                    inProgress: inProgressJobs.length,
+                    completed: completedJobs.length,
+                },
+                workers: {
+                    scheduled: scheduledWorkerIds.size,
+                },
+                jobSites: {
+                    inRange: rangedJobSiteIds.size,
                 },
                 revenue: revenue,
                 quotesValue: quotesValue,
@@ -151,3 +179,19 @@ export const dashboardRouter = createTRPCRouter({
             };
         }),
 });
+
+function applyServerRange(query: any, startDate: Date | null, endDate: Date | null, field: string) {
+    if (startDate) {
+        query = query.gte(field, startDate.toISOString());
+    }
+
+    if (endDate) {
+        query = query.lte(field, endDate.toISOString());
+    }
+
+    return query;
+}
+
+function isUnscheduledJob(job: any) {
+    return !job.start_time || job.status === 'draft' || job.status === 'pending'
+}

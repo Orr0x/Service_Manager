@@ -4,13 +4,52 @@ import { createTRPCRouter, protectedProcedure } from '../trpc'
 export const workersRouter = createTRPCRouter({
     getAll: protectedProcedure
         .input(z.object({
-            search: z.string().optional()
+            search: z.string().optional(),
+            dashboard: z.enum(['scheduled']).optional(),
+            range: z.enum(['today', 'week', 'month', 'year', 'all', 'custom']).optional(),
+            startDate: z.string().optional(),
+            endDate: z.string().optional(),
         }).optional())
         .query(async ({ ctx, input }) => {
             let query = ctx.db
                 .from('workers')
                 .select('*')
                 .eq('tenant_id', ctx.tenantId)
+
+            if (input?.dashboard === 'scheduled') {
+                const { start, end } = getDashboardRangeBounds(input.range || 'all', input.startDate, input.endDate)
+                let jobsQuery = ctx.db
+                    .from('jobs')
+                    .select(`
+                        id,
+                        start_time,
+                        job_assignments (
+                            worker_id
+                        )
+                    `)
+                    .eq('tenant_id', ctx.tenantId)
+                    .eq('status', 'scheduled')
+
+                if (start) jobsQuery = jobsQuery.gte('start_time', start.toISOString())
+                if (end) jobsQuery = jobsQuery.lte('start_time', end.toISOString())
+
+                const { data: jobs, error: jobsError } = await jobsQuery
+
+                if (jobsError) {
+                    throw new Error(`Failed to fetch scheduled workers: ${jobsError.message}`)
+                }
+
+                const workerIds = Array.from(new Set(
+                    (jobs || [])
+                        .flatMap((job) => job.job_assignments || [])
+                        .map((assignment) => assignment.worker_id)
+                        .filter(Boolean)
+                ))
+
+                if (workerIds.length === 0) return []
+
+                query = query.in('id', workerIds)
+            }
 
             if (input?.search) {
                 const search = input.search.trim()
@@ -404,3 +443,37 @@ export const workersRouter = createTRPCRouter({
             return uniqueWorkers
         }),
 })
+
+function getDashboardRangeBounds(range: string, customStartDate?: string, customEndDate?: string) {
+    const now = new Date()
+    let start: Date | null = null
+    let end: Date | null = null
+
+    if (range === 'today') {
+        start = new Date(now)
+        start.setHours(0, 0, 0, 0)
+        end = new Date(now)
+        end.setHours(23, 59, 59, 999)
+    } else if (range === 'week') {
+        const day = now.getDay() || 7
+        start = new Date(now)
+        start.setDate(now.getDate() - day + 1)
+        start.setHours(0, 0, 0, 0)
+        end = new Date(start)
+        end.setDate(start.getDate() + 6)
+        end.setHours(23, 59, 59, 999)
+    } else if (range === 'month') {
+        start = new Date(now.getFullYear(), now.getMonth(), 1)
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+    } else if (range === 'year') {
+        start = new Date(now.getFullYear(), 0, 1)
+        end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999)
+    } else if (range === 'custom') {
+        start = customStartDate ? new Date(customStartDate) : null
+        if (start) start.setHours(0, 0, 0, 0)
+        end = customEndDate ? new Date(customEndDate) : null
+        if (end) end.setHours(23, 59, 59, 999)
+    }
+
+    return { start, end }
+}

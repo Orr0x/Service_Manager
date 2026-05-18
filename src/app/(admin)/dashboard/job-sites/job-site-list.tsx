@@ -14,12 +14,16 @@ import { compareValues, groupRows, includesSearch } from '@/lib/data-view'
 export function JobSiteList() {
     const searchParams = useSearchParams()
     const search = searchParams.get('search') || undefined
+    const dashboard = searchParams.get('dashboard') === 'range' ? 'range' : undefined
+    const range = searchParams.get('range') || undefined
+    const startDate = searchParams.get('startDate') || undefined
+    const endDate = searchParams.get('endDate') || undefined
     const [refineSearch, setRefineSearch] = useState('')
     const [sortBy, setSortBy] = useState('name')
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
     const [groupBy, setGroupBy] = useState('none')
 
-    const { data: jobSites, isLoading } = api.jobSites.getAll.useQuery({ search })
+    const { data: jobSites, isLoading } = api.jobSites.getAll.useQuery({ search, dashboard, range: range as any, startDate, endDate })
     const [view, setView] = useMobileDefaultView()
 
     const visibleSites = useMemo(() => {
@@ -63,7 +67,16 @@ export function JobSiteList() {
         <div className="space-y-4">
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-4 shadow-sm ring-1 ring-gray-900/5 sm:px-6 sm:rounded-xl">
-                <h3 className="text-base font-semibold leading-6 text-gray-900">All Job Sites ({visibleSites.length})</h3>
+                <div>
+                    <h3 className="text-base font-semibold leading-6 text-gray-900">
+                        {dashboard === 'range' ? `Dashboard Job Sites (${visibleSites.length})` : `All Job Sites (${visibleSites.length})`}
+                    </h3>
+                    {dashboard === 'range' && (
+                        <Link href="/dashboard/job-sites" className="text-sm font-medium text-blue-600 hover:text-blue-500">
+                            Clear dashboard filter
+                        </Link>
+                    )}
+                </div>
                 <ViewToggle view={view} setView={setView} />
             </div>
 

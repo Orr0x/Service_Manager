@@ -7,7 +7,9 @@ export const activityRouter = createTRPCRouter({
     getRecent: protectedProcedure
         .input(z.object({
             limit: z.number().default(10),
-            range: z.enum(['today', 'week', 'month', 'year', 'all']).default('all'),
+            range: z.enum(['today', 'week', 'month', 'year', 'all', 'custom']).default('all'),
+            startDate: z.string().optional(),
+            endDate: z.string().optional(),
             entityType: z.string().optional(),
             entityId: z.string().uuid().optional(),
             customerId: z.string().uuid().optional(),
@@ -34,6 +36,10 @@ export const activityRouter = createTRPCRouter({
                     startDate = startOfYear(now).toISOString();
                     endDate = endOfYear(now).toISOString();
                     break;
+                case 'custom':
+                    startDate = input.startDate ? startOfDay(new Date(input.startDate)).toISOString() : undefined;
+                    endDate = input.endDate ? endOfDay(new Date(input.endDate)).toISOString() : undefined;
+                    break;
                 case 'all':
                     startDate = undefined;
                     endDate = undefined;
@@ -48,7 +54,7 @@ export const activityRouter = createTRPCRouter({
             *,
             actor:users(first_name, last_name, email)
         `)
-                .eq('tenant_id', ctx.user.user_metadata.tenant_id)
+                .eq('tenant_id', ctx.tenantId)
                 .order('created_at', { ascending: false })
                 .limit(limit);
 
@@ -64,8 +70,12 @@ export const activityRouter = createTRPCRouter({
                 query = query.eq('customer_id', customerId)
             }
 
-            if (startDate && endDate) {
-                query = query.gte('created_at', startDate).lte('created_at', endDate);
+            if (startDate) {
+                query = query.gte('created_at', startDate);
+            }
+
+            if (endDate) {
+                query = query.lte('created_at', endDate);
             }
 
             const { data, error } = await query;

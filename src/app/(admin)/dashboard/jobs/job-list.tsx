@@ -15,6 +15,10 @@ export function JobList() {
     const [view, setView] = useMobileDefaultView()
     const searchParams = useSearchParams()
     const search = searchParams.get('search') || undefined
+    const dashboardFilter = searchParams.get('dashboard') || 'all'
+    const dashboardRange = searchParams.get('range') || 'all'
+    const dashboardStartDate = searchParams.get('startDate')
+    const dashboardEndDate = searchParams.get('endDate')
     const [refineSearch, setRefineSearch] = useState('')
     const [statusFilter, setStatusFilter] = useState('all')
     const [sortBy, setSortBy] = useState('start_time')
@@ -25,6 +29,8 @@ export function JobList() {
 
     const visibleJobs = useMemo(() => {
         return [...(jobs || [])]
+            .filter((job) => matchesDashboardJobFilter(job, dashboardFilter))
+            .filter((job) => isWithinDashboardRange(job, dashboardFilter, dashboardRange, dashboardStartDate, dashboardEndDate))
             .filter((job) => statusFilter === 'all' || job.status === statusFilter)
             .filter((job) => includesSearch([
                 job.title,
@@ -36,7 +42,7 @@ export function JobList() {
                 job.job_sites?.address,
             ], refineSearch))
             .sort((a, b) => compareValues(getJobSortValue(a, sortBy), getJobSortValue(b, sortBy), sortDirection))
-    }, [jobs, refineSearch, sortBy, sortDirection, statusFilter])
+    }, [jobs, refineSearch, sortBy, sortDirection, statusFilter, dashboardFilter, dashboardRange, dashboardStartDate, dashboardEndDate])
 
     const groupedJobs = useMemo(() => groupRows(visibleJobs, groupBy, getJobGroup), [visibleJobs, groupBy])
 
@@ -70,7 +76,14 @@ export function JobList() {
         <div className="space-y-4">
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-4 shadow-sm ring-1 ring-gray-900/5 sm:px-6 sm:rounded-xl">
-                <h3 className="text-base font-semibold leading-6 text-gray-900">All Jobs ({visibleJobs.length})</h3>
+                <div>
+                    <h3 className="text-base font-semibold leading-6 text-gray-900">{getDashboardFilterLabel(dashboardFilter)} ({visibleJobs.length})</h3>
+                    {dashboardFilter !== 'all' && (
+                        <Link href="/dashboard/jobs" className="text-sm font-medium text-blue-600 hover:text-blue-500">
+                            Clear dashboard filter
+                        </Link>
+                    )}
+                </div>
                 <ViewToggle view={view} setView={setView} />
             </div>
 
@@ -269,6 +282,94 @@ function getJobSortValue(job: any, sortBy: string) {
         case 'start_time':
         default:
             return job.start_time
+    }
+}
+
+function matchesDashboardJobFilter(job: any, filter: string) {
+    switch (filter) {
+        case 'unscheduled':
+            return isUnscheduledJob(job)
+        case 'scheduled':
+            return job.status === 'scheduled'
+        case 'in_progress':
+            return job.status === 'in_progress'
+        case 'completed':
+            return job.status === 'completed'
+        default:
+            return true
+    }
+}
+
+function isUnscheduledJob(job: any) {
+    return !job.start_time || job.status === 'draft' || job.status === 'pending'
+}
+
+function isWithinDashboardRange(job: any, filter: string, range: string, startDate?: string | null, endDate?: string | null) {
+    if (range === 'all') return true
+
+    const { start, end } = getDashboardRangeDates(range, startDate, endDate)
+    if (!start && !end) return true
+
+    const value = filter === 'completed'
+        ? job.actual_end_time || job.end_time || job.updated_at || job.start_time
+        : job.start_time || job.created_at
+
+    if (!value) return false
+
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return false
+    if (start && date < start) return false
+    if (end && date > end) return false
+
+    return true
+}
+
+function getDashboardRangeDates(range: string, customStartDate?: string | null, customEndDate?: string | null) {
+    const now = new Date()
+    let start: Date | null = null
+    let end: Date | null = null
+
+    if (range === 'today') {
+        start = new Date(now)
+        start.setHours(0, 0, 0, 0)
+        end = new Date(now)
+        end.setHours(23, 59, 59, 999)
+    } else if (range === 'week') {
+        const day = now.getDay() || 7
+        start = new Date(now)
+        start.setDate(now.getDate() - day + 1)
+        start.setHours(0, 0, 0, 0)
+        end = new Date(start)
+        end.setDate(start.getDate() + 6)
+        end.setHours(23, 59, 59, 999)
+    } else if (range === 'month') {
+        start = new Date(now.getFullYear(), now.getMonth(), 1)
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+    } else if (range === 'year') {
+        start = new Date(now.getFullYear(), 0, 1)
+        end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999)
+    } else if (range === 'custom') {
+        start = customStartDate ? new Date(customStartDate) : null
+        if (start) start.setHours(0, 0, 0, 0)
+        end = customEndDate ? new Date(customEndDate) : null
+        if (end) end.setHours(23, 59, 59, 999)
+    }
+
+    return { start, end }
+}
+
+function getDashboardFilterLabel(filter: string) {
+    switch (filter) {
+        case 'unscheduled':
+            return 'Unscheduled Jobs'
+        case 'scheduled':
+            return 'Scheduled Jobs'
+        case 'in_progress':
+            return 'In Progress Jobs'
+        case 'completed':
+            return 'Completed Jobs'
+        default:
+            return 'All Jobs'
     }
 }
 
